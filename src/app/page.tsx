@@ -63,7 +63,13 @@ export default function Home() {
             />
             <div className="w-5 h-5 rounded border-2 border-foreground/30 peer-checked:bg-foreground peer-checked:border-foreground flex items-center justify-center">
               {showArchived && (
-                <svg className="w-3 h-3 text-background" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg
+                  className="w-3 h-3 text-background"
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
                   <path d="M2 6l3 3 5-5" />
                 </svg>
               )}
@@ -100,8 +106,18 @@ export default function Home() {
               onClick={() => setSearch('')}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground/40"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           )}

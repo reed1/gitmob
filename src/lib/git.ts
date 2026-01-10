@@ -167,11 +167,10 @@ export async function getBranch(cwd: string): Promise<string> {
   return status.current || 'HEAD';
 }
 
-export async function getLog(
-  cwd: string,
-  count: number = 10
-): Promise<string> {
+export async function getLog(cwd: string, count: number = 10): Promise<string> {
   const git = getGit(cwd);
   const log = await git.log({ maxCount: count });
-  return log.all.map((entry) => `${entry.hash.slice(0, 7)} ${entry.message}`).join('\n');
+  return log.all
+    .map((entry) => `${entry.hash.slice(0, 7)} ${entry.message}`)
+    .join('\n');
 }
