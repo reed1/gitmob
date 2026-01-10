@@ -25,6 +25,8 @@ export default function ProjectPage() {
   const [branch, setBranch] = useState<string>('');
   const [status, setStatus] = useState<GitStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const [wordWrap, setWordWrap] = useState(true);
+  const [showingDiff, setShowingDiff] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -85,6 +87,18 @@ export default function ProjectPage() {
               </span>
             </div>
           </div>
+          {tab === 'changes' && showingDiff && (
+            <button
+              onClick={() => setWordWrap(!wordWrap)}
+              className={`px-2 py-1 text-xs rounded ${
+                wordWrap
+                  ? 'bg-foreground/20 text-foreground'
+                  : 'bg-foreground/10 text-foreground/50'
+              }`}
+            >
+              Wrap
+            </button>
+          )}
         </div>
 
         <nav className="flex border-t border-foreground/10">
@@ -120,6 +134,8 @@ export default function ProjectPage() {
             projectId={projectId}
             status={status}
             onRefresh={refreshStatus}
+            wordWrap={wordWrap}
+            onShowingDiffChange={setShowingDiff}
           />
         )}
         {tab === 'actions' && (
@@ -326,15 +342,23 @@ function ChangesView({
   projectId,
   status,
   onRefresh,
+  wordWrap,
+  onShowingDiffChange,
 }: {
   projectId: string;
   status: GitStatus | null;
   onRefresh: () => void;
+  wordWrap: boolean;
+  onShowingDiffChange: (showing: boolean) => void;
 }) {
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [diff, setDiff] = useState<string>('');
   const [isStaged, setIsStaged] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+
+  useEffect(() => {
+    onShowingDiffChange(selectedFile !== null);
+  }, [selectedFile, onShowingDiffChange]);
 
   useEffect(() => {
     if (selectedFile) {
@@ -415,7 +439,7 @@ function ChangesView({
             )}
           </div>
         </div>
-        <div className="flex-1 overflow-auto p-4 text-xs font-mono whitespace-pre-wrap">
+        <div className={`flex-1 overflow-auto p-4 text-xs font-mono ${wordWrap ? 'whitespace-pre-wrap' : 'whitespace-pre'}`}>
           {diff.split('\n').map((line, i) => {
             let className = 'text-foreground/70';
             if (line.startsWith('+') && !line.startsWith('+++')) {

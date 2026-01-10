@@ -33,6 +33,8 @@ body {
 
 pre, code, .font-mono {
   font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "clig" 0;
 }
 
 ::-webkit-scrollbar {
