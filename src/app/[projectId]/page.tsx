@@ -343,7 +343,7 @@ function FileViewer({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="sticky top-0 bg-background border-b border-foreground/10 px-4 py-3 z-10">
+      <div className="sticky top-0 bg-background border-b border-foreground/10 px-4 py-3">
         <div className="flex items-center gap-3">
           <button
             onClick={onClose}
