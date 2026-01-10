@@ -797,6 +797,7 @@ function CLIView({ projectPath }: { projectPath: string }) {
           onChange={(e) => setCommand(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Enter command..."
+          autoCapitalize="off"
           className="flex-1 px-3 py-2 bg-foreground/5 border border-foreground/10 rounded-lg text-sm font-mono"
         />
         <button
