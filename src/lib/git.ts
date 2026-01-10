@@ -1,4 +1,4 @@
-import { execSync } from 'child_process';
+import simpleGit, { SimpleGit, StatusResult } from 'simple-git';
 
 export interface GitStatus {
   staged: FileChange[];
@@ -11,43 +11,64 @@ export interface FileChange {
   status: 'M' | 'A' | 'D' | 'R' | 'C' | 'U' | '?';
 }
 
-export interface DiffHunk {
-  header: string;
-  lines: DiffLine[];
+function getGit(cwd: string): SimpleGit {
+  return simpleGit(cwd);
 }
 
-export interface DiffLine {
-  type: 'context' | 'add' | 'remove' | 'header';
-  content: string;
-  oldLineNo?: number;
-  newLineNo?: number;
+function mapStatus(index: string): FileChange['status'] {
+  const map: Record<string, FileChange['status']> = {
+    M: 'M',
+    A: 'A',
+    D: 'D',
+    R: 'R',
+    C: 'C',
+    U: 'U',
+    '?': '?',
+  };
+  return map[index] || 'M';
 }
 
-function git(cwd: string, args: string): string {
-  return execSync(`git ${args}`, { cwd, encoding: 'utf-8' });
-}
-
-export function getStatus(cwd: string): GitStatus {
-  const output = git(cwd, 'status --porcelain');
-  const lines = output.trim().split('\n').filter(Boolean);
+export async function getStatus(cwd: string): Promise<GitStatus> {
+  const git = getGit(cwd);
+  const status: StatusResult = await git.status();
 
   const staged: FileChange[] = [];
   const unstaged: FileChange[] = [];
-  const untracked: string[] = [];
+  const untracked: string[] = status.not_added;
 
-  for (const line of lines) {
-    const index = line[0];
-    const worktree = line[1];
-    const path = line.slice(3);
+  for (const file of status.staged) {
+    staged.push({ path: file, status: 'A' });
+  }
 
-    if (index === '?') {
-      untracked.push(path);
-    } else {
-      if (index !== ' ' && index !== '?') {
-        staged.push({ path, status: index as FileChange['status'] });
+  for (const file of status.modified) {
+    if (status.staged.includes(file)) {
+      continue;
+    }
+    unstaged.push({ path: file, status: 'M' });
+  }
+
+  for (const file of status.deleted) {
+    if (status.staged.includes(file)) {
+      continue;
+    }
+    unstaged.push({ path: file, status: 'D' });
+  }
+
+  for (const file of status.renamed) {
+    staged.push({ path: file.to, status: 'R' });
+  }
+
+  for (const file of status.files) {
+    const inStaged = staged.some((s) => s.path === file.path);
+    const inUnstaged = unstaged.some((u) => u.path === file.path);
+    const inUntracked = untracked.includes(file.path);
+
+    if (!inStaged && !inUnstaged && !inUntracked) {
+      if (file.index !== ' ' && file.index !== '?') {
+        staged.push({ path: file.path, status: mapStatus(file.index) });
       }
-      if (worktree !== ' ' && worktree !== '?') {
-        unstaged.push({ path, status: worktree as FileChange['status'] });
+      if (file.working_dir !== ' ' && file.working_dir !== '?') {
+        unstaged.push({ path: file.path, status: mapStatus(file.working_dir) });
       }
     }
   }
@@ -55,48 +76,102 @@ export function getStatus(cwd: string): GitStatus {
   return { staged, unstaged, untracked };
 }
 
-export function getDiff(cwd: string, staged: boolean = false): string {
-  const flag = staged ? '--cached' : '';
-  return git(cwd, `diff ${flag}`);
+export async function getDiff(
+  cwd: string,
+  staged: boolean = false
+): Promise<string> {
+  const git = getGit(cwd);
+  if (staged) {
+    return git.diff(['--cached']);
+  }
+  return git.diff();
 }
 
-export function getFileDiff(
+export async function getFileDiff(
   cwd: string,
   filePath: string,
   staged: boolean = false
-): string {
-  const flag = staged ? '--cached' : '';
-  return git(cwd, `diff ${flag} -- "${filePath}"`);
+): Promise<string> {
+  const git = getGit(cwd);
+
+  if (staged) {
+    const diff = await git.diff(['--cached', '--', filePath]);
+    if (diff.trim()) {
+      return diff;
+    }
+    const content = await git.show([`:${filePath}`]).catch(() => null);
+    if (content !== null) {
+      const lines = content.split('\n');
+      return [
+        `diff --git a/${filePath} b/${filePath}`,
+        'new file mode 100644',
+        '--- /dev/null',
+        `+++ b/${filePath}`,
+        `@@ -0,0 +1,${lines.length} @@`,
+        ...lines.map((line) => '+' + line),
+      ].join('\n');
+    }
+    return '';
+  }
+  return git.diff(['--', filePath]);
 }
 
-export function stageFile(cwd: string, filePath: string): void {
-  git(cwd, `add "${filePath}"`);
+export async function stageFile(cwd: string, filePath: string): Promise<void> {
+  const git = getGit(cwd);
+  await git.add(filePath);
 }
 
-export function unstageFile(cwd: string, filePath: string): void {
-  git(cwd, `reset HEAD "${filePath}"`);
+export async function unstageFile(
+  cwd: string,
+  filePath: string
+): Promise<void> {
+  const git = getGit(cwd);
+  await git.reset(['HEAD', '--', filePath]);
 }
 
-export function discardChanges(cwd: string, filePath: string): void {
-  git(cwd, `checkout -- "${filePath}"`);
+export async function discardChanges(
+  cwd: string,
+  filePath: string
+): Promise<void> {
+  const git = getGit(cwd);
+  await git.checkout(['--', filePath]);
 }
 
-export function commit(cwd: string, message: string): string {
-  return git(cwd, `commit -m "${message.replace(/"/g, '\\"')}"`);
+export async function commit(cwd: string, message: string): Promise<string> {
+  const git = getGit(cwd);
+  const result = await git.commit(message);
+  return `[${result.branch} ${result.commit}] ${message}`;
 }
 
-export function pull(cwd: string): string {
-  return git(cwd, 'pull');
+export async function pull(cwd: string): Promise<string> {
+  const git = getGit(cwd);
+  const result = await git.pull();
+  if (result.summary.changes === 0 && result.summary.insertions === 0) {
+    return 'Already up to date.';
+  }
+  return `Updated: ${result.summary.changes} files, +${result.summary.insertions}/-${result.summary.deletions}`;
 }
 
-export function push(cwd: string): string {
-  return git(cwd, 'push');
+export async function push(cwd: string): Promise<string> {
+  const git = getGit(cwd);
+  const result = await git.push();
+  if (result.pushed.length === 0) {
+    return 'Everything up-to-date';
+  }
+  return `Pushed ${result.pushed.length} ref(s)`;
 }
 
-export function getBranch(cwd: string): string {
-  return git(cwd, 'branch --show-current').trim();
+export async function getBranch(cwd: string): Promise<string> {
+  const git = getGit(cwd);
+  const status = await git.status();
+  return status.current || 'HEAD';
 }
 
-export function getLog(cwd: string, count: number = 10): string {
-  return git(cwd, `log --oneline -n ${count}`);
+export async function getLog(
+  cwd: string,
+  count: number = 10
+): Promise<string> {
+  const git = getGit(cwd);
+  const log = await git.log({ maxCount: count });
+  return log.all.map((entry) => `${entry.hash.slice(0, 7)} ${entry.message}`).join('\n');
 }

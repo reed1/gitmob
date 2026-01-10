@@ -415,7 +415,7 @@ function ChangesView({
             )}
           </div>
         </div>
-        <pre className="flex-1 overflow-auto p-4 text-xs font-mono whitespace-pre-wrap">
+        <div className="flex-1 overflow-auto p-4 text-xs font-mono whitespace-pre-wrap">
           {diff.split('\n').map((line, i) => {
             let className = 'text-foreground/70';
             if (line.startsWith('+') && !line.startsWith('+++')) {
@@ -431,7 +431,7 @@ function ChangesView({
               </div>
             );
           })}
-        </pre>
+        </div>
       </div>
     );
   }
@@ -483,7 +483,7 @@ function ChangesView({
               <span className="text-xs font-mono w-5 text-green-400">
                 {file.status}
               </span>
-              <span className="truncate text-sm">{file.path}</span>
+              <span className="truncate text-sm font-mono">{file.path}</span>
             </button>
           ))}
         </section>
@@ -506,7 +506,7 @@ function ChangesView({
               <span className="text-xs font-mono w-5 text-yellow-400">
                 {file.status}
               </span>
-              <span className="truncate text-sm">{file.path}</span>
+              <span className="truncate text-sm font-mono">{file.path}</span>
             </button>
           ))}
         </section>
@@ -529,7 +529,7 @@ function ChangesView({
               <span className="text-xs font-mono w-5 text-foreground/40">
                 ?
               </span>
-              <span className="truncate text-sm">{file}</span>
+              <span className="truncate text-sm font-mono">{file}</span>
             </button>
           ))}
         </section>

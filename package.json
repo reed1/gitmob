@@ -14,6 +14,7 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "shiki": "^3.21.0",
+    "simple-git": "^3.30.0",
     "yaml": "^2.8.2"
   },
   "devDependencies": {

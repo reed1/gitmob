@@ -31,8 +31,8 @@ body {
   -webkit-touch-callout: none;
 }
 
-pre, code {
-  font-family: var(--font-mono), monospace;
+pre, code, .font-mono {
+  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
 }
 
 ::-webkit-scrollbar {
