@@ -18,4 +18,4 @@ fi
 PORT=$(portman static get gitmob)
 export PORT
 
-exec npm start
+exec ./node_modules/.bin/next start
