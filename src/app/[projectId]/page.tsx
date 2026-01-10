@@ -27,6 +27,13 @@ export default function ProjectPage() {
   const [loading, setLoading] = useState(true);
   const [wordWrap, setWordWrap] = useState(true);
   const [showingDiff, setShowingDiff] = useState(false);
+  const [showingFile, setShowingFile] = useState(false);
+  const [viewFilePath, setViewFilePath] = useState<string | null>(null);
+
+  const goToFile = (filePath: string) => {
+    setViewFilePath(filePath);
+    setTab('files');
+  };
 
   useEffect(() => {
     async function load() {
@@ -87,17 +94,23 @@ export default function ProjectPage() {
               </span>
             </div>
           </div>
-          {tab === 'changes' && showingDiff && (
-            <button
-              onClick={() => setWordWrap(!wordWrap)}
-              className={`px-2 py-1 text-xs rounded ${
-                wordWrap
-                  ? 'bg-foreground/20 text-foreground'
-                  : 'bg-foreground/10 text-foreground/50'
-              }`}
-            >
+          {((tab === 'changes' && showingDiff) || (tab === 'files' && showingFile)) && (
+            <label className="flex items-center gap-2 text-sm text-foreground/60 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={wordWrap}
+                onChange={(e) => setWordWrap(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-5 h-5 rounded border-2 border-foreground/30 peer-checked:bg-foreground peer-checked:border-foreground flex items-center justify-center">
+                {wordWrap && (
+                  <svg className="w-3 h-3 text-background" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M2 6l3 3 5-5" />
+                  </svg>
+                )}
+              </div>
               Wrap
-            </button>
+            </label>
           )}
         </div>
 
@@ -128,7 +141,15 @@ export default function ProjectPage() {
       </header>
 
       <main className="flex-1 overflow-auto">
-        {tab === 'files' && <FileBrowser projectId={projectId} />}
+        {tab === 'files' && (
+          <FileBrowser
+            projectId={projectId}
+            wordWrap={wordWrap}
+            onShowingFileChange={setShowingFile}
+            initialFilePath={viewFilePath}
+            onInitialFileConsumed={() => setViewFilePath(null)}
+          />
+        )}
         {tab === 'changes' && (
           <ChangesView
             projectId={projectId}
@@ -136,6 +157,7 @@ export default function ProjectPage() {
             onRefresh={refreshStatus}
             wordWrap={wordWrap}
             onShowingDiffChange={setShowingDiff}
+            onGoToFile={goToFile}
           />
         )}
         {tab === 'actions' && (
@@ -146,13 +168,36 @@ export default function ProjectPage() {
   );
 }
 
-function FileBrowser({ projectId }: { projectId: string }) {
+function FileBrowser({
+  projectId,
+  wordWrap,
+  onShowingFileChange,
+  initialFilePath,
+  onInitialFileConsumed,
+}: {
+  projectId: string;
+  wordWrap: boolean;
+  onShowingFileChange: (showing: boolean) => void;
+  initialFilePath: string | null;
+  onInitialFileConsumed: () => void;
+}) {
   const [path, setPath] = useState('');
   const [entries, setEntries] = useState<
     { name: string; path: string; isDirectory: boolean }[]
   >([]);
   const [loading, setLoading] = useState(true);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialFilePath) {
+      setSelectedFile(initialFilePath);
+      onInitialFileConsumed();
+    }
+  }, [initialFilePath, onInitialFileConsumed]);
+
+  useEffect(() => {
+    onShowingFileChange(selectedFile !== null);
+  }, [selectedFile, onShowingFileChange]);
 
   useEffect(() => {
     async function load() {
@@ -185,6 +230,7 @@ function FileBrowser({ projectId }: { projectId: string }) {
       <FileViewer
         projectId={projectId}
         filePath={selectedFile}
+        wordWrap={wordWrap}
         onClose={() => setSelectedFile(null)}
       />
     );
@@ -257,10 +303,12 @@ function FileBrowser({ projectId }: { projectId: string }) {
 function FileViewer({
   projectId,
   filePath,
+  wordWrap,
   onClose,
 }: {
   projectId: string;
   filePath: string;
+  wordWrap: boolean;
   onClose: () => void;
 }) {
   const [content, setContent] = useState<{
@@ -325,7 +373,9 @@ function FileViewer({
           <div className="p-4 text-center text-foreground/50">Loading...</div>
         ) : content ? (
           <div
-            className="text-xs font-mono [&_pre]:!bg-transparent [&_pre]:p-4 [&_pre]:overflow-x-auto [&_code]:!bg-transparent"
+            className={`text-xs font-mono [&_pre]:!bg-transparent [&_pre]:p-4 [&_code]:!bg-transparent ${
+              wordWrap ? '[&_pre]:whitespace-pre-wrap' : '[&_pre]:overflow-x-auto'
+            }`}
             dangerouslySetInnerHTML={{ __html: content.highlighted }}
           />
         ) : (
@@ -344,12 +394,14 @@ function ChangesView({
   onRefresh,
   wordWrap,
   onShowingDiffChange,
+  onGoToFile,
 }: {
   projectId: string;
   status: GitStatus | null;
   onRefresh: () => void;
   wordWrap: boolean;
   onShowingDiffChange: (showing: boolean) => void;
+  onGoToFile: (filePath: string) => void;
 }) {
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [diff, setDiff] = useState<string>('');
@@ -411,6 +463,12 @@ function ChangesView({
           </button>
           <span className="text-sm truncate flex-1 mx-2">{selectedFile}</span>
           <div className="flex gap-2">
+            <button
+              onClick={() => onGoToFile(selectedFile)}
+              className="px-3 py-1 text-sm bg-blue-600 text-white rounded active:opacity-80"
+            >
+              View
+            </button>
             {isStaged ? (
               <button
                 onClick={() => handleAction('unstage', selectedFile)}
