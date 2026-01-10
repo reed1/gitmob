@@ -621,10 +621,7 @@ function ChangesView({
           {status.untracked.map((file) => (
             <button
               key={file}
-              onClick={() => {
-                setSelectedFile(file);
-                setIsStaged(false);
-              }}
+              onClick={() => onGoToFile(file)}
               className="w-full px-4 py-3 text-left flex items-center gap-2 active:bg-foreground/5"
             >
               <span className="text-xs font-mono w-5 text-foreground/40">
