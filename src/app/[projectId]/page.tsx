@@ -504,7 +504,11 @@ function ChangesView({
             ) : (
               <>
                 <button
-                  onClick={() => handleAction('discard', selectedFile)}
+                  onClick={() => {
+                    if (window.confirm(`Discard changes to ${selectedFile}? This cannot be undone.`)) {
+                      handleAction('discard', selectedFile);
+                    }
+                  }}
                   disabled={actionLoading}
                   className="px-3 py-1 text-sm bg-red-600 text-white rounded active:opacity-80 disabled:opacity-50"
                 >
