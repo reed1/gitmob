@@ -1,65 +1,121 @@
-import Image from "next/image";
+"use client";
+
+import Link from "next/link";
+import { useState, useEffect } from "react";
+
+interface Project {
+  id: string;
+  path: string;
+  tags?: string[];
+  pinned?: boolean;
+}
+
+function isArchived(project: Project): boolean {
+  return project.tags?.includes("archived") ?? false;
+}
 
 export default function Home() {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [showArchived, setShowArchived] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/projects")
+      .then((res) => res.json())
+      .then((data) => {
+        setProjects(data);
+        setLoading(false);
+      });
+  }, []);
+
+  const filtered = showArchived
+    ? projects
+    : projects.filter((p) => !isArchived(p));
+
+  const pinned = filtered.filter((p) => p.pinned);
+  const others = filtered.filter((p) => !p.pinned);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-foreground/50">Loading...</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-10 border-b border-foreground/10 bg-background/95 backdrop-blur px-4 py-3">
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-semibold">GitMob</h1>
+          <label className="flex items-center gap-2 text-sm text-foreground/60">
+            <input
+              type="checkbox"
+              checked={showArchived}
+              onChange={(e) => setShowArchived(e.target.checked)}
+              className="w-4 h-4 rounded border-foreground/20 bg-foreground/5 accent-foreground"
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            Archived
+          </label>
         </div>
+      </header>
+
+      <main className="p-4 space-y-6">
+        {pinned.length > 0 && (
+          <section>
+            <h2 className="text-sm font-medium text-foreground/60 mb-2">
+              Pinned
+            </h2>
+            <div className="space-y-2">
+              {pinned.map((project) => (
+                <ProjectCard key={project.id} project={project} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        <section>
+          <h2 className="text-sm font-medium text-foreground/60 mb-2">
+            All Projects
+          </h2>
+          <div className="space-y-2">
+            {others.map((project) => (
+              <ProjectCard key={project.id} project={project} />
+            ))}
+          </div>
+        </section>
       </main>
     </div>
+  );
+}
+
+function ProjectCard({ project }: { project: Project }) {
+  return (
+    <Link
+      href={`/${project.id}`}
+      className="block p-4 rounded-lg border border-foreground/10 bg-foreground/5 active:bg-foreground/10 transition-colors"
+    >
+      <div className="flex items-center gap-2">
+        <span className="font-medium">{project.id}</span>
+        {isArchived(project) && (
+          <span className="text-xs px-1.5 py-0.5 rounded bg-foreground/20 text-foreground/60">
+            archived
+          </span>
+        )}
+      </div>
+      <div className="text-sm text-foreground/50 truncate">{project.path}</div>
+      {project.tags && project.tags.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1">
+          {project.tags.map((tag) => (
+            <span
+              key={tag}
+              className="text-xs px-2 py-0.5 rounded-full bg-foreground/10"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
+    </Link>
   );
 }

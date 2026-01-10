@@ -1,0 +1,520 @@
+"use client";
+
+import { useParams } from "next/navigation";
+import { useState, useEffect } from "react";
+import Link from "next/link";
+
+interface Project {
+  id: string;
+  path: string;
+  tags?: string[];
+}
+
+interface GitStatus {
+  staged: { path: string; status: string }[];
+  unstaged: { path: string; status: string }[];
+  untracked: string[];
+}
+
+type Tab = "files" | "changes" | "actions";
+
+export default function ProjectPage() {
+  const { projectId } = useParams<{ projectId: string }>();
+  const [project, setProject] = useState<Project | null>(null);
+  const [tab, setTab] = useState<Tab>("changes");
+  const [branch, setBranch] = useState<string>("");
+  const [status, setStatus] = useState<GitStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      const [projRes, branchRes, statusRes] = await Promise.all([
+        fetch(`/api/projects/${projectId}`),
+        fetch(`/api/projects/${projectId}/git?action=branch`),
+        fetch(`/api/projects/${projectId}/git?action=status`),
+      ]);
+
+      setProject(await projRes.json());
+      setBranch((await branchRes.json()).branch);
+      setStatus(await statusRes.json());
+      setLoading(false);
+    }
+    load();
+  }, [projectId]);
+
+  const refreshStatus = async () => {
+    const res = await fetch(`/api/projects/${projectId}/git?action=status`);
+    setStatus(await res.json());
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-foreground/50">Loading...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      <header className="sticky top-0 z-10 border-b border-foreground/10 bg-background/95 backdrop-blur">
+        <div className="px-4 py-3 flex items-center gap-3">
+          <Link
+            href="/"
+            className="text-foreground/50 hover:text-foreground transition-colors"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+          </Link>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-lg font-semibold truncate">{project?.id}</h1>
+            <div className="text-sm text-foreground/50 flex items-center gap-2">
+              <span className="px-1.5 py-0.5 bg-foreground/10 rounded text-xs">
+                {branch}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <nav className="flex border-t border-foreground/10">
+          {(["files", "changes", "actions"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`flex-1 py-2.5 text-sm font-medium transition-colors ${tab === t
+                  ? "text-foreground border-b-2 border-foreground"
+                  : "text-foreground/50"
+                }`}
+            >
+              {t.charAt(0).toUpperCase() + t.slice(1)}
+              {t === "changes" && status && (
+                <span className="ml-1 text-xs">
+                  ({status.staged.length + status.unstaged.length + status.untracked.length})
+                </span>
+              )}
+            </button>
+          ))}
+        </nav>
+      </header>
+
+      <main className="flex-1 overflow-auto">
+        {tab === "files" && <FileBrowser projectId={projectId} />}
+        {tab === "changes" && (
+          <ChangesView
+            projectId={projectId}
+            status={status}
+            onRefresh={refreshStatus}
+          />
+        )}
+        {tab === "actions" && (
+          <ActionsView projectId={projectId} onRefresh={refreshStatus} />
+        )}
+      </main>
+    </div>
+  );
+}
+
+function FileBrowser({ projectId }: { projectId: string }) {
+  const [path, setPath] = useState("");
+  const [entries, setEntries] = useState<
+    { name: string; path: string; isDirectory: boolean }[]
+  >([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      const res = await fetch(
+        `/api/projects/${projectId}/files?path=${encodeURIComponent(path)}`
+      );
+      setEntries(await res.json());
+      setLoading(false);
+    }
+    load();
+  }, [projectId, path]);
+
+  const navigateTo = (entry: { path: string; isDirectory: boolean }) => {
+    if (entry.isDirectory) {
+      setPath(entry.path);
+    } else {
+      window.location.href = `/${projectId}/file/${encodeURIComponent(entry.path)}`;
+    }
+  };
+
+  const goUp = () => {
+    const parts = path.split("/").filter(Boolean);
+    parts.pop();
+    setPath(parts.join("/"));
+  };
+
+  return (
+    <div className="divide-y divide-foreground/10">
+      {path && (
+        <button
+          onClick={goUp}
+          className="w-full px-4 py-3 text-left flex items-center gap-3 active:bg-foreground/5"
+        >
+          <svg
+            className="w-5 h-5 text-foreground/50"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M11 17l-5-5m0 0l5-5m-5 5h12"
+            />
+          </svg>
+          <span className="text-foreground/70">..</span>
+        </button>
+      )}
+
+      {loading ? (
+        <div className="p-4 text-center text-foreground/50">Loading...</div>
+      ) : (
+        entries.map((entry) => (
+          <button
+            key={entry.path}
+            onClick={() => navigateTo(entry)}
+            className="w-full px-4 py-3 text-left flex items-center gap-3 active:bg-foreground/5"
+          >
+            {entry.isDirectory ? (
+              <svg
+                className="w-5 h-5 text-blue-400"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+              </svg>
+            ) : (
+              <svg
+                className="w-5 h-5 text-foreground/40"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+            )}
+            <span className="truncate">{entry.name}</span>
+          </button>
+        ))
+      )}
+    </div>
+  );
+}
+
+function ChangesView({
+  projectId,
+  status,
+  onRefresh,
+}: {
+  projectId: string;
+  status: GitStatus | null;
+  onRefresh: () => void;
+}) {
+  const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [diff, setDiff] = useState<string>("");
+  const [isStaged, setIsStaged] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  useEffect(() => {
+    if (selectedFile) {
+      loadDiff(selectedFile, isStaged);
+    }
+  }, [selectedFile, isStaged, projectId]);
+
+  const loadDiff = async (file: string, staged: boolean) => {
+    const res = await fetch(
+      `/api/projects/${projectId}/git?action=diff&file=${encodeURIComponent(file)}&staged=${staged}`
+    );
+    const data = await res.json();
+    setDiff(data.diff);
+  };
+
+  const handleAction = async (action: string, file: string) => {
+    setActionLoading(true);
+    await fetch(`/api/projects/${projectId}/git`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, file }),
+    });
+    setSelectedFile(null);
+    setDiff("");
+    onRefresh();
+    setActionLoading(false);
+  };
+
+  if (selectedFile) {
+    return (
+      <div className="flex flex-col h-full">
+        <div className="sticky top-0 bg-background border-b border-foreground/10 px-4 py-2 flex items-center justify-between">
+          <button
+            onClick={() => setSelectedFile(null)}
+            className="text-foreground/50 hover:text-foreground"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+          </button>
+          <span className="text-sm truncate flex-1 mx-2">{selectedFile}</span>
+          <div className="flex gap-2">
+            {isStaged ? (
+              <button
+                onClick={() => handleAction("unstage", selectedFile)}
+                disabled={actionLoading}
+                className="px-3 py-1 text-sm bg-yellow-600 text-white rounded active:opacity-80 disabled:opacity-50"
+              >
+                Unstage
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={() => handleAction("discard", selectedFile)}
+                  disabled={actionLoading}
+                  className="px-3 py-1 text-sm bg-red-600 text-white rounded active:opacity-80 disabled:opacity-50"
+                >
+                  Discard
+                </button>
+                <button
+                  onClick={() => handleAction("stage", selectedFile)}
+                  disabled={actionLoading}
+                  className="px-3 py-1 text-sm bg-green-600 text-white rounded active:opacity-80 disabled:opacity-50"
+                >
+                  Stage
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+        <pre className="flex-1 overflow-auto p-4 text-xs font-mono whitespace-pre-wrap">
+          {diff.split("\n").map((line, i) => {
+            let className = "text-foreground/70";
+            if (line.startsWith("+") && !line.startsWith("+++")) {
+              className = "text-green-400 bg-green-400/10";
+            } else if (line.startsWith("-") && !line.startsWith("---")) {
+              className = "text-red-400 bg-red-400/10";
+            } else if (line.startsWith("@@")) {
+              className = "text-blue-400";
+            }
+            return (
+              <div key={i} className={className}>
+                {line}
+              </div>
+            );
+          })}
+        </pre>
+      </div>
+    );
+  }
+
+  if (!status) {
+    return <div className="p-4 text-foreground/50">Loading...</div>;
+  }
+
+  const hasChanges =
+    status.staged.length + status.unstaged.length + status.untracked.length > 0;
+
+  if (!hasChanges) {
+    return (
+      <div className="p-8 text-center text-foreground/50">
+        <svg
+          className="w-12 h-12 mx-auto mb-4 text-foreground/20"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={1.5}
+            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+        <p>Working tree clean</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="divide-y divide-foreground/10">
+      {status.staged.length > 0 && (
+        <section>
+          <h3 className="px-4 py-2 text-sm font-medium text-green-400 bg-green-400/10">
+            Staged ({status.staged.length})
+          </h3>
+          {status.staged.map((file) => (
+            <button
+              key={file.path}
+              onClick={() => {
+                setSelectedFile(file.path);
+                setIsStaged(true);
+              }}
+              className="w-full px-4 py-3 text-left flex items-center gap-2 active:bg-foreground/5"
+            >
+              <span className="text-xs font-mono w-5 text-green-400">
+                {file.status}
+              </span>
+              <span className="truncate text-sm">{file.path}</span>
+            </button>
+          ))}
+        </section>
+      )}
+
+      {status.unstaged.length > 0 && (
+        <section>
+          <h3 className="px-4 py-2 text-sm font-medium text-yellow-400 bg-yellow-400/10">
+            Modified ({status.unstaged.length})
+          </h3>
+          {status.unstaged.map((file) => (
+            <button
+              key={file.path}
+              onClick={() => {
+                setSelectedFile(file.path);
+                setIsStaged(false);
+              }}
+              className="w-full px-4 py-3 text-left flex items-center gap-2 active:bg-foreground/5"
+            >
+              <span className="text-xs font-mono w-5 text-yellow-400">
+                {file.status}
+              </span>
+              <span className="truncate text-sm">{file.path}</span>
+            </button>
+          ))}
+        </section>
+      )}
+
+      {status.untracked.length > 0 && (
+        <section>
+          <h3 className="px-4 py-2 text-sm font-medium text-foreground/50 bg-foreground/5">
+            Untracked ({status.untracked.length})
+          </h3>
+          {status.untracked.map((file) => (
+            <button
+              key={file}
+              onClick={() => {
+                setSelectedFile(file);
+                setIsStaged(false);
+              }}
+              className="w-full px-4 py-3 text-left flex items-center gap-2 active:bg-foreground/5"
+            >
+              <span className="text-xs font-mono w-5 text-foreground/40">?</span>
+              <span className="truncate text-sm">{file}</span>
+            </button>
+          ))}
+        </section>
+      )}
+    </div>
+  );
+}
+
+function ActionsView({
+  projectId,
+  onRefresh,
+}: {
+  projectId: string;
+  onRefresh: () => void;
+}) {
+  const [commitMessage, setCommitMessage] = useState("");
+  const [loading, setLoading] = useState<string | null>(null);
+  const [result, setResult] = useState<string | null>(null);
+
+  const handleAction = async (action: string, body?: object) => {
+    setLoading(action);
+    setResult(null);
+    const res = await fetch(`/api/projects/${projectId}/git`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, ...body }),
+    });
+    const data = await res.json();
+    setResult(data.result || (data.success ? "Success" : "Failed"));
+    setLoading(null);
+    if (action === "commit") {
+      setCommitMessage("");
+    }
+    onRefresh();
+  };
+
+  return (
+    <div className="p-4 space-y-6">
+      <section>
+        <h3 className="text-sm font-medium text-foreground/60 mb-3">Commit</h3>
+        <textarea
+          value={commitMessage}
+          onChange={(e) => setCommitMessage(e.target.value)}
+          placeholder="Commit message..."
+          className="w-full p-3 bg-foreground/5 border border-foreground/10 rounded-lg text-sm resize-none h-24"
+        />
+        <button
+          onClick={() => handleAction("commit", { message: commitMessage })}
+          disabled={loading === "commit" || !commitMessage.trim()}
+          className="mt-2 w-full py-3 bg-foreground text-background font-medium rounded-lg active:opacity-80 disabled:opacity-50"
+        >
+          {loading === "commit" ? "Committing..." : "Commit"}
+        </button>
+      </section>
+
+      <section>
+        <h3 className="text-sm font-medium text-foreground/60 mb-3">
+          Sync
+        </h3>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => handleAction("pull")}
+            disabled={loading === "pull"}
+            className="py-3 bg-blue-600 text-white font-medium rounded-lg active:opacity-80 disabled:opacity-50"
+          >
+            {loading === "pull" ? "Pulling..." : "Pull"}
+          </button>
+          <button
+            onClick={() => handleAction("push")}
+            disabled={loading === "push"}
+            className="py-3 bg-green-600 text-white font-medium rounded-lg active:opacity-80 disabled:opacity-50"
+          >
+            {loading === "push" ? "Pushing..." : "Push"}
+          </button>
+        </div>
+      </section>
+
+      {result && (
+        <section>
+          <h3 className="text-sm font-medium text-foreground/60 mb-2">
+            Result
+          </h3>
+          <pre className="p-3 bg-foreground/5 border border-foreground/10 rounded-lg text-xs font-mono whitespace-pre-wrap overflow-auto max-h-48">
+            {result}
+          </pre>
+        </section>
+      )}
+    </div>
+  );
+}
