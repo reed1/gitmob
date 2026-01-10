@@ -690,10 +690,29 @@ function ActionsView({
     onRefresh();
   };
 
+  const generateCommitMessage = async () => {
+    setLoading('generate');
+    const res = await fetch(`/api/projects/${projectId}/git?action=diff-summary`);
+    const data = await res.json();
+    if (data.summary) {
+      setCommitMessage(data.summary);
+    }
+    setLoading(null);
+  };
+
   return (
     <div className="p-4 space-y-6">
       <section>
-        <h3 className="text-sm font-medium text-foreground/60 mb-3">Commit</h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-medium text-foreground/60">Commit</h3>
+          <button
+            onClick={generateCommitMessage}
+            disabled={loading === 'generate' || commitMessage.trim() !== ''}
+            className="px-2 py-1 text-xs bg-foreground/10 rounded active:opacity-80 disabled:opacity-30"
+          >
+            {loading === 'generate' ? 'Generating...' : 'Generate'}
+          </button>
+        </div>
         <textarea
           value={commitMessage}
           onChange={(e) => setCommitMessage(e.target.value)}

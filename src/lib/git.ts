@@ -1,4 +1,5 @@
 import simpleGit, { SimpleGit, StatusResult } from 'simple-git';
+import { execSync } from 'child_process';
 
 export interface GitStatus {
   staged: FileChange[];
@@ -186,4 +187,12 @@ export async function hasChanges(cwd: string): Promise<boolean> {
     status.not_added.length > 0 ||
     status.files.length > 0
   );
+}
+
+export function getDiffSummary(cwd: string): string {
+  const output = execSync('gg diff-summary --cached', {
+    cwd,
+    encoding: 'utf-8',
+  });
+  return output.trim();
 }

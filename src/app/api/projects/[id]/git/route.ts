@@ -6,6 +6,7 @@ import {
   getFileDiff,
   getBranch,
   getLog,
+  getDiffSummary,
   stageFile,
   unstageFile,
   discardChanges,
@@ -45,6 +46,8 @@ export async function GET(
       const count = parseInt(searchParams.get('count') || '10', 10);
       return NextResponse.json({ log: await getLog(project.path, count) });
     }
+    case 'diff-summary':
+      return NextResponse.json({ summary: getDiffSummary(project.path) });
     default:
       return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
   }
