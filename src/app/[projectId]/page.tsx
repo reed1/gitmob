@@ -136,6 +136,7 @@ function FileBrowser({ projectId }: { projectId: string }) {
     { name: string; path: string; isDirectory: boolean }[]
   >([]);
   const [loading, setLoading] = useState(true);
+  const [selectedFile, setSelectedFile] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -153,7 +154,7 @@ function FileBrowser({ projectId }: { projectId: string }) {
     if (entry.isDirectory) {
       setPath(entry.path);
     } else {
-      window.location.href = `/${projectId}/file/${encodeURIComponent(entry.path)}`;
+      setSelectedFile(entry.path);
     }
   };
 
@@ -162,6 +163,16 @@ function FileBrowser({ projectId }: { projectId: string }) {
     parts.pop();
     setPath(parts.join('/'));
   };
+
+  if (selectedFile) {
+    return (
+      <FileViewer
+        projectId={projectId}
+        filePath={selectedFile}
+        onClose={() => setSelectedFile(null)}
+      />
+    );
+  }
 
   return (
     <div className="divide-y divide-foreground/10">
@@ -223,6 +234,90 @@ function FileBrowser({ projectId }: { projectId: string }) {
           </button>
         ))
       )}
+    </div>
+  );
+}
+
+function FileViewer({
+  projectId,
+  filePath,
+  onClose,
+}: {
+  projectId: string;
+  filePath: string;
+  onClose: () => void;
+}) {
+  const [content, setContent] = useState<{
+    highlighted: string;
+    language: string;
+    lineCount: number;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fileName = filePath.split('/').pop() || filePath;
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      const res = await fetch(
+        `/api/projects/${projectId}/files/content?path=${encodeURIComponent(filePath)}`
+      );
+      if (res.ok) {
+        setContent(await res.json());
+      }
+      setLoading(false);
+    }
+    load();
+  }, [projectId, filePath]);
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="sticky top-0 bg-background border-b border-foreground/10 px-4 py-3 z-10">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onClose}
+            className="text-foreground/50 hover:text-foreground transition-colors"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+          </button>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-base font-medium truncate">{fileName}</h2>
+            {content && (
+              <div className="text-xs text-foreground/50">
+                {content.language} · {content.lineCount} lines
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="mt-1 text-xs text-foreground/40 truncate">{filePath}</div>
+      </div>
+
+      <div className="flex-1 overflow-auto">
+        {loading ? (
+          <div className="p-4 text-center text-foreground/50">Loading...</div>
+        ) : content ? (
+          <div
+            className="text-xs font-mono [&_pre]:!bg-transparent [&_pre]:p-4 [&_pre]:overflow-x-auto [&_code]:!bg-transparent"
+            dangerouslySetInnerHTML={{ __html: content.highlighted }}
+          />
+        ) : (
+          <div className="p-4 text-center text-foreground/50">
+            Failed to load file
+          </div>
+        )}
+      </div>
     </div>
   );
 }
