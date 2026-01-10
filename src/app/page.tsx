@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { useState, useEffect } from "react";
+import Link from 'next/link';
+import { useState, useEffect } from 'react';
 
 interface Project {
   id: string;
@@ -11,7 +11,7 @@ interface Project {
 }
 
 function isArchived(project: Project): boolean {
-  return project.tags?.includes("archived") ?? false;
+  return project.tags?.includes('archived') ?? false;
 }
 
 export default function Home() {
@@ -20,7 +20,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/projects")
+    fetch('/api/projects')
       .then((res) => res.json())
       .then((data) => {
         setProjects(data);

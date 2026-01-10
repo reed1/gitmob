@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useParams } from "next/navigation";
-import { useState, useEffect } from "react";
-import Link from "next/link";
+import { useParams } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
 
 interface Project {
   id: string;
@@ -16,13 +16,13 @@ interface GitStatus {
   untracked: string[];
 }
 
-type Tab = "files" | "changes" | "actions";
+type Tab = 'files' | 'changes' | 'actions';
 
 export default function ProjectPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const [project, setProject] = useState<Project | null>(null);
-  const [tab, setTab] = useState<Tab>("changes");
-  const [branch, setBranch] = useState<string>("");
+  const [tab, setTab] = useState<Tab>('changes');
+  const [branch, setBranch] = useState<string>('');
   const [status, setStatus] = useState<GitStatus | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -88,19 +88,24 @@ export default function ProjectPage() {
         </div>
 
         <nav className="flex border-t border-foreground/10">
-          {(["files", "changes", "actions"] as const).map((t) => (
+          {(['files', 'changes', 'actions'] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`flex-1 py-2.5 text-sm font-medium transition-colors ${tab === t
-                  ? "text-foreground border-b-2 border-foreground"
-                  : "text-foreground/50"
-                }`}
+              className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+                tab === t
+                  ? 'text-foreground border-b-2 border-foreground'
+                  : 'text-foreground/50'
+              }`}
             >
               {t.charAt(0).toUpperCase() + t.slice(1)}
-              {t === "changes" && status && (
+              {t === 'changes' && status && (
                 <span className="ml-1 text-xs">
-                  ({status.staged.length + status.unstaged.length + status.untracked.length})
+                  (
+                  {status.staged.length +
+                    status.unstaged.length +
+                    status.untracked.length}
+                  )
                 </span>
               )}
             </button>
@@ -109,15 +114,15 @@ export default function ProjectPage() {
       </header>
 
       <main className="flex-1 overflow-auto">
-        {tab === "files" && <FileBrowser projectId={projectId} />}
-        {tab === "changes" && (
+        {tab === 'files' && <FileBrowser projectId={projectId} />}
+        {tab === 'changes' && (
           <ChangesView
             projectId={projectId}
             status={status}
             onRefresh={refreshStatus}
           />
         )}
-        {tab === "actions" && (
+        {tab === 'actions' && (
           <ActionsView projectId={projectId} onRefresh={refreshStatus} />
         )}
       </main>
@@ -126,7 +131,7 @@ export default function ProjectPage() {
 }
 
 function FileBrowser({ projectId }: { projectId: string }) {
-  const [path, setPath] = useState("");
+  const [path, setPath] = useState('');
   const [entries, setEntries] = useState<
     { name: string; path: string; isDirectory: boolean }[]
   >([]);
@@ -153,9 +158,9 @@ function FileBrowser({ projectId }: { projectId: string }) {
   };
 
   const goUp = () => {
-    const parts = path.split("/").filter(Boolean);
+    const parts = path.split('/').filter(Boolean);
     parts.pop();
-    setPath(parts.join("/"));
+    setPath(parts.join('/'));
   };
 
   return (
@@ -232,7 +237,7 @@ function ChangesView({
   onRefresh: () => void;
 }) {
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
-  const [diff, setDiff] = useState<string>("");
+  const [diff, setDiff] = useState<string>('');
   const [isStaged, setIsStaged] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -253,12 +258,12 @@ function ChangesView({
   const handleAction = async (action: string, file: string) => {
     setActionLoading(true);
     await fetch(`/api/projects/${projectId}/git`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action, file }),
     });
     setSelectedFile(null);
-    setDiff("");
+    setDiff('');
     onRefresh();
     setActionLoading(false);
   };
@@ -289,7 +294,7 @@ function ChangesView({
           <div className="flex gap-2">
             {isStaged ? (
               <button
-                onClick={() => handleAction("unstage", selectedFile)}
+                onClick={() => handleAction('unstage', selectedFile)}
                 disabled={actionLoading}
                 className="px-3 py-1 text-sm bg-yellow-600 text-white rounded active:opacity-80 disabled:opacity-50"
               >
@@ -298,14 +303,14 @@ function ChangesView({
             ) : (
               <>
                 <button
-                  onClick={() => handleAction("discard", selectedFile)}
+                  onClick={() => handleAction('discard', selectedFile)}
                   disabled={actionLoading}
                   className="px-3 py-1 text-sm bg-red-600 text-white rounded active:opacity-80 disabled:opacity-50"
                 >
                   Discard
                 </button>
                 <button
-                  onClick={() => handleAction("stage", selectedFile)}
+                  onClick={() => handleAction('stage', selectedFile)}
                   disabled={actionLoading}
                   className="px-3 py-1 text-sm bg-green-600 text-white rounded active:opacity-80 disabled:opacity-50"
                 >
@@ -316,14 +321,14 @@ function ChangesView({
           </div>
         </div>
         <pre className="flex-1 overflow-auto p-4 text-xs font-mono whitespace-pre-wrap">
-          {diff.split("\n").map((line, i) => {
-            let className = "text-foreground/70";
-            if (line.startsWith("+") && !line.startsWith("+++")) {
-              className = "text-green-400 bg-green-400/10";
-            } else if (line.startsWith("-") && !line.startsWith("---")) {
-              className = "text-red-400 bg-red-400/10";
-            } else if (line.startsWith("@@")) {
-              className = "text-blue-400";
+          {diff.split('\n').map((line, i) => {
+            let className = 'text-foreground/70';
+            if (line.startsWith('+') && !line.startsWith('+++')) {
+              className = 'text-green-400 bg-green-400/10';
+            } else if (line.startsWith('-') && !line.startsWith('---')) {
+              className = 'text-red-400 bg-red-400/10';
+            } else if (line.startsWith('@@')) {
+              className = 'text-blue-400';
             }
             return (
               <div key={i} className={className}>
@@ -426,7 +431,9 @@ function ChangesView({
               }}
               className="w-full px-4 py-3 text-left flex items-center gap-2 active:bg-foreground/5"
             >
-              <span className="text-xs font-mono w-5 text-foreground/40">?</span>
+              <span className="text-xs font-mono w-5 text-foreground/40">
+                ?
+              </span>
               <span className="truncate text-sm">{file}</span>
             </button>
           ))}
@@ -443,7 +450,7 @@ function ActionsView({
   projectId: string;
   onRefresh: () => void;
 }) {
-  const [commitMessage, setCommitMessage] = useState("");
+  const [commitMessage, setCommitMessage] = useState('');
   const [loading, setLoading] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
 
@@ -451,15 +458,15 @@ function ActionsView({
     setLoading(action);
     setResult(null);
     const res = await fetch(`/api/projects/${projectId}/git`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action, ...body }),
     });
     const data = await res.json();
-    setResult(data.result || (data.success ? "Success" : "Failed"));
+    setResult(data.result || (data.success ? 'Success' : 'Failed'));
     setLoading(null);
-    if (action === "commit") {
-      setCommitMessage("");
+    if (action === 'commit') {
+      setCommitMessage('');
     }
     onRefresh();
   };
@@ -475,32 +482,30 @@ function ActionsView({
           className="w-full p-3 bg-foreground/5 border border-foreground/10 rounded-lg text-sm resize-none h-24"
         />
         <button
-          onClick={() => handleAction("commit", { message: commitMessage })}
-          disabled={loading === "commit" || !commitMessage.trim()}
+          onClick={() => handleAction('commit', { message: commitMessage })}
+          disabled={loading === 'commit' || !commitMessage.trim()}
           className="mt-2 w-full py-3 bg-foreground text-background font-medium rounded-lg active:opacity-80 disabled:opacity-50"
         >
-          {loading === "commit" ? "Committing..." : "Commit"}
+          {loading === 'commit' ? 'Committing...' : 'Commit'}
         </button>
       </section>
 
       <section>
-        <h3 className="text-sm font-medium text-foreground/60 mb-3">
-          Sync
-        </h3>
+        <h3 className="text-sm font-medium text-foreground/60 mb-3">Sync</h3>
         <div className="grid grid-cols-2 gap-3">
           <button
-            onClick={() => handleAction("pull")}
-            disabled={loading === "pull"}
+            onClick={() => handleAction('pull')}
+            disabled={loading === 'pull'}
             className="py-3 bg-blue-600 text-white font-medium rounded-lg active:opacity-80 disabled:opacity-50"
           >
-            {loading === "pull" ? "Pulling..." : "Pull"}
+            {loading === 'pull' ? 'Pulling...' : 'Pull'}
           </button>
           <button
-            onClick={() => handleAction("push")}
-            disabled={loading === "push"}
+            onClick={() => handleAction('push')}
+            disabled={loading === 'push'}
             className="py-3 bg-green-600 text-white font-medium rounded-lg active:opacity-80 disabled:opacity-50"
           >
-            {loading === "push" ? "Pushing..." : "Push"}
+            {loading === 'push' ? 'Pushing...' : 'Push'}
           </button>
         </div>
       </section>

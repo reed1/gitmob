@@ -1,9 +1,9 @@
-import { notFound } from "next/navigation";
-import Link from "next/link";
-import { getProject } from "@/lib/projects";
-import { readFile, getLanguageFromPath } from "@/lib/files";
-import { join } from "path";
-import { codeToHtml } from "shiki";
+import { notFound } from 'next/navigation';
+import Link from 'next/link';
+import { getProject } from '@/lib/projects';
+import { readFile, getLanguageFromPath } from '@/lib/files';
+import { join } from 'path';
+import { codeToHtml } from 'shiki';
 
 interface PageProps {
   params: Promise<{
@@ -20,7 +20,7 @@ export default async function FilePage({ params }: PageProps) {
     notFound();
   }
 
-  const filePath = path.map(decodeURIComponent).join("/");
+  const filePath = path.map(decodeURIComponent).join('/');
   const fullPath = join(project.path, filePath);
   const language = getLanguageFromPath(fullPath);
 
@@ -31,14 +31,14 @@ export default async function FilePage({ params }: PageProps) {
     content = readFile(fullPath);
     highlightedCode = await codeToHtml(content, {
       lang: language,
-      theme: "github-dark",
+      theme: 'github-dark',
     });
   } catch {
     notFound();
   }
 
-  const fileName = filePath.split("/").pop() || filePath;
-  const lineCount = content.split("\n").length;
+  const fileName = filePath.split('/').pop() || filePath;
+  const lineCount = content.split('\n').length;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -69,7 +69,9 @@ export default async function FilePage({ params }: PageProps) {
             </div>
           </div>
         </div>
-        <div className="mt-2 text-xs text-foreground/40 truncate">{filePath}</div>
+        <div className="mt-2 text-xs text-foreground/40 truncate">
+          {filePath}
+        </div>
       </header>
 
       <main className="flex-1 overflow-auto">
