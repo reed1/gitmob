@@ -450,6 +450,19 @@ function ChangesView({
     setActionLoading(false);
   };
 
+  const handleStageAll = async (files: string[]) => {
+    setActionLoading(true);
+    for (const file of files) {
+      await fetch(`/api/projects/${projectId}/git`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'stage', file }),
+      });
+    }
+    onRefresh();
+    setActionLoading(false);
+  };
+
   if (selectedFile) {
     return (
       <div className="flex flex-col h-full">
@@ -615,9 +628,18 @@ function ChangesView({
 
       {status.untracked.length > 0 && (
         <section>
-          <h3 className="px-4 py-2 text-sm font-medium text-foreground/50 bg-foreground/5">
-            Untracked ({status.untracked.length})
-          </h3>
+          <div className="px-4 py-2 bg-foreground/5 flex items-center justify-between">
+            <h3 className="text-sm font-medium text-foreground/50">
+              Untracked ({status.untracked.length})
+            </h3>
+            <button
+              onClick={() => handleStageAll(status.untracked)}
+              disabled={actionLoading}
+              className="px-2 py-1 text-xs bg-green-600 text-white rounded active:opacity-80 disabled:opacity-50"
+            >
+              Stage All
+            </button>
+          </div>
           {status.untracked.map((file) => (
             <button
               key={file}
