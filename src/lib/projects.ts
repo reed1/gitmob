@@ -11,7 +11,6 @@ export interface Project {
   id: string;
   path: string;
   tags?: string[];
-  pinned?: boolean;
   repo?: string;
 }
 
@@ -30,7 +29,6 @@ export function getProjects(): Project[] {
       id,
       path,
       tags: data.tags,
-      pinned: data.pinned,
       repo: data.repo,
     };
   });

@@ -174,3 +174,16 @@ export async function getLog(cwd: string, count: number = 10): Promise<string> {
     .map((entry) => `${entry.hash.slice(0, 7)} ${entry.message}`)
     .join('\n');
 }
+
+export async function hasChanges(cwd: string): Promise<boolean> {
+  const git = getGit(cwd);
+  const status = await git.status();
+  return (
+    status.staged.length > 0 ||
+    status.modified.length > 0 ||
+    status.deleted.length > 0 ||
+    status.renamed.length > 0 ||
+    status.not_added.length > 0 ||
+    status.files.length > 0
+  );
+}

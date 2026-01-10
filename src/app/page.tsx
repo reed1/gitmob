@@ -7,7 +7,7 @@ interface Project {
   id: string;
   path: string;
   tags?: string[];
-  pinned?: boolean;
+  editing: boolean;
 }
 
 function isArchived(project: Project): boolean {
@@ -38,8 +38,8 @@ export default function Home() {
         p.path.toLowerCase().includes(search.toLowerCase())
     );
 
-  const pinned = filtered.filter((p) => p.pinned);
-  const others = filtered.filter((p) => !p.pinned);
+  const editing = filtered.filter((p) => p.editing);
+  const others = filtered.filter((p) => !p.editing);
 
   if (loading) {
     return (
@@ -125,14 +125,14 @@ export default function Home() {
       </header>
 
       <main className="p-4 space-y-6">
-        {pinned.length > 0 && (
+        {editing.length > 0 && (
           <section>
             <h2 className="text-sm font-medium text-foreground/60 mb-2">
-              Pinned
+              Editing
             </h2>
             <div className="space-y-2">
-              {pinned.map((project) => (
-                <ProjectCard key={project.id} project={project} />
+              {editing.map((project) => (
+                <ProjectCard key={project.id} project={project} isEditing />
               ))}
             </div>
           </section>
@@ -141,7 +141,7 @@ export default function Home() {
         {others.length > 0 && (
           <section>
             <h2 className="text-sm font-medium text-foreground/60 mb-2">
-              {pinned.length > 0 ? 'All Projects' : 'Projects'}
+              {editing.length > 0 ? 'All Projects' : 'Projects'}
             </h2>
             <div className="space-y-2">
               {others.map((project) => (
@@ -169,11 +169,23 @@ function getRelativePath(fullPath: string): string {
   return fullPath.replace(/^\//, '');
 }
 
-function ProjectCard({ project }: { project: Project }) {
+function ProjectCard({
+  project,
+  isEditing,
+}: {
+  project: Project;
+  isEditing?: boolean;
+}) {
   const relativePath = getRelativePath(project.path);
 
   return (
-    <div className="p-4 rounded-lg border border-foreground/10 bg-foreground/5 flex items-center gap-3">
+    <div
+      className={`p-4 rounded-lg border flex items-center gap-3 ${
+        isEditing
+          ? 'border-green-500/50 bg-green-500/10'
+          : 'border-foreground/10 bg-foreground/5'
+      }`}
+    >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
           <span className="font-medium">{project.id}</span>
