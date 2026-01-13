@@ -29,10 +29,24 @@ export default function ProjectPage() {
   const [showingDiff, setShowingDiff] = useState(false);
   const [showingFile, setShowingFile] = useState(false);
   const [viewFilePath, setViewFilePath] = useState<string | null>(null);
+  const [viewFileFromGitUntracked, setViewFileFromGitUntracked] =
+    useState(false);
 
-  const goToFile = (filePath: string) => {
+  const goToFile = (filePath: string, fromGitUntracked = false) => {
     setViewFilePath(filePath);
+    setViewFileFromGitUntracked(fromGitUntracked);
     setTab('files');
+  };
+
+  const handleStageFromPreview = async (filePath: string) => {
+    await fetch(`/api/projects/${projectId}/git`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'stage', file: filePath }),
+    });
+    setViewFileFromGitUntracked(false);
+    setTab('changes');
+    refreshStatus();
   };
 
   useEffect(() => {
@@ -155,6 +169,9 @@ export default function ProjectPage() {
             onShowingFileChange={setShowingFile}
             initialFilePath={viewFilePath}
             onInitialFileConsumed={() => setViewFilePath(null)}
+            fromGitUntracked={viewFileFromGitUntracked}
+            onStageRequest={handleStageFromPreview}
+            onClearGitContext={() => setViewFileFromGitUntracked(false)}
           />
         )}
         {tab === 'changes' && (
@@ -182,12 +199,18 @@ function FileBrowser({
   onShowingFileChange,
   initialFilePath,
   onInitialFileConsumed,
+  fromGitUntracked,
+  onStageRequest,
+  onClearGitContext,
 }: {
   projectId: string;
   wordWrap: boolean;
   onShowingFileChange: (showing: boolean) => void;
   initialFilePath: string | null;
   onInitialFileConsumed: () => void;
+  fromGitUntracked: boolean;
+  onStageRequest: (filePath: string) => void;
+  onClearGitContext: () => void;
 }) {
   const [path, setPath] = useState('');
   const [entries, setEntries] = useState<
@@ -223,6 +246,7 @@ function FileBrowser({
     if (entry.isDirectory) {
       setPath(entry.path);
     } else {
+      onClearGitContext();
       setSelectedFile(entry.path);
     }
   };
@@ -240,6 +264,8 @@ function FileBrowser({
         filePath={selectedFile}
         wordWrap={wordWrap}
         onClose={() => setSelectedFile(null)}
+        showStageButton={fromGitUntracked}
+        onStage={() => onStageRequest(selectedFile)}
       />
     );
   }
@@ -313,11 +339,15 @@ function FileViewer({
   filePath,
   wordWrap,
   onClose,
+  showStageButton,
+  onStage,
 }: {
   projectId: string;
   filePath: string;
   wordWrap: boolean;
   onClose: () => void;
+  showStageButton: boolean;
+  onStage: () => void;
 }) {
   const [content, setContent] = useState<{
     highlighted: string;
@@ -372,6 +402,14 @@ function FileViewer({
               </div>
             )}
           </div>
+          {showStageButton && (
+            <button
+              onClick={onStage}
+              className="px-3 py-1.5 text-sm bg-green-600 text-white rounded active:opacity-80"
+            >
+              Stage
+            </button>
+          )}
         </div>
         <div className="mt-1 text-xs text-foreground/40 truncate">
           {filePath}
@@ -413,7 +451,7 @@ function ChangesView({
   onRefresh: () => void;
   wordWrap: boolean;
   onShowingDiffChange: (showing: boolean) => void;
-  onGoToFile: (filePath: string) => void;
+  onGoToFile: (filePath: string, fromGitUntracked?: boolean) => void;
 }) {
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [diff, setDiff] = useState<string>('');
@@ -447,19 +485,6 @@ function ChangesView({
     });
     setSelectedFile(null);
     setDiff('');
-    onRefresh();
-    setActionLoading(false);
-  };
-
-  const handleStageAll = async (files: string[]) => {
-    setActionLoading(true);
-    for (const file of files) {
-      await fetch(`/api/projects/${projectId}/git`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'stage', file }),
-      });
-    }
     onRefresh();
     setActionLoading(false);
   };
@@ -633,22 +658,15 @@ function ChangesView({
 
       {status.untracked.length > 0 && (
         <section>
-          <div className="px-4 py-2 bg-foreground/5 flex items-center justify-between">
+          <div className="px-4 py-2 bg-foreground/5">
             <h3 className="text-sm font-medium text-foreground/50">
               Untracked ({status.untracked.length})
             </h3>
-            <button
-              onClick={() => handleStageAll(status.untracked)}
-              disabled={actionLoading}
-              className="px-2 py-1 text-xs bg-green-600 text-white rounded active:opacity-80 disabled:opacity-50"
-            >
-              Stage All
-            </button>
           </div>
           {status.untracked.map((file) => (
             <button
               key={file}
-              onClick={() => onGoToFile(file)}
+              onClick={() => onGoToFile(file, true)}
               className="w-full px-4 py-3 text-left flex items-center gap-2 active:bg-foreground/5"
             >
               <span className="text-xs font-mono w-5 text-foreground/40">
