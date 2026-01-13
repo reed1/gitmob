@@ -420,14 +420,18 @@ function FileViewer({
         {loading ? (
           <div className="p-4 text-center text-foreground/50">Loading...</div>
         ) : content ? (
-          <div
-            className={`text-xs font-mono [&_pre]:!bg-transparent [&_pre]:p-4 [&_code]:!bg-transparent ${
-              wordWrap
-                ? '[&_pre]:whitespace-pre-wrap'
-                : '[&_pre]:overflow-x-auto'
-            }`}
-            dangerouslySetInnerHTML={{ __html: content.highlighted }}
-          />
+          content.lineCount === 0 ? (
+            <div className="p-4 text-center text-foreground/30">Empty file</div>
+          ) : (
+            <div
+              className={`text-xs font-mono [&_pre]:!bg-transparent [&_pre]:p-4 [&_code]:!bg-transparent ${
+                wordWrap
+                  ? '[&_pre]:whitespace-pre-wrap'
+                  : '[&_pre]:overflow-x-auto'
+              }`}
+              dangerouslySetInnerHTML={{ __html: content.highlighted }}
+            />
+          )
         ) : (
           <div className="p-4 text-center text-foreground/50">
             Failed to load file
