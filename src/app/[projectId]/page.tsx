@@ -695,6 +695,27 @@ function ActionsView({
   const [commitMessage, setCommitMessage] = useState('');
   const [loading, setLoading] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
+  const [pendingSource, setPendingSource] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function checkPending() {
+      const res = await fetch(`/api/projects/${projectId}/pending-message`);
+      const data = await res.json();
+      if (data.pending) {
+        setCommitMessage(data.pending.message);
+        setPendingSource(data.pending.source);
+      }
+    }
+    checkPending();
+  }, [projectId]);
+
+  const clearPendingMessage = async () => {
+    await fetch(`/api/projects/${projectId}/pending-message`, {
+      method: 'DELETE',
+    });
+    setCommitMessage('');
+    setPendingSource(null);
+  };
 
   const handleAction = async (action: string, body?: object) => {
     setLoading(action);
@@ -709,6 +730,12 @@ function ActionsView({
     setLoading(null);
     if (action === 'commit') {
       setCommitMessage('');
+      if (pendingSource) {
+        await fetch(`/api/projects/${projectId}/pending-message`, {
+          method: 'DELETE',
+        });
+        setPendingSource(null);
+      }
     }
     onRefresh();
   };
@@ -727,14 +754,31 @@ function ActionsView({
     <div className="p-4 space-y-6">
       <section>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-medium text-foreground/60">Commit</h3>
-          <button
-            onClick={generateCommitMessage}
-            disabled={loading === 'generate' || commitMessage.trim() !== ''}
-            className="px-2 py-1 text-xs bg-foreground/10 rounded active:opacity-80 disabled:opacity-30"
-          >
-            {loading === 'generate' ? 'Generating...' : 'Generate'}
-          </button>
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-medium text-foreground/60">Commit</h3>
+            {pendingSource && (
+              <span className="px-2 py-0.5 text-xs bg-blue-500/20 text-blue-400 rounded">
+                from {pendingSource}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {pendingSource && (
+              <button
+                onClick={clearPendingMessage}
+                className="px-2 py-1 text-xs bg-red-500/20 text-red-400 rounded active:opacity-80"
+              >
+                Clear
+              </button>
+            )}
+            <button
+              onClick={generateCommitMessage}
+              disabled={loading === 'generate' || commitMessage.trim() !== ''}
+              className="px-2 py-1 text-xs bg-foreground/10 rounded active:opacity-80 disabled:opacity-30"
+            >
+              {loading === 'generate' ? 'Generating...' : 'Generate'}
+            </button>
+          </div>
         </div>
         <textarea
           value={commitMessage}
