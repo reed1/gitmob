@@ -14,12 +14,39 @@ function isArchived(project: Project): boolean {
   return project.tags?.includes('archived') ?? false;
 }
 
+async function fetchHealthWithTimeout(
+  timeoutMs: number
+): Promise<{ startedAt: number } | null> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch('/api/health', { signal: controller.signal });
+    clearTimeout(timeoutId);
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    clearTimeout(timeoutId);
+    return null;
+  }
+}
+
+async function waitForNewServer(previousStartedAt: number): Promise<void> {
+  while (true) {
+    const health = await fetchHealthWithTimeout(3000);
+    if (health && health.startedAt !== previousStartedAt) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+}
+
 export default function Home() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [showArchived, setShowArchived] = useState(false);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [restarting, setRestarting] = useState(false);
 
   useEffect(() => {
     fetch('/api/projects')
@@ -52,6 +79,11 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
+      {restarting && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center">
+          <div className="text-foreground/70 text-lg">Restarting...</div>
+        </div>
+      )}
       <header className="sticky top-0 z-10 border-b border-foreground/10 bg-background/95 backdrop-blur px-4 py-3 space-y-3">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-semibold">GitMob</h1>
@@ -116,7 +148,13 @@ export default function Home() {
                   <button
                     onClick={async () => {
                       setMenuOpen(false);
+                      const health = await fetchHealthWithTimeout(3000);
+                      if (!health) return;
+                      const previousStartedAt = health.startedAt;
+                      setRestarting(true);
                       await fetch('/api/restart', { method: 'POST' });
+                      await waitForNewServer(previousStartedAt);
+                      window.location.reload();
                     }}
                     className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 flex items-center gap-2"
                   >
