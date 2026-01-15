@@ -96,7 +96,11 @@ export function ChangesView({
               <>
                 <button
                   onClick={() => {
-                    if (window.confirm(`Discard changes to ${selectedFile}? This cannot be undone.`)) {
+                    if (
+                      window.confirm(
+                        `Discard changes to ${selectedFile}? This cannot be undone.`
+                      )
+                    ) {
                       handleAction('discard', selectedFile);
                     }
                   }}

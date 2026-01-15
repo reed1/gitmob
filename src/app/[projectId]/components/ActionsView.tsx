@@ -59,7 +59,9 @@ export function ActionsView({
 
   const generateCommitMessage = async () => {
     setLoading('generate');
-    const res = await fetch(`/api/projects/${projectId}/git?action=diff-summary`);
+    const res = await fetch(
+      `/api/projects/${projectId}/git?action=diff-summary`
+    );
     const data = await res.json();
     if (data.summary) {
       setCommitMessage(data.summary);
