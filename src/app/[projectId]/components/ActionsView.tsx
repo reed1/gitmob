@@ -37,24 +37,33 @@ export function ActionsView({
   const handleAction = async (action: string, body?: object) => {
     setLoading(action);
     setResult(null);
-    const res = await fetch(`/api/projects/${projectId}/git`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, ...body }),
-    });
-    const data = await res.json();
-    setResult(data.result || (data.success ? 'Success' : 'Failed'));
-    setLoading(null);
-    if (action === 'commit') {
-      setCommitMessage('');
-      if (pendingSource) {
-        await fetch(`/api/projects/${projectId}/pending-message`, {
-          method: 'DELETE',
-        });
-        setPendingSource(null);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/git`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, ...body }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setResult(`Error: ${data.error || 'Request failed'}`);
+        return;
       }
+      setResult(data.result || 'Success');
+      if (action === 'commit') {
+        setCommitMessage('');
+        if (pendingSource) {
+          await fetch(`/api/projects/${projectId}/pending-message`, {
+            method: 'DELETE',
+          });
+          setPendingSource(null);
+        }
+      }
+      onRefresh();
+    } catch (err) {
+      setResult(`Error: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setLoading(null);
     }
-    onRefresh();
   };
 
   const generateCommitMessage = async () => {

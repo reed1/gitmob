@@ -67,29 +67,35 @@ export async function POST(
   const body = await request.json();
   const { action } = body;
 
-  switch (action) {
-    case 'stage':
-      await stageFile(project.path, body.file);
-      return NextResponse.json({ success: true });
-    case 'unstage':
-      await unstageFile(project.path, body.file);
-      return NextResponse.json({ success: true });
-    case 'discard':
-      await discardChanges(project.path, body.file);
-      return NextResponse.json({ success: true });
-    case 'commit': {
-      const result = await commit(project.path, body.message);
-      return NextResponse.json({ success: true, result });
+  try {
+    switch (action) {
+      case 'stage':
+        await stageFile(project.path, body.file);
+        return NextResponse.json({ success: true });
+      case 'unstage':
+        await unstageFile(project.path, body.file);
+        return NextResponse.json({ success: true });
+      case 'discard':
+        await discardChanges(project.path, body.file);
+        return NextResponse.json({ success: true });
+      case 'commit': {
+        const result = await commit(project.path, body.message);
+        return NextResponse.json({ success: true, result });
+      }
+      case 'pull': {
+        const result = await pull(project.path);
+        return NextResponse.json({ success: true, result });
+      }
+      case 'push': {
+        const result = await push(project.path);
+        return NextResponse.json({ success: true, result });
+      }
+      default:
+        return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
     }
-    case 'pull': {
-      const result = await pull(project.path);
-      return NextResponse.json({ success: true, result });
-    }
-    case 'push': {
-      const result = await push(project.path);
-      return NextResponse.json({ success: true, result });
-    }
-    default:
-      return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`[git/${action}] ${project.path}: ${message}`);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
