@@ -22,6 +22,9 @@ export default function ProjectPage() {
   const [viewFilePath, setViewFilePath] = useState<string | null>(null);
   const [viewFileFromGitUntracked, setViewFileFromGitUntracked] =
     useState(false);
+  const [commitMessage, setCommitMessage] = useState('');
+  const [pendingSource, setPendingSource] = useState<string | null>(null);
+  const [pendingLoaded, setPendingLoaded] = useState(false);
 
   const goToFile = (filePath: string, fromGitUntracked = false) => {
     setViewFilePath(filePath);
@@ -176,7 +179,16 @@ export default function ProjectPage() {
           />
         )}
         {tab === 'actions' && (
-          <ActionsView projectId={projectId} onRefresh={refreshStatus} />
+          <ActionsView
+            projectId={projectId}
+            onRefresh={refreshStatus}
+            commitMessage={commitMessage}
+            setCommitMessage={setCommitMessage}
+            pendingSource={pendingSource}
+            setPendingSource={setPendingSource}
+            pendingLoaded={pendingLoaded}
+            setPendingLoaded={setPendingLoaded}
+          />
         )}
         {tab === 'cli' && project && <CLIView projectPath={project.path} />}
       </main>

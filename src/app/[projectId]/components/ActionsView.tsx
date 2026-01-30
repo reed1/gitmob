@@ -5,16 +5,27 @@ import { useState, useEffect } from 'react';
 export function ActionsView({
   projectId,
   onRefresh,
+  commitMessage,
+  setCommitMessage,
+  pendingSource,
+  setPendingSource,
+  pendingLoaded,
+  setPendingLoaded,
 }: {
   projectId: string;
   onRefresh: () => void;
+  commitMessage: string;
+  setCommitMessage: (msg: string) => void;
+  pendingSource: string | null;
+  setPendingSource: (source: string | null) => void;
+  pendingLoaded: boolean;
+  setPendingLoaded: (loaded: boolean) => void;
 }) {
-  const [commitMessage, setCommitMessage] = useState('');
   const [loading, setLoading] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
-  const [pendingSource, setPendingSource] = useState<string | null>(null);
 
   useEffect(() => {
+    if (pendingLoaded) return;
     async function checkPending() {
       const res = await fetch(`/api/projects/${projectId}/pending-message`);
       const data = await res.json();
@@ -22,9 +33,10 @@ export function ActionsView({
         setCommitMessage(data.pending.message);
         setPendingSource(data.pending.source);
       }
+      setPendingLoaded(true);
     }
     checkPending();
-  }, [projectId]);
+  }, [projectId, pendingLoaded, setCommitMessage, setPendingSource, setPendingLoaded]);
 
   const clearPendingMessage = async () => {
     await fetch(`/api/projects/${projectId}/pending-message`, {
