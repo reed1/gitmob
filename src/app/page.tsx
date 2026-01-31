@@ -69,8 +69,10 @@ export default function Home() {
         p.path.toLowerCase().includes(search.toLowerCase())
     );
 
-  const editing = filtered.filter((p) => p.editing);
-  const others = filtered.filter((p) => !p.editing);
+  const isActive = (p: Project) =>
+    p.editing || p.hasRunningProcess || p.hasPendingMessage;
+  const active = filtered.filter(isActive);
+  const others = filtered.filter((p) => !isActive(p));
 
   if (loading) {
     return (
@@ -217,14 +219,14 @@ export default function Home() {
       </header>
 
       <main className="p-4 space-y-6">
-        {editing.length > 0 && (
+        {active.length > 0 && (
           <section>
             <h2 className="text-sm font-medium text-foreground/60 mb-2">
-              Editing
+              Active
             </h2>
             <div className="space-y-2">
-              {editing.map((project) => (
-                <ProjectCard key={project.id} project={project} isEditing />
+              {active.map((project) => (
+                <ProjectCard key={project.id} project={project} isActive />
               ))}
             </div>
           </section>
@@ -233,7 +235,7 @@ export default function Home() {
         {others.length > 0 && (
           <section>
             <h2 className="text-sm font-medium text-foreground/60 mb-2">
-              {editing.length > 0 ? 'All Projects' : 'Projects'}
+              {active.length > 0 ? 'All Projects' : 'Projects'}
             </h2>
             <div className="space-y-2">
               {others.map((project) => (
@@ -255,10 +257,10 @@ export default function Home() {
 
 function ProjectCard({
   project,
-  isEditing,
+  isActive,
 }: {
   project: Project;
-  isEditing?: boolean;
+  isActive?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [urlModalOpen, setUrlModalOpen] = useState(false);
@@ -270,7 +272,7 @@ function ProjectCard({
   return (
     <div
       className={`p-4 rounded-lg border flex items-center gap-3 ${
-        isEditing
+        isActive
           ? 'border-green-500/50 bg-green-500/10'
           : 'border-foreground/10 bg-foreground/5'
       }`}
