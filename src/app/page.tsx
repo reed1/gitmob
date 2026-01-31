@@ -250,14 +250,6 @@ export default function Home() {
   );
 }
 
-function getRelativePath(fullPath: string): string {
-  const match = fullPath.match(/^\/home\/[^/]+\/(.*)$/);
-  if (match) {
-    return match[1];
-  }
-  return fullPath.replace(/^\//, '');
-}
-
 function ProjectCard({
   project,
   isEditing,
@@ -265,7 +257,7 @@ function ProjectCard({
   project: Project;
   isEditing?: boolean;
 }) {
-  const relativePath = getRelativePath(project.path);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <div
@@ -275,8 +267,8 @@ function ProjectCard({
           : 'border-foreground/10 bg-foreground/5'
       }`}
     >
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
+      <Link href={`/${project.id}`} className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
           <span className="font-medium">{project.id}</span>
           {isArchived(project) && (
             <span className="text-xs px-1.5 py-0.5 rounded bg-foreground/20 text-foreground/60">
@@ -284,13 +276,6 @@ function ProjectCard({
             </span>
           )}
         </div>
-        <input
-          type="text"
-          readOnly
-          value={`cd ${relativePath}`}
-          className="w-full text-sm text-foreground/50 bg-transparent border-none outline-none p-0"
-          onFocus={(e) => e.target.select()}
-        />
         {project.tags && project.tags.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1">
             {project.tags.map((tag) => (
@@ -303,25 +288,44 @@ function ProjectCard({
             ))}
           </div>
         )}
-      </div>
-      <Link
-        href={`/${project.id}`}
-        className="p-2 rounded-lg bg-foreground/10 active:bg-foreground/20 transition-colors"
-      >
-        <svg
-          className="w-5 h-5 text-foreground/60"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 5l7 7-7 7"
-          />
-        </svg>
       </Link>
+      <div className="relative">
+        <button
+          onClick={() => setMenuOpen(!menuOpen)}
+          className="p-2 rounded-lg bg-foreground/10 active:bg-foreground/20 transition-colors"
+        >
+          <svg
+            className="w-5 h-5 text-foreground/60"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 5v.01M12 12v.01M12 19v.01"
+            />
+          </svg>
+        </button>
+        {menuOpen && (
+          <>
+            <div
+              className="fixed inset-0 z-10"
+              onClick={() => setMenuOpen(false)}
+            />
+            <div className="absolute right-0 top-full mt-1 z-20 bg-background border border-foreground/20 rounded-lg shadow-lg py-1 min-w-[120px]">
+              <Link
+                href={`/${project.id}`}
+                className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
+                onClick={() => setMenuOpen(false)}
+              >
+                Open
+              </Link>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
