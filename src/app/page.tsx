@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 
+const DOOIT_DOMAIN = process.env.NEXT_PUBLIC_DOOIT_DOMAIN;
+
 interface Project {
   id: string;
   path: string;
@@ -367,6 +369,25 @@ function ProjectCard({
                 }`}
               >
                 Stop proc
+              </button>
+              <button
+                onClick={() => {
+                  setMenuOpen(false);
+                  if (DOOIT_DOMAIN) {
+                    window.open(
+                      `${DOOIT_DOMAIN}/frontend/dooit/${project.id}`,
+                      '_blank'
+                    );
+                  }
+                }}
+                disabled={!DOOIT_DOMAIN}
+                className={`block w-full px-4 py-2 text-sm text-left ${
+                  DOOIT_DOMAIN
+                    ? 'hover:bg-foreground/10'
+                    : 'text-foreground/30 cursor-not-allowed'
+                }`}
+              >
+                Dooit
               </button>
             </div>
           </>
