@@ -23,6 +23,8 @@ export function ActionsView({
 }) {
   const [loading, setLoading] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
+  const [shortenVariants, setShortenVariants] = useState<string[]>([]);
+  const [showShortenModal, setShowShortenModal] = useState(false);
 
   useEffect(() => {
     if (pendingLoaded) return;
@@ -90,6 +92,19 @@ export function ActionsView({
     setLoading(null);
   };
 
+  const shortenCommitMessage = async () => {
+    setLoading('shorten');
+    const res = await fetch(
+      `/api/projects/${projectId}/git?action=shorten-message&message=${encodeURIComponent(commitMessage)}`
+    );
+    const data = await res.json();
+    if (data.variants) {
+      setShortenVariants(data.variants);
+      setShowShortenModal(true);
+    }
+    setLoading(null);
+  };
+
   return (
     <div className="p-4 space-y-6">
       <section>
@@ -111,6 +126,13 @@ export function ActionsView({
                 Clear
               </button>
             )}
+            <button
+              onClick={shortenCommitMessage}
+              disabled={loading === 'shorten' || commitMessage.trim() === ''}
+              className="px-2 py-1 text-xs bg-foreground/10 rounded active:opacity-80 disabled:opacity-30"
+            >
+              {loading === 'shorten' ? 'Shortening...' : 'Shorten'}
+            </button>
             <button
               onClick={generateCommitMessage}
               disabled={loading === 'generate' || commitMessage.trim() !== ''}
@@ -164,6 +186,44 @@ export function ActionsView({
             {result}
           </pre>
         </section>
+      )}
+
+      {showShortenModal && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/50"
+            onClick={() => setShowShortenModal(false)}
+          />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="bg-background border border-foreground/20 rounded-lg shadow-xl max-w-lg w-full">
+              <div className="px-4 py-3 border-b border-foreground/10">
+                <h3 className="font-medium">Select shortened message</h3>
+              </div>
+              <div className="py-2 space-y-1">
+                {shortenVariants.map((variant, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      setCommitMessage(variant);
+                      setShowShortenModal(false);
+                    }}
+                    className="block w-full px-4 py-3 text-sm text-left hover:bg-foreground/10 whitespace-pre-wrap"
+                  >
+                    {variant}
+                  </button>
+                ))}
+              </div>
+              <div className="px-4 py-3 border-t border-foreground/10 flex justify-end">
+                <button
+                  onClick={() => setShowShortenModal(false)}
+                  className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

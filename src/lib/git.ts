@@ -196,3 +196,11 @@ export function getDiffSummary(cwd: string): string {
   });
   return output.trim();
 }
+
+export function shortenCommitMessage(message: string, prompt: string): string {
+  const fullPrompt = `${prompt}\n\nCommit message:\n${message}`;
+  const output = execSync(`aichat "${fullPrompt.replace(/"/g, '\\"')}"`, {
+    encoding: 'utf-8',
+  });
+  return output.trim();
+}

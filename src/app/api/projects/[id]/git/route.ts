@@ -7,6 +7,7 @@ import {
   getBranch,
   getLog,
   getDiffSummary,
+  shortenCommitMessage,
   stageFile,
   unstageFile,
   discardChanges,
@@ -48,6 +49,21 @@ export async function GET(
     }
     case 'diff-summary':
       return NextResponse.json({ summary: getDiffSummary(project.path) });
+    case 'shorten-message': {
+      const message = searchParams.get('message');
+      if (!message) {
+        return NextResponse.json({ error: 'Message required' }, { status: 400 });
+      }
+      const prompts = [
+        'Shorten this commit message to half of its length. Try to preserve the key information.',
+        'Shorten this commit message to 20 words at maximum.',
+        'Shorten this commit message to 10 words at maximum. Just show what this commit is doing in general in a very concise sentence.',
+      ];
+      const variants = await Promise.all(
+        prompts.map((prompt) => shortenCommitMessage(message, prompt))
+      );
+      return NextResponse.json({ variants });
+    }
     default:
       return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
   }
