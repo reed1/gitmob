@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getProjects } from '@/lib/projects';
 import { hasChanges } from '@/lib/git';
+import { getAllRunningProcesses } from '@/lib/process';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
@@ -58,19 +59,22 @@ export async function GET() {
 
   const projectsToCheck = projects.filter((p) => !isArchived(p.tags));
 
-  const projectResults = await processWithWorkers(
-    projectsToCheck,
-    WORKERS,
-    async (project) => {
-      try {
-        const editing = await hasChanges(project.path);
-        const pendingMessage = hasPendingMessage(project.path);
-        return { id: project.id, editing, hasPendingMessage: pendingMessage };
-      } catch {
-        return { id: project.id, editing: false, hasPendingMessage: false };
+  const [allRunningProcesses, projectResults] = await Promise.all([
+    getAllRunningProcesses(),
+    processWithWorkers(
+      projectsToCheck,
+      WORKERS,
+      async (project) => {
+        try {
+          const editing = await hasChanges(project.path);
+          const pendingMessage = hasPendingMessage(project.path);
+          return { id: project.id, editing, hasPendingMessage: pendingMessage };
+        } catch {
+          return { id: project.id, editing: false, hasPendingMessage: false };
+        }
       }
-    }
-  );
+    ),
+  ]);
 
   const resultMap: Record<string, { editing: boolean; hasPendingMessage: boolean }> = {};
   for (const r of projectResults) {
@@ -81,6 +85,7 @@ export async function GET() {
     ...p,
     editing: isArchived(p.tags) ? false : (resultMap[p.id]?.editing ?? false),
     hasPendingMessage: isArchived(p.tags) ? false : (resultMap[p.id]?.hasPendingMessage ?? false),
+    hasRunningProcess: isArchived(p.tags) ? false : !!allRunningProcesses[p.id],
   }));
 
   return NextResponse.json(result);

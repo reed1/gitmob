@@ -10,6 +10,7 @@ interface Project {
   urls?: Record<string, string>;
   editing: boolean;
   hasPendingMessage: boolean;
+  hasRunningProcess: boolean;
 }
 
 function isArchived(project: Project): boolean {
@@ -277,6 +278,9 @@ function ProjectCard({
       <Link href={`/${project.id}`} className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="font-medium">{project.id}</span>
+          {project.hasRunningProcess && (
+            <span className="w-2 h-2 rounded-full bg-green-500" />
+          )}
           {project.hasPendingMessage && (
             <span className="w-2 h-2 rounded-full bg-blue-500" />
           )}

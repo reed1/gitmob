@@ -1,4 +1,4 @@
-import { execSync, spawn } from 'child_process';
+import { exec, execSync, spawn } from 'child_process';
 import { Project } from './projects';
 
 const SESSION_PREFIX = 'rvp-';
@@ -35,6 +35,34 @@ export function listWindows(projectId: string): string[] {
   } catch {
     return [];
   }
+}
+
+export async function getAllRunningProcesses(): Promise<Record<string, string[]>> {
+  return new Promise((resolve) => {
+    exec('rv proc status --json', (error, stdout) => {
+      if (error) {
+        resolve({});
+        return;
+      }
+      try {
+        const entries = JSON.parse(stdout) as Array<{
+          project: string;
+          command: string;
+        }>;
+
+        const map: Record<string, string[]> = {};
+        for (const entry of entries) {
+          if (!map[entry.project]) {
+            map[entry.project] = [];
+          }
+          map[entry.project].push(entry.command);
+        }
+        resolve(map);
+      } catch {
+        resolve({});
+      }
+    });
+  });
 }
 
 interface RunningProcessMap {
