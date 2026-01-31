@@ -347,6 +347,27 @@ function ProjectCard({
               >
                 Open URL
               </button>
+              <button
+                onClick={async () => {
+                  setMenuOpen(false);
+                  if (project.hasRunningProcess) {
+                    await fetch(`/api/projects/${project.id}/process`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ action: 'stopAll' }),
+                    });
+                    window.location.reload();
+                  }
+                }}
+                disabled={!project.hasRunningProcess}
+                className={`block w-full px-4 py-2 text-sm text-left ${
+                  project.hasRunningProcess
+                    ? 'hover:bg-foreground/10'
+                    : 'text-foreground/30 cursor-not-allowed'
+                }`}
+              >
+                Stop proc
+              </button>
             </div>
           </>
         )}

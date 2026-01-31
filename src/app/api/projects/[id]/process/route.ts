@@ -5,6 +5,7 @@ import {
   startProcess,
   stopProcess,
   restartProcess,
+  stopAllProcesses,
 } from '@/lib/process';
 
 export async function GET(
@@ -45,16 +46,20 @@ export async function POST(
   const body = await request.json();
   const { action, processName } = body;
 
-  if (!action || !processName) {
-    return NextResponse.json(
-      { error: 'Missing action or processName' },
-      { status: 400 }
-    );
+  if (!action) {
+    return NextResponse.json({ error: 'Missing action' }, { status: 400 });
   }
 
   let result: { success: boolean; error?: string };
 
-  if (action === 'start') {
+  if (action === 'stopAll') {
+    result = await stopAllProcesses(id);
+  } else if (!processName) {
+    return NextResponse.json(
+      { error: 'Missing processName' },
+      { status: 400 }
+    );
+  } else if (action === 'start') {
     result = await startProcess(id, processName);
   } else if (action === 'stop') {
     result = await stopProcess(id, processName);

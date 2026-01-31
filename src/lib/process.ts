@@ -222,3 +222,17 @@ export async function restartProcess(
     });
   });
 }
+
+export async function stopAllProcesses(
+  projectId: string
+): Promise<{ success: boolean; error?: string }> {
+  return new Promise((resolve) => {
+    exec(`rv proc stop ${projectId}`, (error, _, stderr) => {
+      if (error) {
+        resolve({ success: false, error: stderr || error.message });
+      } else {
+        resolve({ success: true });
+      }
+    });
+  });
+}
