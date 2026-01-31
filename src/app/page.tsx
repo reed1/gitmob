@@ -7,6 +7,7 @@ interface Project {
   id: string;
   path: string;
   tags?: string[];
+  urls?: Record<string, string>;
   editing: boolean;
 }
 
@@ -258,6 +259,11 @@ function ProjectCard({
   isEditing?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [urlModalOpen, setUrlModalOpen] = useState(false);
+
+  const urls = project.urls ?? {};
+  const urlEntries = Object.entries(urls);
+  const hasUrls = urlEntries.length > 0;
 
   return (
     <div
@@ -315,17 +321,66 @@ function ProjectCard({
               onClick={() => setMenuOpen(false)}
             />
             <div className="absolute right-0 top-full mt-1 z-20 bg-background border border-foreground/20 rounded-lg shadow-lg py-1 min-w-[120px]">
-              <Link
-                href={`/${project.id}`}
-                className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
-                onClick={() => setMenuOpen(false)}
+              <button
+                onClick={() => {
+                  setMenuOpen(false);
+                  if (hasUrls) {
+                    setUrlModalOpen(true);
+                  }
+                }}
+                disabled={!hasUrls}
+                className={`block w-full px-4 py-2 text-sm text-left ${
+                  hasUrls
+                    ? 'hover:bg-foreground/10'
+                    : 'text-foreground/30 cursor-not-allowed'
+                }`}
               >
-                Open
-              </Link>
+                Open URL
+              </button>
             </div>
           </>
         )}
       </div>
+
+      {urlModalOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/50"
+            onClick={() => setUrlModalOpen(false)}
+          />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="bg-background border border-foreground/20 rounded-lg shadow-xl max-w-sm w-full">
+              <div className="px-4 py-3 border-b border-foreground/10">
+                <h3 className="font-medium">Select URL</h3>
+              </div>
+              <div className="py-2">
+                {urlEntries.map(([key, url]) => (
+                  <button
+                    key={key}
+                    onClick={() => {
+                      window.open(url, '_blank');
+                      setUrlModalOpen(false);
+                    }}
+                    className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
+                  >
+                    <span>{key}</span>
+                    <span className="text-foreground/40"> :: </span>
+                    <span className="text-blue-500">{url}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="px-4 py-3 border-t border-foreground/10 flex justify-end">
+                <button
+                  onClick={() => setUrlModalOpen(false)}
+                  className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

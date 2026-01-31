@@ -12,6 +12,7 @@ export interface Project {
   path: string;
   tags?: string[];
   repo?: string;
+  urls?: Record<string, string>;
 }
 
 export function getProjects(): Project[] {
@@ -30,6 +31,7 @@ export function getProjects(): Project[] {
       path,
       tags: data.tags,
       repo: data.repo,
+      urls: data.urls,
     };
   });
 }
