@@ -9,6 +9,7 @@ interface Project {
   tags?: string[];
   urls?: Record<string, string>;
   editing: boolean;
+  hasPendingMessage: boolean;
 }
 
 function isArchived(project: Project): boolean {
@@ -276,6 +277,9 @@ function ProjectCard({
       <Link href={`/${project.id}`} className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="font-medium">{project.id}</span>
+          {project.hasPendingMessage && (
+            <span className="w-2 h-2 rounded-full bg-blue-500" />
+          )}
           {isArchived(project) && (
             <span className="text-xs px-1.5 py-0.5 rounded bg-foreground/20 text-foreground/60">
               archived
