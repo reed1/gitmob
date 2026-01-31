@@ -15,7 +15,7 @@ if [ "$CURRENT_SHA" != "$CACHED_SHA" ]; then
     echo "$CURRENT_SHA" > "$CACHE_FILE"
 fi
 
-PORT=$(portman static get gitmob)
+PORT=$(portman static get-port gitmob)
 export PORT
 
 exec ./node_modules/.bin/next start
