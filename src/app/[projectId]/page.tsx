@@ -7,6 +7,7 @@ import { Project, GitStatus, Tab } from './types';
 import { FileBrowser } from './components/FileBrowser';
 import { ChangesView } from './components/ChangesView';
 import { ActionsView } from './components/ActionsView';
+import { ProcessView } from './components/ProcessView';
 import { CLIView } from './components/CLIView';
 
 export default function ProjectPage() {
@@ -130,7 +131,7 @@ export default function ProjectPage() {
         </div>
 
         <nav className="flex border-t border-foreground/10">
-          {(['files', 'changes', 'actions', 'cli'] as const).map((t) => (
+          {(['files', 'changes', 'actions', 'process', 'cli'] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -140,7 +141,11 @@ export default function ProjectPage() {
                   : 'text-foreground/50'
               }`}
             >
-              {t === 'cli' ? 'CLI' : t.charAt(0).toUpperCase() + t.slice(1)}
+              {t === 'cli'
+                ? 'CLI'
+                : t === 'process'
+                  ? 'Proc'
+                  : t.charAt(0).toUpperCase() + t.slice(1)}
               {t === 'changes' && status && (
                 <span className="ml-1 text-xs">
                   (
@@ -190,6 +195,7 @@ export default function ProjectPage() {
             setPendingLoaded={setPendingLoaded}
           />
         )}
+        {tab === 'process' && <ProcessView projectId={projectId} />}
         {tab === 'cli' && project && <CLIView projectPath={project.path} />}
       </main>
     </div>
