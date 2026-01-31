@@ -10,6 +10,14 @@ import { ActionsView } from './components/ActionsView';
 import { ProcessView } from './components/ProcessView';
 import { CLIView } from './components/CLIView';
 
+const tabs = [
+  { id: 'files', label: 'Files' },
+  { id: 'changes', label: 'Changes' },
+  { id: 'actions', label: 'Actions' },
+  { id: 'process', label: 'Proc' },
+  { id: 'cli', label: 'CLI' },
+] as const;
+
 export default function ProjectPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const [project, setProject] = useState<Project | null>(null);
@@ -130,23 +138,19 @@ export default function ProjectPage() {
           )}
         </div>
 
-        <nav className="flex border-t border-foreground/10">
-          {(['files', 'changes', 'actions', 'process', 'cli'] as const).map((t) => (
+        <nav className="flex overflow-x-auto border-t border-foreground/10">
+          {tabs.map(({ id, label }) => (
             <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
-                tab === t
+              key={id}
+              onClick={() => setTab(id)}
+              className={`shrink-0 px-4 py-2.5 text-sm font-medium transition-colors ${
+                tab === id
                   ? 'text-foreground border-b-2 border-foreground'
                   : 'text-foreground/50'
               }`}
             >
-              {t === 'cli'
-                ? 'CLI'
-                : t === 'process'
-                  ? 'Proc'
-                  : t.charAt(0).toUpperCase() + t.slice(1)}
-              {t === 'changes' && status && (
+              {label}
+              {id === 'changes' && status && (
                 <span className="ml-1 text-xs">
                   (
                   {status.staged.length +
