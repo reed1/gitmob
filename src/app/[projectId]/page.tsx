@@ -9,6 +9,7 @@ import { ChangesView } from './components/ChangesView';
 import { ActionsView } from './components/ActionsView';
 import { ProcessView } from './components/ProcessView';
 import { CLIView } from './components/CLIView';
+import { DooitView } from './components/DooitView';
 
 const tabs = [
   { id: 'files', label: 'Files' },
@@ -16,6 +17,7 @@ const tabs = [
   { id: 'actions', label: 'Actions' },
   { id: 'process', label: 'Proc' },
   { id: 'cli', label: 'CLI' },
+  { id: 'dooit', label: 'Dooit' },
 ] as const;
 
 export default function ProjectPage() {
@@ -201,6 +203,7 @@ export default function ProjectPage() {
         )}
         {tab === 'process' && <ProcessView projectId={projectId} />}
         {tab === 'cli' && project && <CLIView projectPath={project.path} />}
+        {tab === 'dooit' && <DooitView projectId={projectId} />}
       </main>
     </div>
   );
