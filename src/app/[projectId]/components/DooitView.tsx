@@ -22,7 +22,6 @@ export function DooitView({ projectId }: { projectId: string }) {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState(true);
   const [todosLoading, setTodosLoading] = useState(false);
-  const [newWorkspaceName, setNewWorkspaceName] = useState('');
   const [newTodoText, setNewTodoText] = useState('');
   const [editingTodo, setEditingTodo] = useState<number | null>(null);
   const [editText, setEditText] = useState('');
@@ -60,36 +59,6 @@ export function DooitView({ projectId }: { projectId: string }) {
       fetchTodos();
     }
   }, [selectedWorkspace, fetchTodos]);
-
-  const addWorkspace = async () => {
-    if (!newWorkspaceName.trim()) return;
-    await fetch('/api/dooit?action=add_workspace', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        project_name: projectId,
-        description: newWorkspaceName.trim(),
-      }),
-    });
-    setNewWorkspaceName('');
-    await fetchWorkspaces();
-  };
-
-  const deleteWorkspace = async (workspaceId: number) => {
-    await fetch('/api/dooit?action=delete_workspace', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        project_name: projectId,
-        workspace_id: workspaceId,
-      }),
-    });
-    if (selectedWorkspace === workspaceId) {
-      setSelectedWorkspace(null);
-      setTodos([]);
-    }
-    await fetchWorkspaces();
-  };
 
   const addTodo = async () => {
     if (!newTodoText.trim() || selectedWorkspace === null) return;
@@ -142,52 +111,24 @@ export function DooitView({ projectId }: { projectId: string }) {
     <div className="flex flex-col h-full">
       <div className="flex gap-2 p-3 border-b border-foreground/10 overflow-x-auto">
         {workspaces.map((ws) => (
-          <div key={ws.id} className="flex items-center gap-1 shrink-0">
-            <button
-              onClick={() => setSelectedWorkspace(ws.id)}
-              className={`px-3 py-1.5 text-sm rounded ${
-                selectedWorkspace === ws.id
-                  ? 'bg-foreground text-background'
-                  : 'bg-foreground/10 hover:bg-foreground/20'
-              }`}
-            >
-              {ws.description}
-            </button>
-            <button
-              onClick={() => deleteWorkspace(ws.id)}
-              className="p-1 text-foreground/40 hover:text-red-500"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        ))}
-        <div className="flex items-center gap-1 shrink-0">
-          <input
-            type="text"
-            value={newWorkspaceName}
-            onChange={(e) => setNewWorkspaceName(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && addWorkspace()}
-            placeholder="New list..."
-            className="px-2 py-1.5 text-sm bg-foreground/5 border border-foreground/10 rounded w-28"
-          />
           <button
-            onClick={addWorkspace}
-            disabled={!newWorkspaceName.trim()}
-            className="p-1.5 text-foreground/60 hover:text-foreground disabled:opacity-30"
+            key={ws.id}
+            onClick={() => setSelectedWorkspace(ws.id)}
+            className={`px-3 py-1.5 text-sm rounded shrink-0 ${
+              selectedWorkspace === ws.id
+                ? 'bg-foreground text-background'
+                : 'bg-foreground/10 hover:bg-foreground/20'
+            }`}
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
+            {ws.description}
           </button>
-        </div>
+        ))}
       </div>
 
       <div className="flex-1 overflow-auto p-4">
         {selectedWorkspace === null ? (
           <div className="text-center text-foreground/50">
-            Select or create a list to view todos
+            Select a list to view todos
           </div>
         ) : todosLoading ? (
           <div className="text-center text-foreground/50">Loading todos...</div>
