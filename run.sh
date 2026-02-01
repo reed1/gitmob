@@ -1,6 +1,8 @@
 #!/bin/bash
 cd "$(dirname "$0")"
 
+export GITMOB_PROD=1
+
 CACHE_DIR="$HOME/.cache/rlocal/gitmob"
 CACHE_FILE="$CACHE_DIR/build_sha"
 
