@@ -40,6 +40,9 @@ export function CLIView({ projectPath }: { projectPath: string }) {
         onKeyDown={handleKeyDown}
         placeholder="Enter command..."
         autoCapitalize="off"
+        autoComplete="off"
+        autoCorrect="off"
+        spellCheck={false}
         className="w-full px-3 py-2 bg-foreground/5 border border-foreground/10 rounded-lg text-sm font-mono"
       />
       <div className="flex items-center justify-between mt-2">

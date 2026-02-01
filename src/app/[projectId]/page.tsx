@@ -16,8 +16,8 @@ const tabs = [
   { id: 'files', label: 'Files' },
   { id: 'changes', label: 'Changes' },
   { id: 'actions', label: 'Actions' },
-  { id: 'process', label: 'Proc' },
   { id: 'cli', label: 'CLI' },
+  { id: 'process', label: 'Proc' },
 ] as const;
 
 export default function ProjectPage() {
