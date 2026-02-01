@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { Project, GitStatus, Tab } from './types';
 import { FileBrowser } from './components/FileBrowser';
@@ -12,12 +12,12 @@ import { CLIView } from './components/CLIView';
 import { DooitView } from './components/DooitView';
 
 const tabs = [
+  { id: 'dooit', label: 'Dooit' },
   { id: 'files', label: 'Files' },
   { id: 'changes', label: 'Changes' },
   { id: 'actions', label: 'Actions' },
   { id: 'process', label: 'Proc' },
   { id: 'cli', label: 'CLI' },
-  { id: 'dooit', label: 'Dooit' },
 ] as const;
 
 export default function ProjectPage() {
@@ -36,6 +36,30 @@ export default function ProjectPage() {
   const [commitMessage, setCommitMessage] = useState('');
   const [pendingSource, setPendingSource] = useState<string | null>(null);
   const [pendingLoaded, setPendingLoaded] = useState(false);
+
+  const navRef = useRef<HTMLElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const updateScrollIndicators = useCallback(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const { scrollLeft, scrollWidth, clientWidth } = nav;
+    setCanScrollLeft(scrollLeft > 0);
+    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 1);
+  }, []);
+
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    updateScrollIndicators();
+    nav.addEventListener('scroll', updateScrollIndicators);
+    window.addEventListener('resize', updateScrollIndicators);
+    return () => {
+      nav.removeEventListener('scroll', updateScrollIndicators);
+      window.removeEventListener('resize', updateScrollIndicators);
+    };
+  }, [updateScrollIndicators, loading]);
 
   const goToFile = (filePath: string, fromGitUntracked = false) => {
     setViewFilePath(filePath);
@@ -140,30 +164,69 @@ export default function ProjectPage() {
           )}
         </div>
 
-        <nav className="flex overflow-x-auto border-t border-foreground/10">
-          {tabs.map(({ id, label }) => (
-            <button
-              key={id}
-              onClick={() => setTab(id)}
-              className={`shrink-0 px-4 py-2.5 text-sm font-medium transition-colors ${
-                tab === id
-                  ? 'text-foreground border-b-2 border-foreground'
-                  : 'text-foreground/50'
-              }`}
-            >
-              {label}
-              {id === 'changes' && status && (
-                <span className="ml-1 text-xs">
-                  (
-                  {status.staged.length +
-                    status.unstaged.length +
-                    status.untracked.length}
-                  )
-                </span>
-              )}
-            </button>
-          ))}
-        </nav>
+        <div className="relative border-t border-foreground/10">
+          <nav
+            ref={navRef}
+            className="flex overflow-x-auto scrollbar-hide"
+          >
+            {tabs.map(({ id, label }) => (
+              <button
+                key={id}
+                onClick={() => setTab(id)}
+                className={`shrink-0 px-4 py-2.5 text-sm font-medium transition-colors ${
+                  tab === id
+                    ? 'text-foreground border-b-2 border-foreground'
+                    : 'text-foreground/50'
+                }`}
+              >
+                {label}
+                {id === 'changes' && status && (
+                  <span className="ml-1 text-xs">
+                    (
+                    {status.staged.length +
+                      status.unstaged.length +
+                      status.untracked.length}
+                    )
+                  </span>
+                )}
+              </button>
+            ))}
+          </nav>
+          {canScrollLeft && (
+            <div className="absolute left-0 top-0 bottom-0 w-14 bg-gradient-to-r from-background via-background/80 to-transparent pointer-events-none flex items-center justify-start pl-2">
+              <svg
+                className="w-4 h-4 text-foreground/40"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+            </div>
+          )}
+          {canScrollRight && (
+            <div className="absolute right-0 top-0 bottom-0 w-14 bg-gradient-to-l from-background via-background/80 to-transparent pointer-events-none flex items-center justify-end pr-2">
+              <svg
+                className="w-4 h-4 text-foreground/40"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </div>
+          )}
+        </div>
       </header>
 
       <main className="flex-1 overflow-auto">
