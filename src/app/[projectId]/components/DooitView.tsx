@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 interface Todo {
   id: number;
@@ -22,9 +22,14 @@ export function DooitView({ projectId }: { projectId: string }) {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState(true);
   const [todosLoading, setTodosLoading] = useState(false);
-  const [newTodoText, setNewTodoText] = useState('');
-  const [editingTodo, setEditingTodo] = useState<number | null>(null);
-  const [editText, setEditText] = useState('');
+
+  const [modalMode, setModalMode] = useState<'add' | 'edit' | null>(null);
+  const [modalText, setModalText] = useState('');
+  const [editingTodoId, setEditingTodoId] = useState<number | null>(null);
+
+  const [contextMenu, setContextMenu] = useState<{ todoId: number; x: number; y: number } | null>(null);
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  const contextMenuRef = useRef<HTMLDivElement>(null);
 
   const fetchWorkspaces = useCallback(async () => {
     const res = await fetch(
@@ -60,32 +65,51 @@ export function DooitView({ projectId }: { projectId: string }) {
     }
   }, [selectedWorkspace, fetchTodos]);
 
-  const addTodo = async () => {
-    if (!newTodoText.trim() || selectedWorkspace === null) return;
-    await fetch('/api/dooit?action=add_todo', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        project_name: projectId,
-        workspace_id: selectedWorkspace,
-        description: newTodoText.trim(),
-      }),
-    });
-    setNewTodoText('');
-    await fetchTodos();
+  const openAddModal = () => {
+    setModalMode('add');
+    setModalText('');
+    setEditingTodoId(null);
   };
 
-  const updateTodo = async (todoId: number, description: string) => {
-    await fetch('/api/dooit?action=update_todo', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        project_name: projectId,
-        todo_id: todoId,
-        description,
-      }),
-    });
-    setEditingTodo(null);
+  const openEditModal = (todo: Todo) => {
+    setModalMode('edit');
+    setModalText(todo.description);
+    setEditingTodoId(todo.id);
+    setContextMenu(null);
+  };
+
+  const closeModal = () => {
+    setModalMode(null);
+    setModalText('');
+    setEditingTodoId(null);
+  };
+
+  const handleModalSave = async () => {
+    if (!modalText.trim() || selectedWorkspace === null) return;
+    if (modalMode === 'add') {
+      await fetch('/api/dooit?action=add_todo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          project_name: projectId,
+          workspace_id: selectedWorkspace,
+          description: modalText.trim(),
+        }),
+      });
+    } else if (modalMode === 'edit' && editingTodoId !== null) {
+      await fetch('/api/dooit?action=update_todo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          project_name: projectId,
+          todo_id: editingTodoId,
+          description: modalText.trim(),
+        }),
+      });
+    } else {
+      throw new Error(`Unexpected modalMode: ${modalMode}`);
+    }
+    closeModal();
     await fetchTodos();
   };
 
@@ -98,8 +122,39 @@ export function DooitView({ projectId }: { projectId: string }) {
         todo_id: todoId,
       }),
     });
+    setContextMenu(null);
     await fetchTodos();
   };
+
+  const handleContextMenu = (e: React.MouseEvent, todoId: number) => {
+    e.preventDefault();
+    setContextMenu({ todoId, x: e.clientX, y: e.clientY });
+  };
+
+  const handleTouchStart = (todoId: number) => {
+    longPressTimer.current = setTimeout(() => {
+      setContextMenu({ todoId, x: window.innerWidth / 2, y: window.innerHeight / 2 });
+    }, 500);
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (contextMenuRef.current && !contextMenuRef.current.contains(e.target as Node)) {
+        setContextMenu(null);
+      }
+    };
+    if (contextMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [contextMenu]);
 
   if (loading) {
     return (
@@ -137,40 +192,13 @@ export function DooitView({ projectId }: { projectId: string }) {
             {todos.map((todo) => (
               <div
                 key={todo.id}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm bg-foreground/5 border border-foreground/10 rounded group"
+                className="flex items-center gap-2 px-3 py-1.5 text-sm bg-foreground/5 border border-foreground/10 rounded"
+                onContextMenu={(e) => handleContextMenu(e, todo.id)}
+                onTouchStart={() => handleTouchStart(todo.id)}
+                onTouchEnd={handleTouchEnd}
+                onTouchMove={handleTouchEnd}
               >
-                {editingTodo === todo.id ? (
-                  <input
-                    type="text"
-                    value={editText}
-                    onChange={(e) => setEditText(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') updateTodo(todo.id, editText);
-                      if (e.key === 'Escape') setEditingTodo(null);
-                    }}
-                    onBlur={() => updateTodo(todo.id, editText)}
-                    autoFocus
-                    className="flex-1 bg-transparent border-b border-foreground/30 outline-none text-sm"
-                  />
-                ) : (
-                  <span
-                    className="flex-1 cursor-pointer"
-                    onClick={() => {
-                      setEditingTodo(todo.id);
-                      setEditText(todo.description);
-                    }}
-                  >
-                    {todo.description}
-                  </span>
-                )}
-                <button
-                  onClick={() => deleteTodo(todo.id)}
-                  className="p-0.5 text-foreground/30 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
+                <span className="flex-1">{todo.description}</span>
               </div>
             ))}
             {todos.length === 0 && (
@@ -184,23 +212,72 @@ export function DooitView({ projectId }: { projectId: string }) {
 
       {selectedWorkspace !== null && (
         <div className="p-3 border-t border-foreground/10">
-          <div className="flex gap-2">
+          <button
+            onClick={openAddModal}
+            className="w-full px-3 py-1.5 text-sm bg-foreground text-background rounded"
+          >
+            Add Todo
+          </button>
+        </div>
+      )}
+
+      {modalMode !== null && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-background border border-foreground/20 rounded-lg p-4 w-80 max-w-[90vw]">
             <input
               type="text"
-              value={newTodoText}
-              onChange={(e) => setNewTodoText(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && addTodo()}
-              placeholder="Add todo..."
-              className="flex-1 px-3 py-1.5 text-sm bg-foreground/5 border border-foreground/10 rounded"
+              value={modalText}
+              onChange={(e) => setModalText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleModalSave();
+                if (e.key === 'Escape') closeModal();
+              }}
+              placeholder="Todo description..."
+              autoFocus
+              autoCapitalize="off"
+              autoCorrect="off"
+              className="w-full px-3 py-2 text-sm bg-foreground/5 border border-foreground/10 rounded mb-3"
             />
-            <button
-              onClick={addTodo}
-              disabled={!newTodoText.trim()}
-              className="px-3 py-1.5 text-sm bg-foreground text-background rounded disabled:opacity-30"
-            >
-              Add
-            </button>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={closeModal}
+                className="px-3 py-1.5 text-sm text-foreground/70 hover:text-foreground"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleModalSave}
+                disabled={!modalText.trim()}
+                className="px-3 py-1.5 text-sm bg-foreground text-background rounded disabled:opacity-30"
+              >
+                Save
+              </button>
+            </div>
           </div>
+        </div>
+      )}
+
+      {contextMenu && (
+        <div
+          ref={contextMenuRef}
+          className="fixed bg-background border border-foreground/20 rounded-lg shadow-lg py-1 z-50"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+        >
+          <button
+            onClick={() => {
+              const todo = todos.find((t) => t.id === contextMenu.todoId);
+              if (todo) openEditModal(todo);
+            }}
+            className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
+          >
+            Edit
+          </button>
+          <button
+            onClick={() => deleteTodo(contextMenu.todoId)}
+            className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 text-red-500"
+          >
+            Remove
+          </button>
         </div>
       )}
     </div>
