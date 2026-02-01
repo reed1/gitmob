@@ -109,15 +109,15 @@ export function DooitView({ projectId }: { projectId: string }) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex gap-2 p-3 border-b border-foreground/10 overflow-x-auto">
+      <div className="flex overflow-x-auto scrollbar-hide border-b border-foreground/10">
         {workspaces.map((ws) => (
           <button
             key={ws.id}
             onClick={() => setSelectedWorkspace(ws.id)}
-            className={`px-3 py-1.5 text-sm rounded shrink-0 ${
+            className={`shrink-0 px-4 py-2.5 text-sm font-medium transition-colors ${
               selectedWorkspace === ws.id
-                ? 'bg-foreground text-background'
-                : 'bg-foreground/10 hover:bg-foreground/20'
+                ? 'text-foreground border-b-2 border-foreground'
+                : 'text-foreground/50'
             }`}
           >
             {ws.description}
@@ -137,7 +137,7 @@ export function DooitView({ projectId }: { projectId: string }) {
             {todos.map((todo) => (
               <div
                 key={todo.id}
-                className="flex items-center gap-3 p-3 bg-foreground/5 border border-foreground/10 rounded-lg group"
+                className="flex items-center gap-2 px-3 py-1.5 text-sm bg-foreground/5 border border-foreground/10 rounded group"
               >
                 {editingTodo === todo.id ? (
                   <input
@@ -150,7 +150,7 @@ export function DooitView({ projectId }: { projectId: string }) {
                     }}
                     onBlur={() => updateTodo(todo.id, editText)}
                     autoFocus
-                    className="flex-1 bg-transparent border-b border-foreground/30 outline-none"
+                    className="flex-1 bg-transparent border-b border-foreground/30 outline-none text-sm"
                   />
                 ) : (
                   <span
@@ -165,9 +165,9 @@ export function DooitView({ projectId }: { projectId: string }) {
                 )}
                 <button
                   onClick={() => deleteTodo(todo.id)}
-                  className="p-1 text-foreground/30 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="p-0.5 text-foreground/30 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
                 </button>
@@ -191,12 +191,12 @@ export function DooitView({ projectId }: { projectId: string }) {
               onChange={(e) => setNewTodoText(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && addTodo()}
               placeholder="Add todo..."
-              className="flex-1 px-3 py-2 bg-foreground/5 border border-foreground/10 rounded-lg"
+              className="flex-1 px-3 py-1.5 text-sm bg-foreground/5 border border-foreground/10 rounded"
             />
             <button
               onClick={addTodo}
               disabled={!newTodoText.trim()}
-              className="px-4 py-2 bg-foreground text-background rounded-lg disabled:opacity-30"
+              className="px-3 py-1.5 text-sm bg-foreground text-background rounded disabled:opacity-30"
             >
               Add
             </button>
