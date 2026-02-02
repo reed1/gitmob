@@ -5,10 +5,9 @@ import { useState, useEffect, useCallback } from 'react';
 interface Todo {
   id: number;
   description: string;
-  status: number;
   urgency: number;
   due?: string;
-  parent_id?: number;
+  pending: boolean;
 }
 
 interface Workspace {
