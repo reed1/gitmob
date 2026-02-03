@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { spawn } from 'child_process';
-import { writeFileSync, readFileSync, existsSync, mkdirSync, unlinkSync, openSync, closeSync } from 'fs';
+import {
+  writeFileSync,
+  readFileSync,
+  existsSync,
+  mkdirSync,
+  unlinkSync,
+  openSync,
+  closeSync,
+} from 'fs';
 import { tmpdir, homedir } from 'os';
 import { join } from 'path';
 
@@ -26,7 +34,9 @@ export async function GET(request: NextRequest) {
   }
 
   const job = JSON.parse(readFileSync(jobPath, 'utf-8'));
-  const output = existsSync(outputPath) ? readFileSync(outputPath, 'utf-8') : '';
+  const output = existsSync(outputPath)
+    ? readFileSync(outputPath, 'utf-8')
+    : '';
 
   return NextResponse.json({
     ...job,
@@ -74,14 +84,23 @@ export async function POST(request: NextRequest) {
     unlinkSync(scriptPath);
 
     const endTime = Date.now();
-    const updatedJob = { ...job, status: 'completed', exitCode: code ?? 0, duration: endTime - startTime };
+    const updatedJob = {
+      ...job,
+      status: 'completed',
+      exitCode: code ?? 0,
+      duration: endTime - startTime,
+    };
     writeFileSync(jobPath, JSON.stringify(updatedJob, null, 2));
 
     if (notify) {
-      spawn('pushover-send', [`Command finished with exit code ${code}: ${command.slice(0, 100)}`], {
-        detached: true,
-        stdio: 'ignore',
-      }).unref();
+      spawn(
+        'pushover-send',
+        [`Command finished with exit code ${code}: ${command.slice(0, 100)}`],
+        {
+          detached: true,
+          stdio: 'ignore',
+        }
+      ).unref();
     }
   });
 
