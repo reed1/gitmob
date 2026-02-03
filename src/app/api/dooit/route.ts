@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const RQLITE_URL = 'http://sgtent:4001';
+const RQLITE_URL = process.env.RQLITE_URL;
 
 function getTableName(projectId: string, type: 'workspace' | 'todo') {
-  const sanitized = projectId.replace(/-/g, '_');
-  return `dooit_${sanitized}_${type}`;
+  const normalized = projectId.replace(/[-.]/g, '_');
+  return `dooit_${normalized}_${type}`;
 }
 
 async function rqliteQuery(sql: string) {
