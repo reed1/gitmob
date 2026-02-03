@@ -1,28 +1,61 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 export function CLIView({ projectPath }: { projectPath: string }) {
   const [command, setCommand] = useState('');
   const [output, setOutput] = useState<string | null>(null);
   const [exitCode, setExitCode] = useState<number | null>(null);
+  const [duration, setDuration] = useState<number | null>(null);
   const [notify, setNotify] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [jobId, setJobId] = useState<string | null>(null);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+    };
+  }, []);
+
+  const pollJob = async (id: string) => {
+    const res = await fetch(`/api/cli?jobId=${id}`);
+    if (!res.ok) return;
+
+    const data = await res.json();
+    setOutput(data.output);
+
+    if (data.status === 'completed') {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+      setExitCode(data.exitCode);
+      setDuration(data.duration);
+      setLoading(false);
+      setJobId(null);
+    }
+  };
 
   const runCommand = async () => {
     if (!command.trim()) return;
     setLoading(true);
     setOutput(null);
     setExitCode(null);
+    setDuration(null);
+
     const res = await fetch('/api/cli', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ command, cwd: projectPath, notify }),
     });
     const data = await res.json();
-    setOutput(data.output);
-    setExitCode(data.exitCode);
-    setLoading(false);
+    setJobId(data.jobId);
+
+    pollJob(data.jobId);
+    pollIntervalRef.current = setInterval(() => pollJob(data.jobId), 500);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -64,9 +97,9 @@ export function CLIView({ projectPath }: { projectPath: string }) {
         </button>
       </div>
 
-      {output !== null && (
+      {(loading || output !== null) && (
         <pre className="mt-4 flex-1 p-3 bg-foreground/5 border border-foreground/10 rounded-lg text-xs font-mono whitespace-pre-wrap overflow-auto">
-          {output || '(no output)'}
+          {loading && !output ? 'Running...' : output || '(no output)'}
         </pre>
       )}
 
@@ -76,6 +109,11 @@ export function CLIView({ projectPath }: { projectPath: string }) {
           <span className={exitCode === 0 ? 'text-green-600' : 'text-red-600'}>
             {exitCode}
           </span>
+          {duration !== null && (
+            <span className="ml-4 text-foreground/60">
+              {(duration / 1000).toFixed(2)}s
+            </span>
+          )}
         </div>
       )}
     </div>
