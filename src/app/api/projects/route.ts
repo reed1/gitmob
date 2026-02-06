@@ -23,10 +23,6 @@ function hasPendingMessage(repoPath: string): boolean {
 
 const WORKERS = 4;
 
-function isArchived(tags?: string[]): boolean {
-  return tags?.includes('archived') ?? false;
-}
-
 async function processWithWorkers<T, R>(
   items: T[],
   workers: number,
@@ -57,12 +53,10 @@ async function processWithWorkers<T, R>(
 export async function GET() {
   const projects = getProjects();
 
-  const projectsToCheck = projects.filter((p) => !isArchived(p.tags));
-
   const [allRunningProcesses, projectResults] = await Promise.all([
     getAllRunningProcesses(),
     processWithWorkers(
-      projectsToCheck,
+      projects,
       WORKERS,
       async (project) => {
         try {
@@ -83,9 +77,9 @@ export async function GET() {
 
   const result = projects.map((p) => ({
     ...p,
-    editing: isArchived(p.tags) ? false : (resultMap[p.id]?.editing ?? false),
-    hasPendingMessage: isArchived(p.tags) ? false : (resultMap[p.id]?.hasPendingMessage ?? false),
-    hasRunningProcess: isArchived(p.tags) ? false : !!allRunningProcesses[p.id],
+    editing: resultMap[p.id]?.editing ?? false,
+    hasPendingMessage: resultMap[p.id]?.hasPendingMessage ?? false,
+    hasRunningProcess: !!allRunningProcesses[p.id],
   }));
 
   return NextResponse.json(result);

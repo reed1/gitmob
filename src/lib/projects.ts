@@ -1,11 +1,10 @@
-import { readdirSync, readFileSync } from 'fs';
-import { parse } from 'yaml';
+import { readFileSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 
-const PROJECTS_DIR =
-  process.env.PROJECTS_DIR ||
-  join(homedir(), '.dotfiles/rlocal/app/rofi-vscode/projects');
+const PROJECTS_FILE =
+  process.env.PROJECTS_FILE ||
+  join(homedir(), '.cache/rlocal/rofi-vscode/projects.generated.json');
 
 export interface Project {
   id: string;
@@ -17,25 +16,16 @@ export interface Project {
 }
 
 export function getProjects(): Project[] {
-  const files = readdirSync(PROJECTS_DIR).filter(
-    (f) => f.endsWith('.yaml') || f.endsWith('.yml')
-  );
+  const data = JSON.parse(readFileSync(PROJECTS_FILE, 'utf-8'));
 
-  return files.map((file) => {
-    const content = readFileSync(join(PROJECTS_DIR, file), 'utf-8');
-    const data = parse(content) || {};
-    const id = file.replace(/\.ya?ml$/, '');
-    const path = data.path?.replace(/^~/, homedir()) || '';
-
-    return {
-      id,
-      path,
-      tags: data.tags,
-      repo: data.repo,
-      urls: data.urls,
-      cmd: data.cmd,
-    };
-  });
+  return Object.entries(data).map(([id, raw]: [string, any]) => ({
+    id,
+    path: raw.path?.replace(/^~/, homedir()) || '',
+    tags: raw.tags,
+    repo: raw.repo,
+    urls: raw.urls,
+    cmd: raw.cmd,
+  }));
 }
 
 export function getProject(id: string): Project | undefined {

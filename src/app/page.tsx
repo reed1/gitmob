@@ -15,10 +15,6 @@ interface Project {
   hasRunningProcess: boolean;
 }
 
-function isArchived(project: Project): boolean {
-  return project.tags?.includes('archived') ?? false;
-}
-
 async function fetchHealthWithTimeout(
   timeoutMs: number
 ): Promise<{ startedAt: number } | null> {
@@ -47,7 +43,6 @@ async function waitForNewServer(previousStartedAt: number): Promise<void> {
 
 export default function Home() {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [showArchived, setShowArchived] = useState(false);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
@@ -63,7 +58,6 @@ export default function Home() {
   }, []);
 
   const filtered = projects
-    .filter((p) => showArchived || !isArchived(p))
     .filter(
       (p) =>
         search === '' ||
@@ -126,32 +120,6 @@ export default function Home() {
                   onClick={() => setMenuOpen(false)}
                 />
                 <div className="absolute right-0 top-full mt-1 z-20 bg-background border border-foreground/20 rounded-lg shadow-lg py-1 min-w-[180px]">
-                  <button
-                    onClick={() => {
-                      setShowArchived(!showArchived);
-                      setMenuOpen(false);
-                    }}
-                    className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 flex items-center gap-2"
-                  >
-                    <span className="w-4">
-                      {showArchived && (
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                      )}
-                    </span>
-                    Show Archived
-                  </button>
                   <button
                     onClick={async () => {
                       setMenuOpen(false);
@@ -287,11 +255,6 @@ function ProjectCard({
           )}
           {project.hasPendingMessage && (
             <span className="w-2 h-2 rounded-full bg-blue-500" />
-          )}
-          {isArchived(project) && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-foreground/20 text-foreground/60">
-              archived
-            </span>
           )}
         </div>
         {project.tags && project.tags.length > 0 && (
