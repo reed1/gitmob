@@ -243,7 +243,7 @@ export function DooitView({ projectId }: { projectId: string }) {
       </div>
 
       {modalMode !== null && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-16 z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-background border border-foreground/20 rounded-lg p-4 w-80 max-w-[90vw]">
             <textarea
               value={modalText}

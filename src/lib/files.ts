@@ -11,7 +11,6 @@ export function listDirectory(dir: string): FileEntry[] {
   const entries = readdirSync(dir, { withFileTypes: true });
 
   return entries
-    .filter((entry) => !entry.name.startsWith('.'))
     .map((entry) => ({
       name: entry.name,
       path: join(dir, entry.name),
