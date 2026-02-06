@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { GitStatus } from '../types';
 
 export function ChangesView({
@@ -22,6 +22,8 @@ export function ChangesView({
   const [diff, setDiff] = useState<string>('');
   const [isStaged, setIsStaged] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     onShowingDiffChange(selectedFile !== null);
@@ -32,6 +34,36 @@ export function ChangesView({
       loadDiff(selectedFile, isStaged);
     }
   }, [selectedFile, isStaged, projectId]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [menuOpen]);
+
+  const allFiles = status
+    ? [
+        ...status.staged.map((f) => ({ path: f.path, isStaged: true })),
+        ...status.unstaged.map((f) => ({ path: f.path, isStaged: false })),
+      ]
+    : [];
+  const currentIndex = allFiles.findIndex(
+    (f) => f.path === selectedFile && f.isStaged === isStaged
+  );
+  const hasPrev = currentIndex > 0;
+  const hasNext = currentIndex < allFiles.length - 1;
+
+  const navigateTo = (index: number) => {
+    const file = allFiles[index];
+    setSelectedFile(file.path);
+    setIsStaged(file.isStaged);
+    setMenuOpen(false);
+  };
 
   const loadDiff = async (file: string, staged: boolean) => {
     const res = await fetch(
@@ -77,13 +109,7 @@ export function ChangesView({
             </svg>
           </button>
           <span className="text-sm truncate flex-1 mx-2">{selectedFile}</span>
-          <div className="flex gap-2">
-            <button
-              onClick={() => onGoToFile(selectedFile)}
-              className="px-3 py-1 text-sm bg-blue-600 text-white rounded active:opacity-80"
-            >
-              View
-            </button>
+          <div className="flex gap-2 items-center">
             {isStaged ? (
               <button
                 onClick={() => handleAction('unstage', selectedFile)}
@@ -93,31 +119,67 @@ export function ChangesView({
                 Unstage
               </button>
             ) : (
-              <>
-                <button
-                  onClick={() => {
-                    if (
-                      window.confirm(
-                        `Discard changes to ${selectedFile}? This cannot be undone.`
-                      )
-                    ) {
-                      handleAction('discard', selectedFile);
-                    }
-                  }}
-                  disabled={actionLoading}
-                  className="px-3 py-1 text-sm bg-red-600 text-white rounded active:opacity-80 disabled:opacity-50"
-                >
-                  Discard
-                </button>
-                <button
-                  onClick={() => handleAction('stage', selectedFile)}
-                  disabled={actionLoading}
-                  className="px-3 py-1 text-sm bg-green-600 text-white rounded active:opacity-80 disabled:opacity-50"
-                >
-                  Stage
-                </button>
-              </>
+              <button
+                onClick={() => handleAction('stage', selectedFile)}
+                disabled={actionLoading}
+                className="px-3 py-1 text-sm bg-green-600 text-white rounded active:opacity-80 disabled:opacity-50"
+              >
+                Stage
+              </button>
             )}
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={() => setMenuOpen(!menuOpen)}
+                className="px-2 py-1 text-lg text-foreground/70 hover:text-foreground active:opacity-80"
+              >
+                ⋮
+              </button>
+              {menuOpen && (
+                <div className="absolute right-0 top-full mt-1 bg-background border border-foreground/20 rounded shadow-lg z-50 min-w-40">
+                  <button
+                    onClick={() => {
+                      onGoToFile(selectedFile);
+                      setMenuOpen(false);
+                    }}
+                    className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 active:bg-foreground/15"
+                  >
+                    View
+                  </button>
+                  {!isStaged && (
+                    <button
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            `Discard changes to ${selectedFile}? This cannot be undone.`
+                          )
+                        ) {
+                          handleAction('discard', selectedFile);
+                        }
+                        setMenuOpen(false);
+                      }}
+                      disabled={actionLoading}
+                      className="w-full px-4 py-2 text-sm text-left text-red-400 hover:bg-foreground/10 active:bg-foreground/15 disabled:opacity-50"
+                    >
+                      Discard
+                    </button>
+                  )}
+                  <button
+                    onClick={() => navigateTo(currentIndex - 1)}
+                    disabled={!hasPrev}
+                    className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 active:bg-foreground/15 disabled:opacity-30"
+                  >
+                    Previous File
+                  </button>
+                  <button
+                    onClick={() => navigateTo(currentIndex + 1)}
+                    disabled={!hasNext}
+                    className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 active:bg-foreground/15 disabled:opacity-30"
+                  >
+                    Next File
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex-1 overflow-auto p-4 text-xs font-mono">
