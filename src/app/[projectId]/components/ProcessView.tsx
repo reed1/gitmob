@@ -9,7 +9,13 @@ interface ProcessInfo {
   uptime?: string;
 }
 
-export function ProcessView({ projectId }: { projectId: string }) {
+export function ProcessView({
+  projectId,
+  urls,
+}: {
+  projectId: string;
+  urls?: Record<string, string>;
+}) {
   const [processes, setProcesses] = useState<ProcessInfo[]>([]);
   const [hasProcesses, setHasProcesses] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -118,6 +124,27 @@ export function ProcessView({ projectId }: { projectId: string }) {
           </div>
         </div>
       ))}
+
+      {urls && Object.keys(urls).length > 0 && (
+        <div className="mt-6">
+          <h3 className="text-sm font-medium text-foreground/50 mb-2">
+            URLs ({Object.keys(urls).length})
+          </h3>
+          <div className="space-y-1">
+            {Object.entries(urls).map(([key, url]) => (
+              <button
+                key={key}
+                onClick={() => window.open(url, '_blank')}
+                className="block w-full px-3 py-2 text-sm text-left bg-foreground/5 border border-foreground/10 rounded-lg active:opacity-80"
+              >
+                <span>{key}</span>
+                <span className="text-foreground/40"> :: </span>
+                <span className="text-blue-500">{url}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

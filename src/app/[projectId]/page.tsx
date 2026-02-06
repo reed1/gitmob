@@ -264,7 +264,7 @@ export default function ProjectPage() {
             setPendingLoaded={setPendingLoaded}
           />
         )}
-        {tab === 'process' && <ProcessView projectId={projectId} />}
+        {tab === 'process' && <ProcessView projectId={projectId} urls={project?.urls} />}
         {tab === 'cli' && project && <CLIView projectPath={project.path} />}
         {tab === 'dooit' && <DooitView projectId={projectId} />}
       </main>
