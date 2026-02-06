@@ -18,6 +18,7 @@ interface PendingMessage {
   message: string;
   timestamp: string;
   source: string;
+  short_options?: string[];
 }
 
 export async function GET(
@@ -51,6 +52,7 @@ export async function GET(
         message: data.message,
         timestamp: data.timestamp,
         source: data.source,
+        short_options: data.short_options ?? [],
       },
     });
   } catch {

@@ -25,6 +25,7 @@ export function ActionsView({
   const [result, setResult] = useState<string | null>(null);
   const [shortenVariants, setShortenVariants] = useState<string[]>([]);
   const [showShortenModal, setShowShortenModal] = useState(false);
+  const [pendingShortOptions, setPendingShortOptions] = useState<string[]>([]);
 
   useEffect(() => {
     if (pendingLoaded) return;
@@ -34,6 +35,7 @@ export function ActionsView({
       if (data.pending) {
         setCommitMessage(data.pending.message);
         setPendingSource(data.pending.source);
+        setPendingShortOptions(data.pending.short_options ?? []);
       }
       setPendingLoaded(true);
     }
@@ -46,6 +48,7 @@ export function ActionsView({
     });
     setCommitMessage('');
     setPendingSource(null);
+    setPendingShortOptions([]);
   };
 
   const handleAction = async (action: string, body?: object) => {
@@ -70,6 +73,7 @@ export function ActionsView({
             method: 'DELETE',
           });
           setPendingSource(null);
+          setPendingShortOptions([]);
         }
       }
       onRefresh();
@@ -93,6 +97,11 @@ export function ActionsView({
   };
 
   const shortenCommitMessage = async () => {
+    if (pendingSource && pendingShortOptions.length > 0) {
+      setShortenVariants(pendingShortOptions);
+      setShowShortenModal(true);
+      return;
+    }
     setLoading('shorten');
     const res = await fetch(
       `/api/projects/${projectId}/git?action=shorten-message&message=${encodeURIComponent(commitMessage)}`
