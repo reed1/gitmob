@@ -243,21 +243,20 @@ export function DooitView({ projectId }: { projectId: string }) {
       </div>
 
       {modalMode !== null && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-16 z-50">
           <div className="bg-background border border-foreground/20 rounded-lg p-4 w-80 max-w-[90vw]">
-            <input
-              type="text"
+            <textarea
               value={modalText}
               onChange={(e) => setModalText(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') handleModalSave();
                 if (e.key === 'Escape') closeModal();
               }}
               placeholder="Todo description..."
+              rows={3}
               autoFocus
               autoCapitalize="off"
               autoCorrect="off"
-              className="w-full px-3 py-2 text-sm bg-foreground/5 border border-foreground/10 rounded mb-3"
+              className="w-full px-3 py-2 text-sm bg-foreground/5 border border-foreground/10 rounded mb-3 resize-none"
             />
             <div className="flex gap-2 justify-end">
               <button
