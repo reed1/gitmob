@@ -21,6 +21,6 @@ npm run build && npm start
 
 ## Key Patterns
 
-- Projects loaded from YAML files in `~/.dotfiles/rlocal/app/rofi-vscode/projects/`
+- Projects loaded from `~/.cache/rlocal/rofi-vscode/projects.generated.json`
 - CLI commands run as detached processes, output to `~/.local/share/gitmob/cli-jobs/{jobId}.log`
 - Process management via tmux sessions (`rvp-{projectId}`) and `rv` CLI tool
