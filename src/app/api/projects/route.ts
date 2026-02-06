@@ -55,24 +55,26 @@ export async function GET() {
 
   const [allRunningProcesses, projectResults] = await Promise.all([
     getAllRunningProcesses(),
-    processWithWorkers(
-      projects,
-      WORKERS,
-      async (project) => {
-        try {
-          const editing = await hasChanges(project.path);
-          const pendingMessage = hasPendingMessage(project.path);
-          return { id: project.id, editing, hasPendingMessage: pendingMessage };
-        } catch {
-          return { id: project.id, editing: false, hasPendingMessage: false };
-        }
+    processWithWorkers(projects, WORKERS, async (project) => {
+      try {
+        const editing = await hasChanges(project.path);
+        const pendingMessage = hasPendingMessage(project.path);
+        return { id: project.id, editing, hasPendingMessage: pendingMessage };
+      } catch {
+        return { id: project.id, editing: false, hasPendingMessage: false };
       }
-    ),
+    }),
   ]);
 
-  const resultMap: Record<string, { editing: boolean; hasPendingMessage: boolean }> = {};
+  const resultMap: Record<
+    string,
+    { editing: boolean; hasPendingMessage: boolean }
+  > = {};
   for (const r of projectResults) {
-    resultMap[r.id] = { editing: r.editing, hasPendingMessage: r.hasPendingMessage };
+    resultMap[r.id] = {
+      editing: r.editing,
+      hasPendingMessage: r.hasPendingMessage,
+    };
   }
 
   const result = projects.map((p) => ({

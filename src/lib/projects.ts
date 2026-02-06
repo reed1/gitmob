@@ -12,7 +12,16 @@ export interface Project {
   tags?: string[];
   repo?: string;
   urls?: Record<string, string>;
-  cmd?: Record<string, string | string[] | { run: string | string[]; infrastructure?: boolean; run_in_terminal?: boolean }>;
+  cmd?: Record<
+    string,
+    | string
+    | string[]
+    | {
+        run: string | string[];
+        infrastructure?: boolean;
+        run_in_terminal?: boolean;
+      }
+  >;
 }
 
 export function getProjects(): Project[] {

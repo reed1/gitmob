@@ -57,13 +57,12 @@ export default function Home() {
       });
   }, []);
 
-  const filtered = projects
-    .filter(
-      (p) =>
-        search === '' ||
-        p.id.toLowerCase().includes(search.toLowerCase()) ||
-        p.path.toLowerCase().includes(search.toLowerCase())
-    );
+  const filtered = projects.filter(
+    (p) =>
+      search === '' ||
+      p.id.toLowerCase().includes(search.toLowerCase()) ||
+      p.path.toLowerCase().includes(search.toLowerCase())
+  );
 
   const isActive = (p: Project) =>
     p.editing || p.hasRunningProcess || p.hasPendingMessage;
