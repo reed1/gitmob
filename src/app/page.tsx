@@ -47,14 +47,21 @@ export default function Home() {
   const [search, setSearch] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const [restarting, setRestarting] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
+  function refreshProjects() {
+    setRefreshing(true);
     fetch('/api/projects')
       .then((res) => res.json())
       .then((data) => {
         setProjects(data);
         setLoading(false);
-      });
+      })
+      .finally(() => setRefreshing(false));
+  }
+
+  useEffect(() => {
+    refreshProjects();
   }, []);
 
   const filtered = projects.filter(
@@ -87,7 +94,27 @@ export default function Home() {
       <header className="sticky top-0 z-10 border-b border-foreground/10 bg-background/95 backdrop-blur px-4 py-3 space-y-3">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-semibold">GitMob</h1>
-          <div className="relative">
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => refreshProjects()}
+              disabled={refreshing}
+              className="p-2 rounded-lg hover:bg-foreground/10 active:opacity-80"
+            >
+              <svg
+                className={`w-5 h-5 text-foreground/60 ${refreshing ? 'animate-spin' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+            </button>
+            <div className="relative">
             <button
               onClick={() => setMenuOpen(!menuOpen)}
               className="p-2 rounded-lg hover:bg-foreground/10 active:opacity-80"
@@ -138,6 +165,7 @@ export default function Home() {
                 </div>
               </>
             )}
+            </div>
           </div>
         </div>
         <div className="relative">
