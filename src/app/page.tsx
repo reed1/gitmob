@@ -273,19 +273,41 @@ function ProjectCard({
   return (
     <div
       className={`p-4 rounded-lg border flex items-center gap-3 ${
-        isActive
+        project.editing
           ? 'border-green-500/50 bg-green-500/10'
-          : 'border-foreground/10 bg-foreground/5'
+          : isActive
+            ? 'border-foreground/30 bg-foreground/5'
+            : 'border-foreground/10 bg-foreground/5'
       }`}
     >
       <Link href={`/${project.id}`} className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="font-medium">{project.id}</span>
           {project.hasRunningProcess && (
-            <span className="w-2 h-2 rounded-full bg-green-500" />
+            <svg
+              className="w-3.5 h-3.5 text-green-500"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+              aria-label="Running process"
+            >
+              <path d="M8 5v14l11-7z" />
+            </svg>
           )}
           {project.hasPendingMessage && (
-            <span className="w-2 h-2 rounded-full bg-blue-500" />
+            <svg
+              className="w-3.5 h-3.5 text-blue-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-label="Pending commit message"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
+              />
+            </svg>
           )}
           {project.downSites.length > 0 && (
             <svg
@@ -293,6 +315,7 @@ function ProjectCard({
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
+              aria-label="Sites down"
             >
               <circle cx="12" cy="12" r="10" strokeWidth={2} />
               <path
