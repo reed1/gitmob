@@ -65,6 +65,7 @@ export default function Home() {
     refreshProjects();
   }, []);
 
+
   const filtered = projects.filter(
     (p) =>
       search === '' ||

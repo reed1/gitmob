@@ -1,8 +1,7 @@
 'use client';
 
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import Link from 'next/link';
 import { Project, GitStatus, Tab } from './types';
 import { FileBrowser } from './components/FileBrowser';
 import { ChangesView } from './components/ChangesView';
@@ -22,6 +21,7 @@ const tabs = [
 
 export default function ProjectPage() {
   const { projectId } = useParams<{ projectId: string }>();
+  const router = useRouter();
   const [project, setProject] = useState<Project | null>(null);
   const [tab, setTab] = useState<Tab>('changes');
   const [branch, setBranch] = useState<string>('');
@@ -111,8 +111,8 @@ export default function ProjectPage() {
     <div className="min-h-screen bg-background flex flex-col">
       <header className="sticky top-0 z-10 border-b border-foreground/10 bg-background/95 backdrop-blur">
         <div className="px-4 py-3 flex items-center gap-3">
-          <Link
-            href="/"
+          <button
+            onClick={() => router.back()}
             className="text-foreground/50 hover:text-foreground transition-colors"
           >
             <svg
@@ -128,7 +128,7 @@ export default function ProjectPage() {
                 d="M15 19l-7-7 7-7"
               />
             </svg>
-          </Link>
+          </button>
           <div className="flex-1 min-w-0">
             <h1 className="text-lg font-semibold truncate">{project?.id}</h1>
             <div className="text-sm text-foreground/50 flex items-center gap-2">
