@@ -1,11 +1,15 @@
 package com.gitmob.app
 
 import android.app.Activity
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.webkit.WebSettings
-import androidx.activity.OnBackPressedCallback
+
+private const val APP_HOST = "gitmob.loc"
 
 class MainActivity : Activity() {
     private lateinit var webView: WebView
@@ -15,7 +19,13 @@ class MainActivity : Activity() {
         webView = WebView(this)
         setContentView(webView)
 
-        webView.webViewClient = WebViewClient()
+        webView.webViewClient = object : WebViewClient() {
+            override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                if (request.url.host == APP_HOST) return false
+                startActivity(Intent(Intent.ACTION_VIEW, request.url))
+                return true
+            }
+        }
         webView.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
