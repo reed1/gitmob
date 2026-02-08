@@ -9,6 +9,12 @@ interface ProcessInfo {
   uptime?: string;
 }
 
+interface MonitorStatus {
+  project_id: string;
+  site_key: string;
+  is_up: boolean;
+}
+
 export function ProcessView({
   projectId,
   urls,
@@ -20,6 +26,7 @@ export function ProcessView({
   const [hasProcesses, setHasProcesses] = useState(true);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [monitors, setMonitors] = useState<MonitorStatus[]>([]);
 
   const fetchStatus = useCallback(async () => {
     const res = await fetch(`/api/projects/${projectId}/process?action=status`);
@@ -34,6 +41,13 @@ export function ProcessView({
     const interval = setInterval(fetchStatus, 5000);
     return () => clearInterval(interval);
   }, [fetchStatus]);
+
+  useEffect(() => {
+    fetch(`/api/projects/${projectId}/upmon`)
+      .then((res) => res.json())
+      .then((data) => setMonitors(data))
+      .catch(() => {});
+  }, [projectId]);
 
   const handleAction = async (
     action: 'start' | 'stop' | 'restart',
@@ -109,7 +123,9 @@ export function ProcessView({
                   disabled={actionLoading === `stop-${proc.name}`}
                   className="px-3 py-1.5 text-sm bg-red-600 text-white rounded active:opacity-80 disabled:opacity-50"
                 >
-                  {actionLoading === `stop-${proc.name}` ? 'Stopping...' : 'Stop'}
+                  {actionLoading === `stop-${proc.name}`
+                    ? 'Stopping...'
+                    : 'Stop'}
                 </button>
               </>
             ) : (
@@ -118,7 +134,9 @@ export function ProcessView({
                 disabled={actionLoading === `start-${proc.name}`}
                 className="px-3 py-1.5 text-sm bg-green-600 text-white rounded active:opacity-80 disabled:opacity-50"
               >
-                {actionLoading === `start-${proc.name}` ? 'Starting...' : 'Start'}
+                {actionLoading === `start-${proc.name}`
+                  ? 'Starting...'
+                  : 'Start'}
               </button>
             )}
           </div>
@@ -131,17 +149,31 @@ export function ProcessView({
             URLs ({Object.keys(urls).length})
           </h3>
           <div className="space-y-1">
-            {Object.entries(urls).map(([key, url]) => (
-              <button
-                key={key}
-                onClick={() => window.open(url, '_blank')}
-                className="block w-full px-3 py-2 text-sm text-left bg-foreground/5 border border-foreground/10 rounded-lg active:opacity-80"
-              >
-                <span>{key}</span>
-                <span className="text-foreground/40"> :: </span>
-                <span className="text-blue-500">{url}</span>
-              </button>
-            ))}
+            {Object.entries(urls).map(([key, url]) => {
+              const monitor = monitors.find((m) => m.site_key === key);
+              return (
+                <button
+                  key={key}
+                  onClick={() => window.open(url, '_blank')}
+                  className="flex items-center gap-3 w-full px-3 py-2 text-sm text-left bg-foreground/5 border border-foreground/10 rounded-lg active:opacity-80"
+                >
+                  <div
+                    className={`w-2 h-2 rounded-full shrink-0 ${
+                      monitor
+                        ? monitor.is_up
+                          ? 'bg-green-500'
+                          : 'bg-red-500'
+                        : 'bg-foreground/30'
+                    }`}
+                  />
+                  <div className="min-w-0">
+                    <span>{key}</span>
+                    <span className="text-foreground/40"> :: </span>
+                    <span className="text-blue-500">{url}</span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
