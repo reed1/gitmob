@@ -13,6 +13,7 @@ interface Project {
   editing: boolean;
   hasPendingMessage: boolean;
   hasRunningProcess: boolean;
+  downSites: string[];
 }
 
 async function fetchHealthWithTimeout(
@@ -72,7 +73,10 @@ export default function Home() {
   );
 
   const isActive = (p: Project) =>
-    p.editing || p.hasRunningProcess || p.hasPendingMessage;
+    p.editing ||
+    p.hasRunningProcess ||
+    p.hasPendingMessage ||
+    p.downSites.length > 0;
   const active = filtered.filter(isActive);
   const others = filtered.filter((p) => !isActive(p));
 
@@ -115,56 +119,56 @@ export default function Home() {
               </svg>
             </button>
             <div className="relative">
-            <button
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="p-2 rounded-lg hover:bg-foreground/10 active:opacity-80"
-            >
-              <svg
-                className="w-5 h-5 text-foreground/60"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+              <button
+                onClick={() => setMenuOpen(!menuOpen)}
+                className="p-2 rounded-lg hover:bg-foreground/10 active:opacity-80"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-              </svg>
-            </button>
-            {menuOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setMenuOpen(false)}
-                />
-                <div className="absolute right-0 top-full mt-1 z-20 bg-background border border-foreground/20 rounded-lg shadow-lg py-1 min-w-[180px]">
-                  <button
-                    onClick={async () => {
-                      setMenuOpen(false);
-                      const health = await fetchHealthWithTimeout(3000);
-                      if (!health) return;
-                      const previousStartedAt = health.startedAt;
-                      setRestarting(true);
-                      await fetch('/api/restart', { method: 'POST' });
-                      await waitForNewServer(previousStartedAt);
-                      window.location.reload();
-                    }}
-                    className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 flex items-center gap-2"
-                  >
-                    <span className="w-4" />
-                    Restart GitMob
-                  </button>
-                </div>
-              </>
-            )}
+                <svg
+                  className="w-5 h-5 text-foreground/60"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+              </button>
+              {menuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setMenuOpen(false)}
+                  />
+                  <div className="absolute right-0 top-full mt-1 z-20 bg-background border border-foreground/20 rounded-lg shadow-lg py-1 min-w-[180px]">
+                    <button
+                      onClick={async () => {
+                        setMenuOpen(false);
+                        const health = await fetchHealthWithTimeout(3000);
+                        if (!health) return;
+                        const previousStartedAt = health.startedAt;
+                        setRestarting(true);
+                        await fetch('/api/restart', { method: 'POST' });
+                        await waitForNewServer(previousStartedAt);
+                        window.location.reload();
+                      }}
+                      className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 flex items-center gap-2"
+                    >
+                      <span className="w-4" />
+                      Restart GitMob
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -282,6 +286,20 @@ function ProjectCard({
           )}
           {project.hasPendingMessage && (
             <span className="w-2 h-2 rounded-full bg-blue-500" />
+          )}
+          {project.downSites.length > 0 && (
+            <svg
+              className="w-3.5 h-3.5 text-yellow-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <circle cx="12" cy="12" r="10" strokeWidth={2} />
+              <path
+                strokeWidth={2}
+                d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10A15.3 15.3 0 0112 2z"
+              />
+            </svg>
           )}
         </div>
         {project.tags && project.tags.length > 0 && (

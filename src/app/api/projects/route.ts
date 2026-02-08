@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getProjects } from '@/lib/projects';
 import { hasChanges } from '@/lib/git';
 import { getAllRunningProcesses } from '@/lib/process';
+import { getDownSites } from '@/lib/upmon';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
@@ -53,8 +54,9 @@ async function processWithWorkers<T, R>(
 export async function GET() {
   const projects = getProjects();
 
-  const [allRunningProcesses, projectResults] = await Promise.all([
+  const [allRunningProcesses, downSites, projectResults] = await Promise.all([
     getAllRunningProcesses(),
+    getDownSites(),
     processWithWorkers(projects, WORKERS, async (project) => {
       try {
         const editing = await hasChanges(project.path);
@@ -82,6 +84,7 @@ export async function GET() {
     editing: resultMap[p.id]?.editing ?? false,
     hasPendingMessage: resultMap[p.id]?.hasPendingMessage ?? false,
     hasRunningProcess: !!allRunningProcesses[p.id],
+    downSites: downSites[p.id] ?? [],
   }));
 
   return NextResponse.json(result);
