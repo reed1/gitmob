@@ -1,6 +1,6 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Project, GitStatus, Tab } from './types';
 import { FileBrowser } from './components/FileBrowser';
@@ -19,11 +19,20 @@ const tabs = [
   { id: 'process', label: 'Proc' },
 ] as const;
 
+const validTabs = new Set<string>(tabs.map((t) => t.id));
+
+function getInitialTab(searchParams: URLSearchParams): Tab {
+  const param = searchParams.get('tab');
+  if (param && validTabs.has(param)) return param as Tab;
+  return 'dooit';
+}
+
 export default function ProjectPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [project, setProject] = useState<Project | null>(null);
-  const [tab, setTab] = useState<Tab>('changes');
+  const [tab, setTab] = useState<Tab>(() => getInitialTab(searchParams));
   const [branch, setBranch] = useState<string>('');
   const [status, setStatus] = useState<GitStatus | null>(null);
   const [loading, setLoading] = useState(true);

@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 
 const DOOIT_DOMAIN = process.env.NEXT_PUBLIC_DOOIT_DOMAIN;
@@ -257,6 +257,12 @@ export default function Home() {
   );
 }
 
+function getDefaultTab(project: Project): string {
+  if (project.downSites.length > 0) return 'process';
+  if (project.editing) return 'changes';
+  return 'dooit';
+}
+
 function ProjectCard({
   project,
   isActive,
@@ -264,6 +270,7 @@ function ProjectCard({
   project: Project;
   isActive?: boolean;
 }) {
+  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [urlModalOpen, setUrlModalOpen] = useState(false);
 
@@ -281,7 +288,10 @@ function ProjectCard({
             : 'border-foreground/10 bg-foreground/5'
       }`}
     >
-      <Link href={`/${project.id}`} className="flex-1 min-w-0">
+      <div
+        onClick={() => router.push(`/${project.id}?tab=${getDefaultTab(project)}`)}
+        className="flex-1 min-w-0 cursor-pointer"
+      >
         <div className="flex items-center gap-2">
           <span className="font-medium">{project.id}</span>
           {project.hasRunningProcess && (
@@ -338,7 +348,7 @@ function ProjectCard({
             ))}
           </div>
         )}
-      </Link>
+      </div>
       <div className="relative">
         <button
           onClick={() => setMenuOpen(!menuOpen)}
