@@ -1,0 +1,7 @@
+name: GitMob
+id: com.gitmob.app
+url: 'http://gitmob.loc'
+host: 'gitmob.loc'
+icon: ./icon.png
+theme_color: '#0a0a0a'
+refresh_timeout_ms: 300000

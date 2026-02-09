@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
-    "build:android": "cd android && ANDROID_HOME=~/Android/Sdk ./gradlew assembleDebug"
+    "build:android": "./android/build.sh"
   },
   "dependencies": {
     "next": "16.1.1",
