@@ -63,8 +63,12 @@ export default function Home() {
 
   useEffect(() => {
     refreshProjects();
+    // webview-apk: called when app resumes after being backgrounded
+    (window as any).__webviewRefresh = () => refreshProjects();
+    return () => {
+      delete (window as any).__webviewRefresh;
+    };
   }, []);
-
 
   const filtered = projects.filter(
     (p) =>
@@ -289,7 +293,9 @@ function ProjectCard({
       }`}
     >
       <div
-        onClick={() => router.push(`/${project.id}?tab=${getDefaultTab(project)}`)}
+        onClick={() =>
+          router.push(`/${project.id}?tab=${getDefaultTab(project)}`)
+        }
         className="flex-1 min-w-0 cursor-pointer"
       >
         <div className="flex items-center gap-2">
