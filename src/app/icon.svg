@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="96" fill="#0a0a0a"/>
+
+  <!-- Face/body -->
+  <circle cx="256" cy="305" r="142" fill="#22c55e"/>
+
+  <!-- Blush cheeks -->
+  <circle cx="180" cy="310" r="22" fill="#16a34a" opacity="0.6"/>
+  <circle cx="332" cy="310" r="22" fill="#16a34a" opacity="0.6"/>
+
+  <!-- Hat brim -->
+  <ellipse cx="256" cy="174" rx="138" ry="22" fill="#333333"/>
+
+  <!-- Hat crown -->
+  <path d="M 192 174 L 192 100 Q 192 78 212 78 L 300 78 Q 320 78 320 100 L 320 174 Z" fill="#333333"/>
+
+  <!-- Hat band -->
+  <rect x="192" y="152" width="128" height="16" fill="#22c55e"/>
+
+  <!-- Eyes -->
+  <ellipse cx="214" cy="284" rx="21" ry="26" fill="#0a0a0a"/>
+  <ellipse cx="298" cy="284" rx="21" ry="26" fill="#0a0a0a"/>
+
+  <!-- Eye glints -->
+  <circle cx="222" cy="276" r="8" fill="#ffffff" opacity="0.9"/>
+  <circle cx="306" cy="276" r="8" fill="#ffffff" opacity="0.9"/>
+
+  <!-- Smile -->
+  <path d="M 218 328 Q 256 368 294 328" stroke="#0a0a0a" stroke-width="8" fill="none" stroke-linecap="round"/>
+</svg>

@@ -19,6 +19,17 @@ npm run dev && npm run lint && npm run format
 npm run build && npm start
 ```
 
+## App Icons
+
+Source SVG: `src/app/icon.svg` — all PNGs are generated from this via `rsvg-convert`.
+
+- `src/app/icon.png` (180x180) - Next.js auto-discovered web icon; Android app symlinks to this
+- `src/app/apple-icon.png` (180x180) - Next.js auto-discovered Apple touch icon
+- `src/app/favicon.ico` (16+32) - Next.js auto-discovered browser tab icon
+- `public/icon-192.png` (192x192) - PWA manifest (`src/app/manifest.json`)
+- `public/icon-512.png` (512x512) - PWA manifest (`src/app/manifest.json`)
+- `android/icon.png` - Symlink → `../src/app/icon.png`
+
 ## Key Patterns
 
 - Projects loaded from `~/.cache/rlocal/rofi-vscode/projects.generated.json`
