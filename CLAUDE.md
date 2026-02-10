@@ -21,7 +21,7 @@ npm run build && npm start
 
 ## App Icons
 
-Source SVG: `src/app/icon.svg` — all PNGs are generated from this via `rsvg-convert`.
+Source SVG: `android/icon.svg` — all PNGs are generated from this via `rsvg-convert`. Do NOT put SVG in `src/app/` as it triggers a Turbopack build crash.
 
 - `src/app/icon.png` (180x180) - Next.js auto-discovered web icon; Android app symlinks to this
 - `src/app/apple-icon.png` (180x180) - Next.js auto-discovered Apple touch icon
