@@ -9,7 +9,9 @@ async function fetchMonitors(query?: string): Promise<MonitorStatus[]> {
   const apiKey = process.env.UPMON_APIKEY;
   if (!baseUrl || !apiKey) return [];
 
-  const url = query ? `${baseUrl}/status?${query}` : `${baseUrl}/status`;
+  const url = query
+    ? `${baseUrl}/api/v1/status?${query}`
+    : `${baseUrl}/api/v1/status`;
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 5000);
