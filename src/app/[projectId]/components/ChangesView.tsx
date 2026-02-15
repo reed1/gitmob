@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import PullToRefresh from 'react-simple-pull-to-refresh';
 import { GitStatus } from '../types';
 
 export function ChangesView({
@@ -13,7 +14,7 @@ export function ChangesView({
 }: {
   projectId: string;
   status: GitStatus | null;
-  onRefresh: () => void;
+  onRefresh: () => Promise<void>;
   wordWrap: boolean;
   onShowingDiffChange: (showing: boolean) => void;
   onGoToFile: (filePath: string, fromGitUntracked?: boolean) => void;
@@ -218,28 +219,7 @@ export function ChangesView({
   const hasChanges =
     status.staged.length + status.unstaged.length + status.untracked.length > 0;
 
-  if (!hasChanges) {
-    return (
-      <div className="p-8 text-center text-foreground/50">
-        <svg
-          className="w-12 h-12 mx-auto mb-4 text-foreground/20"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={1.5}
-            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
-        <p>Working tree clean</p>
-      </div>
-    );
-  }
-
-  return (
+  const content = hasChanges ? (
     <div className="divide-y divide-foreground/10">
       {status.staged.length > 0 && (
         <section>
@@ -309,5 +289,26 @@ export function ChangesView({
         </section>
       )}
     </div>
+  ) : (
+    <div className="p-8 text-center text-foreground/50">
+      <svg
+        className="w-12 h-12 mx-auto mb-4 text-foreground/20"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+        />
+      </svg>
+      <p>Working tree clean</p>
+    </div>
+  );
+
+  return (
+    <PullToRefresh onRefresh={onRefresh}>{content}</PullToRefresh>
   );
 }
