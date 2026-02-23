@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import PullToRefresh from 'react-simple-pull-to-refresh';
 import { GitStatus } from '../types';
 
 export function ChangesView({
@@ -308,7 +307,5 @@ export function ChangesView({
     </div>
   );
 
-  return (
-    <PullToRefresh onRefresh={onRefresh}>{content}</PullToRefresh>
-  );
+  return content;
 }

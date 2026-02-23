@@ -103,10 +103,14 @@ export default function ProjectPage() {
     load();
   }, [projectId]);
 
-  const refreshStatus = async () => {
+  const refreshStatus = useCallback(async () => {
     const res = await fetch(`/api/projects/${projectId}/git?action=status`);
     setStatus(await res.json());
-  };
+  }, [projectId]);
+
+  useEffect(() => {
+    if (tab === 'changes') refreshStatus();
+  }, [tab, refreshStatus]);
 
   if (loading) {
     return (
