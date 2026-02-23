@@ -109,7 +109,10 @@ export default function ProjectPage() {
   }, [projectId]);
 
   useEffect(() => {
-    if (tab === 'changes') refreshStatus();
+    if (tab === 'changes') {
+      setStatus(null);
+      refreshStatus();
+    }
   }, [tab, refreshStatus]);
 
   if (loading) {
