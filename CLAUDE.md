@@ -15,8 +15,8 @@ React 19, Next.js 16, TypeScript, Tailwind CSS 4, simple-git
 ## Development
 
 ```
-npm run dev && npm run lint && npm run format
-npm run build && npm start
+pnpm dev && pnpm lint && pnpm format
+pnpm build && pnpm start
 ```
 
 ## App Icons
