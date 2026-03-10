@@ -164,6 +164,22 @@ export default function ProjectCard({
                 Stop proc
               </button>
               <button
+                onClick={async () => {
+                  setMenuOpen(false);
+                  const res = await fetch(
+                    `/api/projects/${project.id}/claude-remote`,
+                    { method: 'POST' }
+                  );
+                  const data = await res.json();
+                  if (data.url) {
+                    window.open(data.url, '_blank');
+                  }
+                }}
+                className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
+              >
+                Claude Code
+              </button>
+              <button
                 onClick={() => {
                   setMenuOpen(false);
                   if (DOOIT_DOMAIN) {
