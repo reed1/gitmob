@@ -40,6 +40,12 @@ function mutationKey(url: string, method: string) {
   return `${method}:${url}`;
 }
 
+export class DuplicateRequestError extends Error {
+  constructor() {
+    super('Request already in progress');
+  }
+}
+
 export async function apiFetch(
   url: string,
   options?: RequestInit
@@ -50,13 +56,8 @@ export async function apiFetch(
   if (isMutation) {
     const key = mutationKey(url, method);
     if (inFlightMutations.has(key)) {
-      return new Response(
-        JSON.stringify({ error: 'Request already in progress' }),
-        {
-          status: 429,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
+      addToast('Request already in progress');
+      throw new DuplicateRequestError();
     }
     inFlightMutations.add(key);
     activeRequests++;
