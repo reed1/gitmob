@@ -11,14 +11,26 @@ const SETTINGS_PATH = join(homedir(), '.claude/settings.json');
 
 function disableHooks() {
   execSync(
-    `jq '. + {disableAllHooks: true}' '${SETTINGS_PATH}' > '${SETTINGS_PATH}.tmp' && mv '${SETTINGS_PATH}.tmp' '${SETTINGS_PATH}'`
+    [
+      `jq '. + {disableAllHooks: true}' '${SETTINGS_PATH}' > '${SETTINGS_PATH}.tmp'`,
+      `cat '${SETTINGS_PATH}.tmp' > '${SETTINGS_PATH}'`,
+      `rm '${SETTINGS_PATH}.tmp'`,
+    ].join(' && ')
   );
 }
 
 function restoreHooks() {
   execSync(
-    `jq 'del(.disableAllHooks)' '${SETTINGS_PATH}' > '${SETTINGS_PATH}.tmp' && mv '${SETTINGS_PATH}.tmp' '${SETTINGS_PATH}'`
+    [
+      `jq 'del(.disableAllHooks)' '${SETTINGS_PATH}' > '${SETTINGS_PATH}.tmp'`,
+      `cat '${SETTINGS_PATH}.tmp' > '${SETTINGS_PATH}'`,
+      `rm '${SETTINGS_PATH}.tmp'`,
+    ].join(' && ')
   );
+}
+
+function restoreHooksAfterDelay() {
+  setTimeout(restoreHooks, 10000);
 }
 
 export async function POST(
@@ -42,7 +54,6 @@ export async function POST(
       });
 
       const timeout = setTimeout(() => {
-        restoreHooks();
         reject(new Error('Timed out waiting for URL'));
       }, 10000);
 
@@ -56,7 +67,6 @@ export async function POST(
           child.stdout!.removeListener('data', onData);
           child.stderr!.removeListener('data', onData);
           child.unref();
-          restoreHooks();
           resolve(match[0]);
         }
       };
@@ -66,13 +76,11 @@ export async function POST(
 
       child.on('error', (err) => {
         clearTimeout(timeout);
-        restoreHooks();
         reject(err);
       });
 
       child.on('close', (code) => {
         clearTimeout(timeout);
-        restoreHooks();
         reject(
           new Error(
             `Process exited with code ${code} before URL was found. Output: ${output}`
@@ -81,6 +89,7 @@ export async function POST(
       });
     });
 
+    restoreHooksAfterDelay();
     return NextResponse.json({ url });
   } catch (e) {
     restoreHooks();
