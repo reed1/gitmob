@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { apiFetch } from '../../../lib/api';
 
 interface ProcessInfo {
   name: string;
@@ -25,7 +26,6 @@ export function ProcessView({
   const [processes, setProcesses] = useState<ProcessInfo[]>([]);
   const [hasProcesses, setHasProcesses] = useState(true);
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [monitors, setMonitors] = useState<MonitorStatus[]>([]);
 
   const fetchStatus = useCallback(async () => {
@@ -53,15 +53,13 @@ export function ProcessView({
     action: 'start' | 'stop' | 'restart',
     processName: string
   ) => {
-    setActionLoading(`${action}-${processName}`);
-    await fetch(`/api/projects/${projectId}/process`, {
+    await apiFetch(`/api/projects/${projectId}/process`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action, processName }),
     });
     await new Promise((r) => setTimeout(r, 500));
     await fetchStatus();
-    setActionLoading(null);
   };
 
   if (loading) {
@@ -111,32 +109,23 @@ export function ProcessView({
               <>
                 <button
                   onClick={() => handleAction('restart', proc.name)}
-                  disabled={actionLoading === `restart-${proc.name}`}
-                  className="px-3 py-1.5 text-sm bg-yellow-600 text-white rounded active:opacity-80 disabled:opacity-50"
+                  className="px-3 py-1.5 text-sm bg-yellow-600 text-white rounded active:opacity-80"
                 >
-                  {actionLoading === `restart-${proc.name}`
-                    ? 'Restarting...'
-                    : 'Restart'}
+                  Restart
                 </button>
                 <button
                   onClick={() => handleAction('stop', proc.name)}
-                  disabled={actionLoading === `stop-${proc.name}`}
-                  className="px-3 py-1.5 text-sm bg-red-600 text-white rounded active:opacity-80 disabled:opacity-50"
+                  className="px-3 py-1.5 text-sm bg-red-600 text-white rounded active:opacity-80"
                 >
-                  {actionLoading === `stop-${proc.name}`
-                    ? 'Stopping...'
-                    : 'Stop'}
+                  Stop
                 </button>
               </>
             ) : (
               <button
                 onClick={() => handleAction('start', proc.name)}
-                disabled={actionLoading === `start-${proc.name}`}
-                className="px-3 py-1.5 text-sm bg-green-600 text-white rounded active:opacity-80 disabled:opacity-50"
+                className="px-3 py-1.5 text-sm bg-green-600 text-white rounded active:opacity-80"
               >
-                {actionLoading === `start-${proc.name}`
-                  ? 'Starting...'
-                  : 'Start'}
+                Start
               </button>
             )}
           </div>

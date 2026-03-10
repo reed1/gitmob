@@ -47,7 +47,8 @@ export async function POST(
 
   try {
     const url = await new Promise<string>((resolve, reject) => {
-      const child = spawn('claude', ['remote-control'], {
+      const folderName = project.path.split('/').pop() || id;
+      const child = spawn('claude', ['remote-control', '--name', folderName], {
         cwd: project.path,
         detached: true,
         stdio: ['ignore', 'pipe', 'pipe'],

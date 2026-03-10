@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Project } from './types';
+import { apiFetch } from '../lib/api';
 
 const DOOIT_DOMAIN = process.env.NEXT_PUBLIC_DOOIT_DOMAIN;
 
@@ -146,7 +147,7 @@ export default function ProjectCard({
                 onClick={async () => {
                   setMenuOpen(false);
                   if (project.hasRunningProcess) {
-                    await fetch(`/api/projects/${project.id}/process`, {
+                    await apiFetch(`/api/projects/${project.id}/process`, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ action: 'stopAll' }),
@@ -166,7 +167,7 @@ export default function ProjectCard({
               <button
                 onClick={async () => {
                   setMenuOpen(false);
-                  const res = await fetch(
+                  const res = await apiFetch(
                     `/api/projects/${project.id}/claude-remote`,
                     { method: 'POST' }
                   );

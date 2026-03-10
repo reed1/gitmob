@@ -9,6 +9,7 @@ import { ActionsView } from './components/ActionsView';
 import { ProcessView } from './components/ProcessView';
 import { CLIView } from './components/CLIView';
 import { DooitView } from './components/DooitView';
+import { apiFetch } from '../../lib/api';
 
 const tabs = [
   { id: 'dooit', label: 'Dooit' },
@@ -77,7 +78,7 @@ export default function ProjectPage() {
   };
 
   const handleStageFromPreview = async (filePath: string) => {
-    await fetch(`/api/projects/${projectId}/git`, {
+    await apiFetch(`/api/projects/${projectId}/git`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'stage', file: filePath }),
@@ -181,10 +182,7 @@ export default function ProjectPage() {
         </div>
 
         <div className="relative border-t border-foreground/10">
-          <nav
-            ref={navRef}
-            className="flex overflow-x-auto scrollbar-hide"
-          >
+          <nav ref={navRef} className="flex overflow-x-auto scrollbar-hide">
             {tabs.map(({ id, label }) => (
               <button
                 key={id}
@@ -280,7 +278,9 @@ export default function ProjectPage() {
             setPendingLoaded={setPendingLoaded}
           />
         )}
-        {tab === 'process' && <ProcessView projectId={projectId} urls={project?.urls} />}
+        {tab === 'process' && (
+          <ProcessView projectId={projectId} urls={project?.urls} />
+        )}
         {tab === 'cli' && project && <CLIView projectPath={project.path} />}
         {tab === 'dooit' && <DooitView projectId={projectId} />}
       </main>

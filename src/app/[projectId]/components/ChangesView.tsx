@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { GitStatus } from '../types';
+import { apiFetch } from '../../../lib/api';
 
 export function ChangesView({
   projectId,
@@ -21,7 +22,6 @@ export function ChangesView({
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [diff, setDiff] = useState<string>('');
   const [isStaged, setIsStaged] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -74,8 +74,7 @@ export function ChangesView({
   };
 
   const handleAction = async (action: string, file: string) => {
-    setActionLoading(true);
-    await fetch(`/api/projects/${projectId}/git`, {
+    await apiFetch(`/api/projects/${projectId}/git`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action, file }),
@@ -83,7 +82,6 @@ export function ChangesView({
     setSelectedFile(null);
     setDiff('');
     onRefresh();
-    setActionLoading(false);
   };
 
   if (selectedFile) {
@@ -113,16 +111,14 @@ export function ChangesView({
             {isStaged ? (
               <button
                 onClick={() => handleAction('unstage', selectedFile)}
-                disabled={actionLoading}
-                className="px-3 py-1 text-sm bg-yellow-600 text-white rounded active:opacity-80 disabled:opacity-50"
+                className="px-3 py-1 text-sm bg-yellow-600 text-white rounded active:opacity-80"
               >
                 Unstage
               </button>
             ) : (
               <button
                 onClick={() => handleAction('stage', selectedFile)}
-                disabled={actionLoading}
-                className="px-3 py-1 text-sm bg-green-600 text-white rounded active:opacity-80 disabled:opacity-50"
+                className="px-3 py-1 text-sm bg-green-600 text-white rounded active:opacity-80"
               >
                 Stage
               </button>
@@ -132,7 +128,7 @@ export function ChangesView({
                 onClick={() => setMenuOpen(!menuOpen)}
                 className="px-2 py-1 text-lg text-foreground/70 hover:text-foreground active:opacity-80"
               >
-                ⋮
+                &#8942;
               </button>
               {menuOpen && (
                 <div className="absolute right-0 top-full mt-1 bg-background border border-foreground/20 rounded shadow-lg z-50 min-w-40">
@@ -157,8 +153,7 @@ export function ChangesView({
                         }
                         setMenuOpen(false);
                       }}
-                      disabled={actionLoading}
-                      className="w-full px-4 py-2 text-sm text-left text-red-400 hover:bg-foreground/10 active:bg-foreground/15 disabled:opacity-50"
+                      className="w-full px-4 py-2 text-sm text-left text-red-400 hover:bg-foreground/10 active:bg-foreground/15"
                     >
                       Discard
                     </button>

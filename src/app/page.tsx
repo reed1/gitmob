@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import ProjectCard from './ProjectCard';
 import { Project } from './types';
+import { apiFetch } from '../lib/api';
 
 async function fetchHealthWithTimeout(
   timeoutMs: number
@@ -150,7 +151,7 @@ export default function Home() {
                         if (!health) return;
                         const previousStartedAt = health.startedAt;
                         setRestarting(true);
-                        await fetch('/api/restart', { method: 'POST' });
+                        await apiFetch('/api/restart', { method: 'POST' });
                         await waitForNewServer(previousStartedAt);
                         window.location.reload();
                       }}

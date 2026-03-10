@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { apiFetch } from '../../../lib/api';
 
 export function CLIView({ projectPath }: { projectPath: string }) {
   const [command, setCommand] = useState('');
@@ -46,7 +47,7 @@ export function CLIView({ projectPath }: { projectPath: string }) {
     setExitCode(null);
     setDuration(null);
 
-    const res = await fetch('/api/cli', {
+    const res = await apiFetch('/api/cli', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ command, cwd: projectPath, notify }),

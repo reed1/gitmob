@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { apiFetch } from '../../../lib/api';
 
 export function ActionsView({
   projectId,
@@ -21,8 +22,6 @@ export function ActionsView({
   pendingLoaded: boolean;
   setPendingLoaded: (loaded: boolean) => void;
 }) {
-  const [loading, setLoading] = useState<string | null>(null);
-  const [result, setResult] = useState<string | null>(null);
   const [shortenVariants, setShortenVariants] = useState<string[]>([]);
   const [showShortenModal, setShowShortenModal] = useState(false);
   const [pendingShortOptions, setPendingShortOptions] = useState<string[]>([]);
@@ -40,10 +39,16 @@ export function ActionsView({
       setPendingLoaded(true);
     }
     checkPending();
-  }, [projectId, pendingLoaded, setCommitMessage, setPendingSource, setPendingLoaded]);
+  }, [
+    projectId,
+    pendingLoaded,
+    setCommitMessage,
+    setPendingSource,
+    setPendingLoaded,
+  ]);
 
   const clearPendingMessage = async () => {
-    await fetch(`/api/projects/${projectId}/pending-message`, {
+    await apiFetch(`/api/projects/${projectId}/pending-message`, {
       method: 'DELETE',
     });
     setCommitMessage('');
@@ -52,40 +57,26 @@ export function ActionsView({
   };
 
   const handleAction = async (action: string, body?: object) => {
-    setLoading(action);
-    setResult(null);
-    try {
-      const res = await fetch(`/api/projects/${projectId}/git`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, ...body }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setResult(`Error: ${data.error || 'Request failed'}`);
-        return;
+    const res = await apiFetch(`/api/projects/${projectId}/git`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, ...body }),
+    });
+    if (!res.ok) return;
+    if (action === 'commit') {
+      setCommitMessage('');
+      if (pendingSource) {
+        await apiFetch(`/api/projects/${projectId}/pending-message`, {
+          method: 'DELETE',
+        });
+        setPendingSource(null);
+        setPendingShortOptions([]);
       }
-      setResult(data.result || 'Success');
-      if (action === 'commit') {
-        setCommitMessage('');
-        if (pendingSource) {
-          await fetch(`/api/projects/${projectId}/pending-message`, {
-            method: 'DELETE',
-          });
-          setPendingSource(null);
-          setPendingShortOptions([]);
-        }
-      }
-      onRefresh();
-    } catch (err) {
-      setResult(`Error: ${err instanceof Error ? err.message : String(err)}`);
-    } finally {
-      setLoading(null);
     }
+    onRefresh();
   };
 
   const generateCommitMessage = async () => {
-    setLoading('generate');
     const res = await fetch(
       `/api/projects/${projectId}/git?action=diff-summary`
     );
@@ -93,7 +84,6 @@ export function ActionsView({
     if (data.summary) {
       setCommitMessage(data.summary);
     }
-    setLoading(null);
   };
 
   const shortenCommitMessage = async () => {
@@ -102,7 +92,6 @@ export function ActionsView({
       setShowShortenModal(true);
       return;
     }
-    setLoading('shorten');
     const res = await fetch(
       `/api/projects/${projectId}/git?action=shorten-message&message=${encodeURIComponent(commitMessage)}`
     );
@@ -111,7 +100,6 @@ export function ActionsView({
       setShortenVariants(data.variants);
       setShowShortenModal(true);
     }
-    setLoading(null);
   };
 
   return (
@@ -137,17 +125,17 @@ export function ActionsView({
             )}
             <button
               onClick={shortenCommitMessage}
-              disabled={loading === 'shorten' || commitMessage.trim() === ''}
+              disabled={commitMessage.trim() === ''}
               className="px-2 py-1 text-xs bg-foreground/10 rounded active:opacity-80 disabled:opacity-30"
             >
-              {loading === 'shorten' ? 'Shortening...' : 'Shorten'}
+              Shorten
             </button>
             <button
               onClick={generateCommitMessage}
-              disabled={loading === 'generate' || commitMessage.trim() !== ''}
+              disabled={commitMessage.trim() !== ''}
               className="px-2 py-1 text-xs bg-foreground/10 rounded active:opacity-80 disabled:opacity-30"
             >
-              {loading === 'generate' ? 'Generating...' : 'Generate'}
+              Generate
             </button>
           </div>
         </div>
@@ -159,10 +147,10 @@ export function ActionsView({
         />
         <button
           onClick={() => handleAction('commit', { message: commitMessage })}
-          disabled={loading === 'commit' || !commitMessage.trim()}
+          disabled={!commitMessage.trim()}
           className="mt-2 w-full py-3 bg-foreground text-background font-medium rounded-lg active:opacity-80 disabled:opacity-50"
         >
-          {loading === 'commit' ? 'Committing...' : 'Commit'}
+          Commit
         </button>
       </section>
 
@@ -171,31 +159,18 @@ export function ActionsView({
         <div className="grid grid-cols-2 gap-3">
           <button
             onClick={() => handleAction('pull')}
-            disabled={loading === 'pull'}
             className="py-3 bg-blue-600 text-white font-medium rounded-lg active:opacity-80 disabled:opacity-50"
           >
-            {loading === 'pull' ? 'Pulling...' : 'Pull'}
+            Pull
           </button>
           <button
             onClick={() => handleAction('push')}
-            disabled={loading === 'push'}
             className="py-3 bg-green-600 text-white font-medium rounded-lg active:opacity-80 disabled:opacity-50"
           >
-            {loading === 'push' ? 'Pushing...' : 'Push'}
+            Push
           </button>
         </div>
       </section>
-
-      {result && (
-        <section>
-          <h3 className="text-sm font-medium text-foreground/60 mb-2">
-            Result
-          </h3>
-          <pre className="p-3 bg-foreground/5 border border-foreground/10 rounded-lg text-xs font-mono whitespace-pre-wrap overflow-auto max-h-48">
-            {result}
-          </pre>
-        </section>
-      )}
 
       {showShortenModal && (
         <>
