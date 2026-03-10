@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { spawn, execSync } from 'child_process';
+import { openSync, readFileSync, unlinkSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
+import { tmpdir } from 'os';
 import { getProject } from '@/lib/projects';
 
 // Workaround: claude remote-control hangs indefinitely when hooks are enabled
@@ -46,51 +48,38 @@ export async function POST(
   disableHooks();
 
   try {
+    const logFile = join(tmpdir(), `claude-remote-${id}-${Date.now()}.log`);
+    const logFd = openSync(logFile, 'w');
+
     const url = await new Promise<string>((resolve, reject) => {
       const folderName = project.path.split('/').pop() || id;
       const child = spawn('claude', ['remote-control', '--name', folderName], {
         cwd: project.path,
         detached: true,
-        stdio: ['ignore', 'pipe', 'pipe'],
+        stdio: ['ignore', logFd, logFd],
       });
+      child.unref();
+
+      const cleanup = () => {
+        clearInterval(poll);
+        clearTimeout(timeout);
+        try { unlinkSync(logFile); } catch {}
+      };
 
       const timeout = setTimeout(() => {
+        cleanup();
         child.kill();
         reject(new Error('Timed out waiting for URL'));
       }, 10000);
 
-      let output = '';
-
-      const onData = (data: Buffer) => {
-        output += data.toString();
-        const match = output.match(/https:\/\/\S+/);
+      const poll = setInterval(() => {
+        const content = readFileSync(logFile, 'utf-8');
+        const match = content.match(/https:\/\/\S+/);
         if (match) {
-          clearTimeout(timeout);
-          child.stdout!.removeAllListeners();
-          child.stderr!.removeAllListeners();
-          child.stdout!.destroy();
-          child.stderr!.destroy();
-          child.unref();
+          cleanup();
           resolve(match[0]);
         }
-      };
-
-      child.stdout!.on('data', onData);
-      child.stderr!.on('data', onData);
-
-      child.on('error', (err) => {
-        clearTimeout(timeout);
-        reject(err);
-      });
-
-      child.on('close', (code) => {
-        clearTimeout(timeout);
-        reject(
-          new Error(
-            `Process exited with code ${code} before URL was found. Output: ${output}`
-          )
-        );
-      });
+      }, 200);
     });
 
     restoreHooksAfterDelay();
