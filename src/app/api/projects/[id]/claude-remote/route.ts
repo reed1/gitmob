@@ -55,6 +55,7 @@ export async function POST(
       });
 
       const timeout = setTimeout(() => {
+        child.kill();
         reject(new Error('Timed out waiting for URL'));
       }, 10000);
 
@@ -65,8 +66,10 @@ export async function POST(
         const match = output.match(/https:\/\/\S+/);
         if (match) {
           clearTimeout(timeout);
-          child.stdout!.removeListener('data', onData);
-          child.stderr!.removeListener('data', onData);
+          child.stdout!.removeAllListeners();
+          child.stderr!.removeAllListeners();
+          child.stdout!.destroy();
+          child.stderr!.destroy();
           child.unref();
           resolve(match[0]);
         }
