@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { spawn, execSync } from 'child_process';
-import { openSync, readFileSync, unlinkSync } from 'fs';
+import { openSync, readFileSync, unlinkSync, mkdirSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
-import { tmpdir } from 'os';
 import { getProject } from '@/lib/projects';
 
 // Workaround: claude remote-control hangs indefinitely when hooks are enabled
@@ -48,22 +47,36 @@ export async function POST(
   disableHooks();
 
   try {
-    const logFile = join(tmpdir(), `claude-remote-${id}-${Date.now()}.log`);
+    const remoteDir = '/tmp/rlocal/gitmob/remote';
+    mkdirSync(remoteDir, { recursive: true });
+    const logFile = `${remoteDir}/${id}-${Date.now()}.log`;
     const logFd = openSync(logFile, 'w');
 
     const url = await new Promise<string>((resolve, reject) => {
       const folderName = project.path.split('/').pop() || id;
-      const child = spawn('claude', ['remote-control', '--name', folderName], {
-        cwd: project.path,
-        detached: true,
-        stdio: ['ignore', logFd, logFd],
-      });
+      const child = spawn(
+        'claude',
+        [
+          'remote-control',
+          '--name',
+          folderName,
+          '--permission-mode',
+          'bypassPermissions',
+        ],
+        {
+          cwd: project.path,
+          detached: true,
+          stdio: ['ignore', logFd, logFd],
+        }
+      );
       child.unref();
 
       const cleanup = () => {
         clearInterval(poll);
         clearTimeout(timeout);
-        try { unlinkSync(logFile); } catch {}
+        try {
+          unlinkSync(logFile);
+        } catch {}
       };
 
       const timeout = setTimeout(() => {
