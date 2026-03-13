@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import ProjectCard from './ProjectCard';
 import { Project } from './types';
 import { apiFetch } from '../lib/api';
@@ -32,6 +33,7 @@ async function waitForNewServer(previousStartedAt: number): Promise<void> {
 }
 
 export default function Home() {
+  const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -144,6 +146,16 @@ export default function Home() {
                     onClick={() => setMenuOpen(false)}
                   />
                   <div className="absolute right-0 top-full mt-1 z-20 bg-background border border-foreground/20 rounded-lg shadow-lg py-1 min-w-[180px]">
+                    <button
+                      onClick={() => {
+                        setMenuOpen(false);
+                        router.push('/claude-sessions');
+                      }}
+                      className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 flex items-center gap-2"
+                    >
+                      <span className="w-4" />
+                      Claude Code
+                    </button>
                     <button
                       onClick={async () => {
                         setMenuOpen(false);

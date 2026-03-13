@@ -4,6 +4,7 @@ import { openSync, readFileSync, unlinkSync, mkdirSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
 import { getProject } from '@/lib/projects';
+import { registerSession } from '@/lib/claude-sessions';
 
 // Workaround: claude remote-control hangs indefinitely when hooks are enabled
 // (https://github.com/anthropics/claude-code/issues/9542).
@@ -52,6 +53,7 @@ export async function POST(
     const logFile = `${remoteDir}/${id}-${Date.now()}.log`;
     const logFd = openSync(logFile, 'w');
 
+    let childPid = 0;
     const url = await new Promise<string>((resolve, reject) => {
       const folderName = project.path.split('/').pop() || id;
       const child = spawn(
@@ -69,6 +71,7 @@ export async function POST(
           stdio: ['ignore', logFd, logFd],
         }
       );
+      childPid = child.pid ?? 0;
       child.unref();
 
       const cleanup = () => {
@@ -95,8 +98,16 @@ export async function POST(
       }, 200);
     });
 
+    registerSession({
+      projectId: id,
+      projectPath: project.path,
+      url,
+      pid: childPid,
+      startedAt: Date.now(),
+    });
+
     restoreHooksAfterDelay();
-    return NextResponse.json({ url });
+    return NextResponse.json({ url, pid: childPid });
   } catch (e) {
     restoreHooks();
     throw e;
