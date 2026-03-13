@@ -1,10 +1,8 @@
 import Database from 'better-sqlite3';
 import { mkdirSync, existsSync } from 'fs';
-import { join } from 'path';
-import { homedir } from 'os';
 
-const DB_DIR = join(homedir(), '.cache/gitmob');
-const DB_PATH = join(DB_DIR, 'claude-sessions.db');
+const DB_DIR = '/tmp/gitmob';
+const DB_PATH = `${DB_DIR}/claude-sessions.db`;
 
 function getDb(): Database.Database {
   if (!existsSync(DB_DIR)) {
