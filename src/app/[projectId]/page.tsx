@@ -71,7 +71,10 @@ export default function ProjectPage() {
     };
   }, [updateScrollIndicators, loading]);
 
+  const [returnTab, setReturnTab] = useState<Tab | null>(null);
+
   const goToFile = (filePath: string, fromGitUntracked = false) => {
+    setReturnTab(tab);
     setViewFilePath(filePath);
     setViewFileFromGitUntracked(fromGitUntracked);
     setTab('files');
@@ -254,6 +257,12 @@ export default function ProjectPage() {
             fromGitUntracked={viewFileFromGitUntracked}
             onStageRequest={handleStageFromPreview}
             onClearGitContext={() => setViewFileFromGitUntracked(false)}
+            onReturnToSource={() => {
+              if (returnTab) {
+                setTab(returnTab);
+                setReturnTab(null);
+              }
+            }}
           />
         )}
         {tab === 'changes' && (

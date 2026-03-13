@@ -119,6 +119,7 @@ export function FileBrowser({
   fromGitUntracked,
   onStageRequest,
   onClearGitContext,
+  onReturnToSource,
 }: {
   projectId: string;
   wordWrap: boolean;
@@ -128,6 +129,7 @@ export function FileBrowser({
   fromGitUntracked: boolean;
   onStageRequest: (filePath: string) => void;
   onClearGitContext: () => void;
+  onReturnToSource?: () => void;
 }) {
   const [path, setPath] = useState('');
   const [entries, setEntries] = useState<
@@ -135,10 +137,12 @@ export function FileBrowser({
   >([]);
   const [loading, setLoading] = useState(true);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [openedFromExternal, setOpenedFromExternal] = useState(false);
 
   useEffect(() => {
     if (initialFilePath) {
       setSelectedFile(initialFilePath);
+      setOpenedFromExternal(true);
       onInitialFileConsumed();
     }
   }, [initialFilePath, onInitialFileConsumed]);
@@ -164,6 +168,7 @@ export function FileBrowser({
       setPath(entry.path);
     } else {
       onClearGitContext();
+      setOpenedFromExternal(false);
       setSelectedFile(entry.path);
     }
   };
@@ -180,7 +185,13 @@ export function FileBrowser({
         projectId={projectId}
         filePath={selectedFile}
         wordWrap={wordWrap}
-        onClose={() => setSelectedFile(null)}
+        onClose={() => {
+          setSelectedFile(null);
+          if (openedFromExternal) {
+            setOpenedFromExternal(false);
+            onReturnToSource?.();
+          }
+        }}
         showStageButton={fromGitUntracked}
         onStage={() => onStageRequest(selectedFile)}
       />
