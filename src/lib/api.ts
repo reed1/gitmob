@@ -29,7 +29,7 @@ export function dismissToast(id: number) {
   notify();
 }
 
-function addToast(message: string) {
+export function addToast(message: string) {
   const id = nextToastId++;
   toasts = [...toasts, { id, message }];
   notify();

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import ProjectCard from './ProjectCard';
 import { Project } from './types';
-import { apiFetch } from '../lib/api';
+import { addToast } from '../lib/api';
 
 async function fetchHealthWithTimeout(
   timeoutMs: number
@@ -22,14 +22,19 @@ async function fetchHealthWithTimeout(
   }
 }
 
-async function waitForNewServer(previousStartedAt: number): Promise<void> {
-  while (true) {
+async function waitForNewServer(
+  previousStartedAt: number,
+  timeoutMs = 20000
+): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
     const health = await fetchHealthWithTimeout(3000);
     if (health && health.startedAt !== previousStartedAt) {
-      return;
+      return true;
     }
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
+  return false;
 }
 
 export default function Home() {
@@ -163,9 +168,20 @@ export default function Home() {
                         if (!health) return;
                         const previousStartedAt = health.startedAt;
                         setRestarting(true);
-                        await apiFetch('/api/restart', { method: 'POST' });
-                        await waitForNewServer(previousStartedAt);
-                        window.location.reload();
+                        // Raw fetch to avoid error toasts — the server will die mid-request
+                        fetch('/api/restart', { method: 'POST' }).catch(
+                          () => {}
+                        );
+                        const came_back =
+                          await waitForNewServer(previousStartedAt);
+                        if (came_back) {
+                          window.location.reload();
+                        } else {
+                          setRestarting(false);
+                          addToast(
+                            'Service did not come back up after 20 seconds'
+                          );
+                        }
                       }}
                       className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 flex items-center gap-2"
                     >
