@@ -11,6 +11,7 @@ interface SessionStatus {
   pid: number;
   startedAt: number;
   alive: boolean;
+  type: 'remote' | 'ttyd';
 }
 
 function formatUptime(startedAt: number): string {
@@ -69,7 +70,7 @@ export default function ClaudeSessionsPage() {
                 />
               </svg>
             </button>
-            <h1 className="text-xl font-semibold">Claude Code Sessions</h1>
+            <h1 className="text-xl font-semibold">Claude Remote Sessions</h1>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-foreground/50">
@@ -101,7 +102,7 @@ export default function ClaudeSessionsPage() {
 
         {!loading && sessions.length === 0 && (
           <div className="text-center text-foreground/50 py-8">
-            No Claude Code sessions found
+            No Claude Remote sessions found
           </div>
         )}
 
@@ -121,6 +122,9 @@ export default function ClaudeSessionsPage() {
                     className={`w-2 h-2 rounded-full ${session.alive ? 'bg-green-500' : 'bg-foreground/30'}`}
                   />
                   <span className="font-medium">{session.projectId}</span>
+                  <span className="text-xs px-1.5 py-0.5 rounded bg-foreground/10 text-foreground/60">
+                    {session.type}
+                  </span>
                   <span className="text-xs text-foreground/40">
                     PID {session.pid}
                   </span>
@@ -135,7 +139,7 @@ export default function ClaudeSessionsPage() {
                 )}
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                {session.url && (
+                {session.url && session.type === 'remote' && (
                   <button
                     onClick={() => window.open(session.url, '_blank')}
                     className="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-400 hover:bg-blue-500/30"

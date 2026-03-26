@@ -104,6 +104,7 @@ export async function POST(
       url,
       pid: childPid,
       startedAt: Date.now(),
+      type: 'remote',
     });
 
     restoreHooksAfterDelay();

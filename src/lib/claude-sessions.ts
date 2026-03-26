@@ -16,11 +16,30 @@ function getDb(): Database.Database {
       project_id TEXT NOT NULL,
       project_path TEXT NOT NULL,
       url TEXT NOT NULL,
-      started_at INTEGER NOT NULL
+      started_at INTEGER NOT NULL,
+      type TEXT NOT NULL
     )
   `);
+  const columns = db.prepare('PRAGMA table_info(sessions)').all() as {
+    name: string;
+  }[];
+  if (!columns.some((c) => c.name === 'type')) {
+    db.exec('DROP TABLE sessions');
+    db.exec(`
+      CREATE TABLE sessions (
+        pid INTEGER PRIMARY KEY,
+        project_id TEXT NOT NULL,
+        project_path TEXT NOT NULL,
+        url TEXT NOT NULL,
+        started_at INTEGER NOT NULL,
+        type TEXT NOT NULL
+      )
+    `);
+  }
   return db;
 }
+
+export type SessionType = 'remote' | 'ttyd';
 
 export interface ClaudeSession {
   projectId: string;
@@ -28,19 +47,21 @@ export interface ClaudeSession {
   url: string;
   pid: number;
   startedAt: number;
+  type: SessionType;
 }
 
 export function registerSession(session: ClaudeSession) {
   const db = getDb();
   try {
     db.prepare(
-      'INSERT OR REPLACE INTO sessions (pid, project_id, project_path, url, started_at) VALUES (?, ?, ?, ?, ?)'
+      'INSERT OR REPLACE INTO sessions (pid, project_id, project_path, url, started_at, type) VALUES (?, ?, ?, ?, ?, ?)'
     ).run(
       session.pid,
       session.projectId,
       session.projectPath,
       session.url,
-      session.startedAt
+      session.startedAt,
+      session.type
     );
   } finally {
     db.close();
@@ -64,13 +85,16 @@ export function getSessionStatuses(): ClaudeSessionStatus[] {
   const db = getDb();
   try {
     const rows = db
-      .prepare('SELECT pid, project_id, project_path, url, started_at FROM sessions ORDER BY started_at DESC')
+      .prepare(
+        'SELECT pid, project_id, project_path, url, started_at, type FROM sessions ORDER BY started_at DESC'
+      )
       .all() as {
       pid: number;
       project_id: string;
       project_path: string;
       url: string;
       started_at: number;
+      type: SessionType;
     }[];
 
     return rows.map((row) => ({
@@ -79,6 +103,7 @@ export function getSessionStatuses(): ClaudeSessionStatus[] {
       projectPath: row.project_path,
       url: row.url,
       startedAt: row.started_at,
+      type: row.type,
       alive: isProcessAlive(row.pid),
     }));
   } finally {

@@ -178,7 +178,23 @@ export default function ProjectCard({
                 }}
                 className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
               >
-                Claude Code
+                Claude Remote
+              </button>
+              <button
+                onClick={async () => {
+                  setMenuOpen(false);
+                  const res = await apiFetch(
+                    `/api/projects/${project.id}/claude-ttyd`,
+                    { method: 'POST' }
+                  );
+                  const data = await res.json();
+                  if (data.url) {
+                    window.open(data.url, '_blank');
+                  }
+                }}
+                className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
+              >
+                Claude TTYD
               </button>
               <button
                 onClick={() => {

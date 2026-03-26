@@ -154,7 +154,7 @@ export default function Home() {
                       className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 flex items-center gap-2"
                     >
                       <span className="w-4" />
-                      Claude Code Manager
+                      Claude Remote Manager
                     </button>
                     <button
                       onClick={async () => {
