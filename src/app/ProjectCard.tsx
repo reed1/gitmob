@@ -7,7 +7,7 @@ import { apiFetch } from '../lib/api';
 
 const DOOIT_DOMAIN = process.env.NEXT_PUBLIC_DOOIT_DOMAIN;
 function openExternal(url: string) {
-  if ((window as Record<string, unknown>).__webviewApk) {
+  if ((window as unknown as Record<string, unknown>).__webviewApk) {
     const parsed = new URL(url);
     window.location.href = `intent://${parsed.host}${parsed.pathname}#Intent;scheme=${parsed.protocol.replace(':', '')};package=com.android.chrome;end`;
   } else {
