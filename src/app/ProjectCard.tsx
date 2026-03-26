@@ -205,6 +205,23 @@ export default function ProjectCard({
                 Claude TTYD
               </button>
               <button
+                onClick={async () => {
+                  setMenuOpen(false);
+                  const res = await apiFetch(
+                    `/api/projects/${project.id}/claude-ttyd`,
+                    { method: 'POST' }
+                  );
+                  const data = await res.json();
+                  if (data.url) {
+                    const parsed = new URL(data.url);
+                    window.location.href = `intent://${parsed.host}${parsed.pathname}#Intent;scheme=${parsed.protocol.replace(':', '')};package=com.android.chrome;end`;
+                  }
+                }}
+                className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
+              >
+                TTYD (Intent)
+              </button>
+              <button
                 onClick={() => {
                   setMenuOpen(false);
                   if (DOOIT_DOMAIN) {
