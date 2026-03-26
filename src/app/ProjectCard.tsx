@@ -6,6 +6,14 @@ import { Project } from './types';
 import { apiFetch } from '../lib/api';
 
 const DOOIT_DOMAIN = process.env.NEXT_PUBLIC_DOOIT_DOMAIN;
+function openExternal(url: string) {
+  if ((window as Record<string, unknown>).__webviewApk) {
+    const parsed = new URL(url);
+    window.location.href = `intent://${parsed.host}${parsed.pathname}#Intent;scheme=${parsed.protocol.replace(':', '')};package=com.android.chrome;end`;
+  } else {
+    window.open(url, '_blank');
+  }
+}
 
 function getDefaultTab(project: Project): string {
   if (project.downSites.length > 0) return 'process';
@@ -189,7 +197,7 @@ export default function ProjectCard({
                   );
                   const data = await res.json();
                   if (data.url) {
-                    window.open(data.url, '_blank');
+                    openExternal(data.url);
                   }
                 }}
                 className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
