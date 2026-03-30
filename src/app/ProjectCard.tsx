@@ -9,7 +9,10 @@ const DOOIT_DOMAIN = process.env.NEXT_PUBLIC_DOOIT_DOMAIN;
 function openExternal(url: string) {
   if ((window as unknown as Record<string, unknown>).__webviewApk) {
     const parsed = new URL(url);
-    window.location.href = `intent://${parsed.host}${parsed.pathname}#Intent;scheme=${parsed.protocol.replace(':', '')};package=com.android.chrome;end`;
+    const intentUrl = `intent://${parsed.host}${parsed.pathname}#Intent;scheme=${parsed.protocol.replace(':', '')};package=com.android.chrome;end`;
+    const a = document.createElement('a');
+    a.href = intentUrl;
+    a.click();
   } else {
     window.open(url, '_blank');
   }
@@ -212,10 +215,7 @@ export default function ProjectCard({
                     { method: 'POST' }
                   );
                   const data = await res.json();
-                  if (data.url) {
-                    const parsed = new URL(data.url);
-                    window.location.href = `intent://${parsed.host}${parsed.pathname}#Intent;scheme=${parsed.protocol.replace(':', '')};package=com.android.chrome;end`;
-                  }
+                  if (data.url) openExternal(data.url);
                 }}
                 className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
               >
