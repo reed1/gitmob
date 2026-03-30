@@ -7,15 +7,7 @@ import { apiFetch } from '../lib/api';
 
 const DOOIT_DOMAIN = process.env.NEXT_PUBLIC_DOOIT_DOMAIN;
 function openExternal(url: string) {
-  if ((window as unknown as Record<string, unknown>).__webviewApk) {
-    const parsed = new URL(url);
-    const intentUrl = `intent://${parsed.host}${parsed.pathname}#Intent;scheme=${parsed.protocol.replace(':', '')};package=com.android.chrome;end`;
-    const a = document.createElement('a');
-    a.href = intentUrl;
-    a.click();
-  } else {
-    window.open(url, '_blank');
-  }
+  window.open(`https://href.li/?${url}`, '_blank');
 }
 
 function getDefaultTab(project: Project): string {
@@ -206,20 +198,6 @@ export default function ProjectCard({
                 className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
               >
                 Claude TTYD
-              </button>
-              <button
-                onClick={async () => {
-                  setMenuOpen(false);
-                  const res = await apiFetch(
-                    `/api/projects/${project.id}/claude-ttyd`,
-                    { method: 'POST' }
-                  );
-                  const data = await res.json();
-                  if (data.url) openExternal(data.url);
-                }}
-                className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
-              >
-                TTYD (Intent)
               </button>
               <button
                 onClick={() => {
