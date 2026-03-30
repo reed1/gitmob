@@ -35,7 +35,13 @@ export async function POST(
 
   const child = spawn(
     'ttyd',
-    ['-o', '-p', String(port), '-W', '-w', project.path, 'claude'],
+    [
+      '-o', '-p', String(port), '-W',
+      '-t', 'fontSize=26',
+      '-t', 'closeOnDisconnect=true',
+      '-w', project.path,
+      'claude',
+    ],
     {
       detached: true,
       stdio: 'ignore',
