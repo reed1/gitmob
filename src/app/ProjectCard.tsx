@@ -192,7 +192,8 @@ export default function ProjectCard({
                   );
                   const data = await res.json();
                   if (data.url) {
-                    openExternal(data.url);
+                    const wrapperUrl = `/ttyd?url=${encodeURIComponent(data.url)}&session=${encodeURIComponent(data.tmuxSession)}`;
+                    openExternal(window.location.origin + wrapperUrl);
                   }
                 }}
                 className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"

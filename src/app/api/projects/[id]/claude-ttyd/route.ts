@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServer } from 'net';
-import { spawn } from 'child_process';
+import { spawn, execSync } from 'child_process';
 import { getProject } from '@/lib/projects';
 import { registerSession } from '@/lib/claude-sessions';
 
@@ -32,15 +32,28 @@ export async function POST(
   }
 
   const port = await findFreePort();
+  const tmuxSession = `gitmob-ttyd-${port}`;
+
+  execSync(
+    `tmux new-session -d -s ${tmuxSession} -c ${JSON.stringify(project.path)} -x 80 -y 24 claude`
+  );
+  execSync(`tmux set -t ${tmuxSession} status off`);
 
   const child = spawn(
     'ttyd',
     [
-      '-o', '-p', String(port), '-W',
-      '-t', 'fontSize=26',
-      '-t', 'closeOnDisconnect=true',
-      '-w', project.path,
-      'claude',
+      '-q',
+      '-p',
+      String(port),
+      '-W',
+      '-t',
+      'fontSize=26',
+      '-t',
+      'closeOnDisconnect=true',
+      'tmux',
+      'attach',
+      '-t',
+      tmuxSession,
     ],
     {
       detached: true,
@@ -63,5 +76,5 @@ export async function POST(
     type: 'ttyd',
   });
 
-  return NextResponse.json({ url, pid });
+  return NextResponse.json({ url, pid, tmuxSession });
 }
