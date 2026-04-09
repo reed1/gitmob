@@ -23,17 +23,22 @@ function FileViewer({
     lineCount: number;
   } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fileName = filePath.split('/').pop() || filePath;
 
   useEffect(() => {
     async function load() {
       setLoading(true);
+      setError(null);
       const res = await fetch(
         `/api/projects/${projectId}/files/content?path=${encodeURIComponent(filePath)}`
       );
       if (res.ok) {
         setContent(await res.json());
+      } else {
+        const data = await res.json();
+        setError(data.error || 'Failed to load file');
       }
       setLoading(false);
     }
@@ -100,6 +105,8 @@ function FileViewer({
               dangerouslySetInnerHTML={{ __html: content.highlighted }}
             />
           )
+        ) : error ? (
+          <div className="p-4 text-center text-foreground/50">{error}</div>
         ) : (
           <div className="p-4 text-center text-foreground/50">
             Failed to load file
