@@ -8,6 +8,14 @@ export interface ProcessInfo {
   running: boolean;
   pid?: string;
   uptime?: string;
+  members?: string[];
+  runningMembers?: number;
+}
+
+export interface ProcessDefinition {
+  name: string;
+  commands?: string[];
+  members?: string[];
 }
 
 export function getSessionName(projectId: string): string {
@@ -37,7 +45,9 @@ export function listWindows(projectId: string): string[] {
   }
 }
 
-export async function getAllRunningProcesses(): Promise<Record<string, string[]>> {
+export async function getAllRunningProcesses(): Promise<
+  Record<string, string[]>
+> {
   return new Promise((resolve) => {
     exec('rv proc status --json', (error, stdout) => {
       if (error) {
@@ -90,33 +100,96 @@ function getRunningProcesses(projectId: string): RunningProcessMap {
   }
 }
 
+function getEntryRun(
+  entry: NonNullable<Project['cmd']>[string]
+): string | string[] | undefined {
+  if (typeof entry === 'string') return entry;
+  if (Array.isArray(entry)) return entry;
+  if (typeof entry === 'object') return entry.run;
+  return undefined;
+}
+
+function resolveGroupMembers(
+  cmd: NonNullable<Project['cmd']>,
+  name: string,
+  visited: Set<string>
+): string[] {
+  if (visited.has(name)) {
+    throw new Error(`Circular cmd reference: ${name}`);
+  }
+  visited.add(name);
+
+  const entry = cmd[name];
+  if (!entry) return [];
+
+  const run = getEntryRun(entry);
+  if (!Array.isArray(run)) {
+    return [name];
+  }
+
+  const hasRefs = run.some((r) => typeof r === 'string' && r.startsWith('@'));
+  if (!hasRefs) {
+    return [name];
+  }
+
+  const members: string[] = [];
+  for (const item of run) {
+    if (typeof item === 'string' && item.startsWith('@')) {
+      const refName = item.slice(1);
+      for (const m of resolveGroupMembers(cmd, refName, new Set(visited))) {
+        if (!members.includes(m)) members.push(m);
+      }
+    }
+  }
+  return members;
+}
+
+export function getGroupMembers(
+  cmd: Project['cmd'],
+  name: string
+): string[] | null {
+  if (!cmd) return null;
+  const entry = cmd[name];
+  if (!entry) return null;
+  const run = getEntryRun(entry);
+  if (!Array.isArray(run)) return null;
+  if (!run.some((r) => typeof r === 'string' && r.startsWith('@'))) return null;
+  return resolveGroupMembers(cmd, name, new Set());
+}
+
 export function parseProcessDefinitions(
   cmd: Project['cmd']
-): { name: string; commands: string[] }[] {
+): ProcessDefinition[] {
   if (!cmd) return [];
 
-  const processes: { name: string; commands: string[] }[] = [];
+  const definitions: ProcessDefinition[] = [];
 
   for (const [name, value] of Object.entries(cmd)) {
     if (typeof value === 'string') {
-      processes.push({ name, commands: [value] });
+      definitions.push({ name, commands: [value] });
     } else if (Array.isArray(value)) {
-      processes.push({ name, commands: value });
+      definitions.push({ name, commands: value });
     } else if (typeof value === 'object' && value.run) {
       const run = value.run;
       if (typeof run === 'string') {
-        processes.push({ name, commands: [run] });
+        definitions.push({ name, commands: [run] });
       } else if (Array.isArray(run)) {
-        const isReference = run.some((r) => r.startsWith('@'));
-        if (isReference) {
-          continue;
+        const hasRefs = run.some(
+          (r) => typeof r === 'string' && r.startsWith('@')
+        );
+        if (hasRefs) {
+          definitions.push({
+            name,
+            members: resolveGroupMembers(cmd, name, new Set()),
+          });
+        } else {
+          definitions.push({ name, commands: run });
         }
-        processes.push({ name, commands: run });
       }
     }
   }
 
-  return processes;
+  return definitions;
 }
 
 export function getProcessStatus(
@@ -129,6 +202,15 @@ export function getProcessStatus(
   const runningMap = getRunningProcesses(projectId);
 
   return definitions.map((def) => {
+    if (def.members) {
+      const runningMembers = def.members.filter((m) => runningMap[m]).length;
+      return {
+        name: def.name,
+        running: runningMembers > 0,
+        members: def.members,
+        runningMembers,
+      };
+    }
     const running = runningMap[def.name];
     return {
       name: def.name,
@@ -139,88 +221,75 @@ export function getProcessStatus(
   });
 }
 
+function runRv(args: string[]): Promise<{ success: boolean; error?: string }> {
+  return new Promise((resolve) => {
+    const proc = spawn('rv', args, { stdio: 'pipe' });
+
+    let stderr = '';
+    proc.stderr?.on('data', (data) => {
+      stderr += data.toString();
+    });
+
+    proc.on('close', (code) => {
+      if (code === 0) {
+        resolve({ success: true });
+      } else {
+        resolve({ success: false, error: stderr || `Exit code ${code}` });
+      }
+    });
+
+    proc.on('error', (err) => {
+      resolve({ success: false, error: err.message });
+    });
+  });
+}
+
 export async function startProcess(
   projectId: string,
   processName: string
 ): Promise<{ success: boolean; error?: string }> {
-  return new Promise((resolve) => {
-    const proc = spawn('rv', ['proc', 'start', projectId, processName], {
-      stdio: 'pipe',
-    });
-
-    let stderr = '';
-    proc.stderr?.on('data', (data) => {
-      stderr += data.toString();
-    });
-
-    proc.on('close', (code) => {
-      if (code === 0) {
-        resolve({ success: true });
-      } else {
-        resolve({ success: false, error: stderr || `Exit code ${code}` });
-      }
-    });
-
-    proc.on('error', (err) => {
-      resolve({ success: false, error: err.message });
-    });
-  });
+  return runRv(['proc', 'start', projectId, processName]);
 }
 
 export async function stopProcess(
   projectId: string,
-  processName: string
+  processName: string,
+  cmd?: Project['cmd']
 ): Promise<{ success: boolean; error?: string }> {
-  return new Promise((resolve) => {
-    const proc = spawn('rv', ['proc', 'stop', projectId, processName], {
-      stdio: 'pipe',
-    });
-
-    let stderr = '';
-    proc.stderr?.on('data', (data) => {
-      stderr += data.toString();
-    });
-
-    proc.on('close', (code) => {
-      if (code === 0) {
-        resolve({ success: true });
-      } else {
-        resolve({ success: false, error: stderr || `Exit code ${code}` });
-      }
-    });
-
-    proc.on('error', (err) => {
-      resolve({ success: false, error: err.message });
-    });
-  });
+  const members = getGroupMembers(cmd, processName);
+  if (members && members.length > 0) {
+    const runningMap = getRunningProcesses(projectId);
+    const runningMembers = members.filter((m) => runningMap[m]);
+    if (runningMembers.length === 0) {
+      return { success: true };
+    }
+    const errors: string[] = [];
+    for (const member of runningMembers) {
+      const result = await runRv(['proc', 'stop', projectId, member]);
+      if (!result.success && result.error)
+        errors.push(`${member}: ${result.error}`);
+    }
+    if (errors.length > 0) {
+      return { success: false, error: errors.join('; ') };
+    }
+    return { success: true };
+  }
+  return runRv(['proc', 'stop', projectId, processName]);
 }
 
 export async function restartProcess(
   projectId: string,
-  processName: string
+  processName: string,
+  cmd?: Project['cmd']
 ): Promise<{ success: boolean; error?: string }> {
-  return new Promise((resolve) => {
-    const proc = spawn('rv', ['proc', 'restart', projectId, processName], {
-      stdio: 'pipe',
-    });
-
-    let stderr = '';
-    proc.stderr?.on('data', (data) => {
-      stderr += data.toString();
-    });
-
-    proc.on('close', (code) => {
-      if (code === 0) {
-        resolve({ success: true });
-      } else {
-        resolve({ success: false, error: stderr || `Exit code ${code}` });
-      }
-    });
-
-    proc.on('error', (err) => {
-      resolve({ success: false, error: err.message });
-    });
-  });
+  const members = getGroupMembers(cmd, processName);
+  if (members && members.length > 0) {
+    const stopResult = await stopProcess(projectId, processName, cmd);
+    if (!stopResult.success) return stopResult;
+    await new Promise((r) => setTimeout(r, 500));
+    return runRv(['proc', 'start', projectId, processName]);
+  }
+  return runRv(['proc', 'restart', projectId, processName]);
 }
 
 export async function stopAllProcesses(

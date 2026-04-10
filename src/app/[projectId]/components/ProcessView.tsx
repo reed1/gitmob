@@ -8,6 +8,8 @@ interface ProcessInfo {
   running: boolean;
   pid?: string;
   uptime?: string;
+  members?: string[];
+  runningMembers?: number;
 }
 
 interface MonitorStatus {
@@ -84,53 +86,76 @@ export function ProcessView({
 
   return (
     <div className="p-4 space-y-3">
-      {processes.map((proc) => (
-        <div
-          key={proc.name}
-          className="flex items-center justify-between p-3 bg-foreground/5 border border-foreground/10 rounded-lg"
-        >
-          <div className="flex items-center gap-3">
-            <div
-              className={`w-2.5 h-2.5 rounded-full ${
-                proc.running ? 'bg-green-500' : 'bg-foreground/30'
-              }`}
-            />
-            <div>
-              <div className="font-medium">{proc.name}</div>
-              {proc.running && proc.uptime && (
-                <div className="text-xs text-foreground/50">
-                  PID {proc.pid} · {proc.uptime}
+      {processes.map((proc) => {
+        const isGroup = !!proc.members;
+        const total = proc.members?.length ?? 0;
+        const running = proc.runningMembers ?? 0;
+        const fullyRunning = isGroup ? running === total : proc.running;
+        return (
+          <div
+            key={proc.name}
+            className="flex items-center justify-between p-3 bg-foreground/5 border border-foreground/10 rounded-lg"
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className={`w-2.5 h-2.5 rounded-full ${
+                  isGroup
+                    ? fullyRunning
+                      ? 'bg-green-500'
+                      : running > 0
+                        ? 'bg-yellow-500'
+                        : 'bg-foreground/30'
+                    : proc.running
+                      ? 'bg-green-500'
+                      : 'bg-foreground/30'
+                }`}
+              />
+              <div>
+                <div className="font-medium">
+                  {isGroup ? `@${proc.name}` : proc.name}
                 </div>
+                {isGroup ? (
+                  <div className="text-xs text-foreground/50">
+                    {running}/{total} running · {proc.members!.join(', ')}
+                  </div>
+                ) : (
+                  proc.running &&
+                  proc.uptime && (
+                    <div className="text-xs text-foreground/50">
+                      PID {proc.pid} · {proc.uptime}
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              {proc.running ? (
+                <>
+                  <button
+                    onClick={() => handleAction('restart', proc.name)}
+                    className="px-3 py-1.5 text-sm bg-yellow-600 text-white rounded active:opacity-80"
+                  >
+                    Restart
+                  </button>
+                  <button
+                    onClick={() => handleAction('stop', proc.name)}
+                    className="px-3 py-1.5 text-sm bg-red-600 text-white rounded active:opacity-80"
+                  >
+                    Stop
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => handleAction('start', proc.name)}
+                  className="px-3 py-1.5 text-sm bg-green-600 text-white rounded active:opacity-80"
+                >
+                  Start
+                </button>
               )}
             </div>
           </div>
-          <div className="flex gap-2">
-            {proc.running ? (
-              <>
-                <button
-                  onClick={() => handleAction('restart', proc.name)}
-                  className="px-3 py-1.5 text-sm bg-yellow-600 text-white rounded active:opacity-80"
-                >
-                  Restart
-                </button>
-                <button
-                  onClick={() => handleAction('stop', proc.name)}
-                  className="px-3 py-1.5 text-sm bg-red-600 text-white rounded active:opacity-80"
-                >
-                  Stop
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={() => handleAction('start', proc.name)}
-                className="px-3 py-1.5 text-sm bg-green-600 text-white rounded active:opacity-80"
-              >
-                Start
-              </button>
-            )}
-          </div>
-        </div>
-      ))}
+        );
+      })}
 
       {urls && Object.keys(urls).length > 0 && (
         <div className="mt-6">

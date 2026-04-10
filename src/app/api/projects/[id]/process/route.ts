@@ -55,16 +55,13 @@ export async function POST(
   if (action === 'stopAll') {
     result = await stopAllProcesses(id);
   } else if (!processName) {
-    return NextResponse.json(
-      { error: 'Missing processName' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'Missing processName' }, { status: 400 });
   } else if (action === 'start') {
     result = await startProcess(id, processName);
   } else if (action === 'stop') {
-    result = await stopProcess(id, processName);
+    result = await stopProcess(id, processName, project.cmd);
   } else if (action === 'restart') {
-    result = await restartProcess(id, processName);
+    result = await restartProcess(id, processName, project.cmd);
   } else {
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   }
