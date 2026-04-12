@@ -22,6 +22,7 @@ export function ChangesView({
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [diff, setDiff] = useState<string>('');
   const [isStaged, setIsStaged] = useState(false);
+  const [isUntracked, setIsUntracked] = useState(false);
   const [isFullDiff, setIsFullDiff] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -32,9 +33,13 @@ export function ChangesView({
 
   useEffect(() => {
     if (selectedFile) {
-      loadDiff(selectedFile, isStaged, isFullDiff);
+      if (isUntracked) {
+        loadUntrackedDiff(selectedFile);
+      } else {
+        loadDiff(selectedFile, isStaged, isFullDiff);
+      }
     }
-  }, [selectedFile, isStaged, isFullDiff, projectId]);
+  }, [selectedFile, isStaged, isUntracked, isFullDiff, projectId]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -49,12 +54,13 @@ export function ChangesView({
 
   const allFiles = status
     ? [
-        ...status.staged.map((f) => ({ path: f.path, isStaged: true })),
-        ...status.unstaged.map((f) => ({ path: f.path, isStaged: false })),
+        ...status.staged.map((f) => ({ path: f.path, isStaged: true, isUntracked: false })),
+        ...status.unstaged.map((f) => ({ path: f.path, isStaged: false, isUntracked: false })),
+        ...status.untracked.map((f) => ({ path: f, isStaged: false, isUntracked: true })),
       ]
     : [];
   const currentIndex = allFiles.findIndex(
-    (f) => f.path === selectedFile && f.isStaged === isStaged
+    (f) => f.path === selectedFile && f.isStaged === isStaged && f.isUntracked === isUntracked
   );
   const hasPrev = currentIndex > 0;
   const hasNext = currentIndex < allFiles.length - 1;
@@ -64,12 +70,21 @@ export function ChangesView({
     setIsFullDiff(false);
     setSelectedFile(file.path);
     setIsStaged(file.isStaged);
+    setIsUntracked(file.isUntracked);
     setMenuOpen(false);
   };
 
   const loadDiff = async (file: string, staged: boolean, full: boolean = false) => {
     const res = await fetch(
       `/api/projects/${projectId}/git?action=diff&file=${encodeURIComponent(file)}&staged=${staged}&full=${full}`
+    );
+    const data = await res.json();
+    setDiff(data.diff);
+  };
+
+  const loadUntrackedDiff = async (file: string) => {
+    const res = await fetch(
+      `/api/projects/${projectId}/git?action=diff&file=${encodeURIComponent(file)}&untracked=true`
     );
     const data = await res.json();
     setDiff(data.diff);
@@ -84,6 +99,7 @@ export function ChangesView({
     setSelectedFile(null);
     setDiff('');
     setIsFullDiff(false);
+    setIsUntracked(false);
     onRefresh();
   };
 
@@ -92,7 +108,7 @@ export function ChangesView({
       <div className="flex flex-col h-full">
         <div className="sticky top-0 bg-background border-b border-foreground/10 px-4 py-2 flex items-center justify-between">
           <button
-            onClick={() => { setSelectedFile(null); setIsFullDiff(false); }}
+            onClick={() => { setSelectedFile(null); setIsFullDiff(false); setIsUntracked(false); }}
             className="text-foreground/50 hover:text-foreground"
           >
             <svg
@@ -144,30 +160,31 @@ export function ChangesView({
                   >
                     View
                   </button>
-                  <button
-                    onClick={() => {
-                      setIsFullDiff(!isFullDiff);
-                      setMenuOpen(false);
-                    }}
-                    className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 active:bg-foreground/15"
-                  >
-                    {isFullDiff ? 'Contextual Diff' : 'Full Diff'}
-                  </button>
+                  {!isUntracked && (
+                    <button
+                      onClick={() => {
+                        setIsFullDiff(!isFullDiff);
+                        setMenuOpen(false);
+                      }}
+                      className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 active:bg-foreground/15"
+                    >
+                      {isFullDiff ? 'Contextual Diff' : 'Full Diff'}
+                    </button>
+                  )}
                   {!isStaged && (
                     <button
                       onClick={() => {
-                        if (
-                          window.confirm(
-                            `Discard changes to ${selectedFile}? This cannot be undone.`
-                          )
-                        ) {
-                          handleAction('discard', selectedFile);
+                        const msg = isUntracked
+                          ? `Delete untracked file ${selectedFile}? This cannot be undone.`
+                          : `Discard changes to ${selectedFile}? This cannot be undone.`;
+                        if (window.confirm(msg)) {
+                          handleAction(isUntracked ? 'discard-untracked' : 'discard', selectedFile);
                         }
                         setMenuOpen(false);
                       }}
                       className="w-full px-4 py-2 text-sm text-left text-red-400 hover:bg-foreground/10 active:bg-foreground/15"
                     >
-                      Discard
+                      {isUntracked ? 'Delete' : 'Discard'}
                     </button>
                   )}
                   <button
@@ -238,6 +255,7 @@ export function ChangesView({
               onClick={() => {
                 setSelectedFile(file.path);
                 setIsStaged(true);
+                setIsUntracked(false);
               }}
               className="w-full px-4 py-3 text-left flex items-center gap-2 active:bg-foreground/5"
             >
@@ -261,6 +279,7 @@ export function ChangesView({
               onClick={() => {
                 setSelectedFile(file.path);
                 setIsStaged(false);
+                setIsUntracked(false);
               }}
               className="w-full px-4 py-3 text-left flex items-center gap-2 active:bg-foreground/5"
             >
@@ -283,7 +302,11 @@ export function ChangesView({
           {status.untracked.map((file) => (
             <button
               key={file}
-              onClick={() => onGoToFile(file, true)}
+              onClick={() => {
+                setSelectedFile(file);
+                setIsStaged(false);
+                setIsUntracked(true);
+              }}
               className="w-full px-4 py-3 text-left flex items-center gap-2 active:bg-foreground/5"
             >
               <span className="text-xs font-mono w-5 text-foreground/40">

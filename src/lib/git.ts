@@ -119,6 +119,24 @@ export async function getFileDiff(
   return git.diff([...contextArgs, '--', filePath]);
 }
 
+export async function getUntrackedFileDiff(
+  cwd: string,
+  filePath: string
+): Promise<string> {
+  const fs = await import('fs/promises');
+  const path = await import('path');
+  const content = await fs.readFile(path.join(cwd, filePath), 'utf-8');
+  const lines = content.split('\n');
+  return [
+    `diff --git a/${filePath} b/${filePath}`,
+    'new file mode 100644',
+    '--- /dev/null',
+    `+++ b/${filePath}`,
+    `@@ -0,0 +1,${lines.length} @@`,
+    ...lines.map((line) => '+' + line),
+  ].join('\n');
+}
+
 export async function stageFile(cwd: string, filePath: string): Promise<void> {
   const git = getGit(cwd);
   await git.add(filePath);
@@ -138,6 +156,14 @@ export async function discardChanges(
 ): Promise<void> {
   const git = getGit(cwd);
   await git.checkout(['--', filePath]);
+}
+
+export async function discardUntracked(
+  cwd: string,
+  filePath: string
+): Promise<void> {
+  const git = getGit(cwd);
+  await git.raw(['clean', '-f', '--', filePath]);
 }
 
 export async function commit(cwd: string, message: string): Promise<string> {
