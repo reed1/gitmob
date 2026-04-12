@@ -35,9 +35,10 @@ export async function GET(
       return NextResponse.json(await getStatus(project.path));
     case 'diff': {
       const staged = searchParams.get('staged') === 'true';
+      const full = searchParams.get('full') === 'true';
       const file = searchParams.get('file');
       const diff = file
-        ? await getFileDiff(project.path, file, staged)
+        ? await getFileDiff(project.path, file, staged, full)
         : await getDiff(project.path, staged);
       return NextResponse.json({ diff });
     }

@@ -91,12 +91,14 @@ export async function getDiff(
 export async function getFileDiff(
   cwd: string,
   filePath: string,
-  staged: boolean = false
+  staged: boolean = false,
+  full: boolean = false
 ): Promise<string> {
   const git = getGit(cwd);
+  const contextArgs = full ? ['-U99999'] : [];
 
   if (staged) {
-    const diff = await git.diff(['--cached', '--', filePath]);
+    const diff = await git.diff([...contextArgs, '--cached', '--', filePath]);
     if (diff.trim()) {
       return diff;
     }
@@ -114,7 +116,7 @@ export async function getFileDiff(
     }
     return '';
   }
-  return git.diff(['--', filePath]);
+  return git.diff([...contextArgs, '--', filePath]);
 }
 
 export async function stageFile(cwd: string, filePath: string): Promise<void> {

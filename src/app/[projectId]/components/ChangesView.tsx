@@ -22,6 +22,7 @@ export function ChangesView({
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [diff, setDiff] = useState<string>('');
   const [isStaged, setIsStaged] = useState(false);
+  const [isFullDiff, setIsFullDiff] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -31,9 +32,9 @@ export function ChangesView({
 
   useEffect(() => {
     if (selectedFile) {
-      loadDiff(selectedFile, isStaged);
+      loadDiff(selectedFile, isStaged, isFullDiff);
     }
-  }, [selectedFile, isStaged, projectId]);
+  }, [selectedFile, isStaged, isFullDiff, projectId]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -60,14 +61,15 @@ export function ChangesView({
 
   const navigateTo = (index: number) => {
     const file = allFiles[index];
+    setIsFullDiff(false);
     setSelectedFile(file.path);
     setIsStaged(file.isStaged);
     setMenuOpen(false);
   };
 
-  const loadDiff = async (file: string, staged: boolean) => {
+  const loadDiff = async (file: string, staged: boolean, full: boolean = false) => {
     const res = await fetch(
-      `/api/projects/${projectId}/git?action=diff&file=${encodeURIComponent(file)}&staged=${staged}`
+      `/api/projects/${projectId}/git?action=diff&file=${encodeURIComponent(file)}&staged=${staged}&full=${full}`
     );
     const data = await res.json();
     setDiff(data.diff);
@@ -81,6 +83,7 @@ export function ChangesView({
     });
     setSelectedFile(null);
     setDiff('');
+    setIsFullDiff(false);
     onRefresh();
   };
 
@@ -89,7 +92,7 @@ export function ChangesView({
       <div className="flex flex-col h-full">
         <div className="sticky top-0 bg-background border-b border-foreground/10 px-4 py-2 flex items-center justify-between">
           <button
-            onClick={() => setSelectedFile(null)}
+            onClick={() => { setSelectedFile(null); setIsFullDiff(false); }}
             className="text-foreground/50 hover:text-foreground"
           >
             <svg
@@ -140,6 +143,15 @@ export function ChangesView({
                     className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 active:bg-foreground/15"
                   >
                     View
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsFullDiff(!isFullDiff);
+                      setMenuOpen(false);
+                    }}
+                    className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 active:bg-foreground/15"
+                  >
+                    {isFullDiff ? 'Contextual Diff' : 'Full Diff'}
                   </button>
                   {!isStaged && (
                     <button

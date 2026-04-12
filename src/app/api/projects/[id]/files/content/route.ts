@@ -42,7 +42,7 @@ export async function GET(
     const mime = execFileSync('file', ['--brief', '--mime', fullPath], {
       encoding: 'utf-8',
     }).trim();
-    if (!mime.startsWith('text/') && !mime.startsWith('application/json')) {
+    if (mime.includes('charset=binary')) {
       return NextResponse.json(
         { error: 'Cannot preview binary file' },
         { status: 422 }
