@@ -35,9 +35,14 @@ export async function POST(
   const tmuxSession = `gitmob-ttyd-${port}`;
 
   execSync(
-    `tmux new-session -d -s ${tmuxSession} -c ${JSON.stringify(project.path)} -x 80 -y 24 claude`
+    `tmux new-session -d -s ${tmuxSession} -c ${JSON.stringify(project.path)} claude`
   );
   execSync(`tmux set -t ${tmuxSession} status off`);
+  execSync(`tmux set -t ${tmuxSession} mouse off`);
+  execSync(`tmux setw -t ${tmuxSession} alternate-screen off`);
+  execSync(
+    `tmux set -t ${tmuxSession} terminal-overrides ',*:smcup@:rmcup@'`
+  );
 
   const child = spawn(
     'ttyd',
@@ -47,7 +52,11 @@ export async function POST(
       String(port),
       '-W',
       '-t',
-      'fontSize=26',
+      'fontSize=14',
+      '-t',
+      'fontFamily=ui-monospace, "SF Mono", Menlo, Consolas, "JetBrains Mono", "Fira Code", "Cascadia Code", "DejaVu Sans Mono", monospace',
+      '-t',
+      'scrollback=3000',
       '-t',
       'closeOnDisconnect=true',
       'tmux',
