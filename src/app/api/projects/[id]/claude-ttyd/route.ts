@@ -40,9 +40,7 @@ export async function POST(
   execSync(`tmux set -t ${tmuxSession} status off`);
   execSync(`tmux set -t ${tmuxSession} mouse off`);
   execSync(`tmux setw -t ${tmuxSession} alternate-screen off`);
-  execSync(
-    `tmux set -t ${tmuxSession} terminal-overrides ',*:smcup@:rmcup@'`
-  );
+  execSync(`tmux set -t ${tmuxSession} terminal-overrides ',*:smcup@:rmcup@'`);
 
   const child = spawn(
     'ttyd',
@@ -52,7 +50,7 @@ export async function POST(
       String(port),
       '-W',
       '-t',
-      'fontSize=14',
+      'fontSize=12',
       '-t',
       'fontFamily=ui-monospace, "SF Mono", Menlo, Consolas, "JetBrains Mono", "Fira Code", "Cascadia Code", "DejaVu Sans Mono", monospace',
       '-t',

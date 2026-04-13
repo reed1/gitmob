@@ -18,7 +18,12 @@ function TtydWrapper() {
   const tmuxSession = searchParams.get('session');
   const [inputOpen, setInputOpen] = useState(false);
   const [text, setText] = useState('');
+  const [lockedHeight, setLockedHeight] = useState<number | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    setLockedHeight(window.innerHeight);
+  }, []);
 
   useEffect(() => {
     if (inputOpen && textareaRef.current) {
@@ -44,7 +49,10 @@ function TtydWrapper() {
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-black">
+    <div
+      className="fixed top-0 left-0 right-0 flex flex-col bg-black overflow-hidden"
+      style={lockedHeight ? { height: `${lockedHeight}px` } : { bottom: 0 }}
+    >
       <iframe
         src={ttydUrl}
         className="flex-1 w-full border-none"
