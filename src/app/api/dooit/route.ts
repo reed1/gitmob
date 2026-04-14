@@ -21,6 +21,15 @@ async function rqliteExecute(statements: string[]) {
   return res.json();
 }
 
+async function rqliteRequest(statements: string[]) {
+  const res = await fetch(`${RQLITE_URL}/db/request`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(statements),
+  });
+  return res.json();
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const action = searchParams.get('action');
@@ -89,21 +98,22 @@ export async function POST(request: NextRequest) {
     const table = getTableName(projectName, 'todo');
     const workspaceId = body.workspace_id;
     const description = body.description?.replace(/'/g, "''") || '';
-    const maxOrderSql = `SELECT COALESCE(MAX(order_index), -1) FROM ${table} WHERE parent_workspace_id = ${workspaceId}`;
-    const maxOrderData = await rqliteQuery(maxOrderSql);
-    const maxOrder = maxOrderData.results?.[0]?.values?.[0]?.[0] ?? -1;
-    const sql = `INSERT INTO ${table} (order_index, description, due, effort, recurrence, urgency, pending, parent_workspace_id, parent_todo_id) VALUES (${maxOrder + 1}, '${description}', NULL, 1, NULL, 1, true, ${workspaceId}, NULL)`;
-    await rqliteExecute([sql]);
-    return NextResponse.json({ success: true });
+    const sql = `INSERT INTO ${table} (order_index, description, due, effort, recurrence, urgency, pending, parent_workspace_id, parent_todo_id) VALUES ((SELECT COALESCE(MAX(order_index), -1) + 1 FROM ${table} WHERE parent_workspace_id = ${workspaceId}), '${description}', NULL, 1, NULL, 1, true, ${workspaceId}, NULL) RETURNING id, description, urgency, due, pending`;
+    const data = await rqliteRequest([sql]);
+    const row = data.results?.[0]?.values?.[0];
+    const todo = row ? { id: row[0], description: row[1], urgency: row[2], due: row[3], pending: row[4] } : null;
+    return NextResponse.json({ success: true, todo });
   }
 
   if (action === 'update_todo') {
     const table = getTableName(projectName, 'todo');
     const todoId = body.todo_id;
     const description = body.description?.replace(/'/g, "''") || '';
-    const sql = `UPDATE ${table} SET description = '${description}' WHERE id = ${todoId}`;
-    await rqliteExecute([sql]);
-    return NextResponse.json({ success: true });
+    const sql = `UPDATE ${table} SET description = '${description}' WHERE id = ${todoId} RETURNING id, description, urgency, due, pending`;
+    const data = await rqliteRequest([sql]);
+    const row = data.results?.[0]?.values?.[0];
+    const todo = row ? { id: row[0], description: row[1], urgency: row[2], due: row[3], pending: row[4] } : null;
+    return NextResponse.json({ success: true, todo });
   }
 
   if (action === 'delete_todo') {

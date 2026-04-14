@@ -106,7 +106,7 @@ export function DooitView({ projectId }: { projectId: string }) {
   const handleModalSave = async () => {
     if (!modalText.trim() || selectedWorkspace === null) return;
     if (modalMode === 'add') {
-      await apiFetch('/api/dooit?action=add_todo', {
+      const res = await apiFetch('/api/dooit?action=add_todo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -115,8 +115,14 @@ export function DooitView({ projectId }: { projectId: string }) {
           description: modalText.trim(),
         }),
       });
+      const data = await res.json();
+      if (data.todo) {
+        setTodos((prev) => [...prev, data.todo]);
+      }
+      closeModal();
+      return;
     } else if (modalMode === 'edit' && editingTodoId !== null) {
-      await apiFetch('/api/dooit?action=update_todo', {
+      const res = await apiFetch('/api/dooit?action=update_todo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -125,11 +131,17 @@ export function DooitView({ projectId }: { projectId: string }) {
           description: modalText.trim(),
         }),
       });
+      const data = await res.json();
+      if (data.todo) {
+        setTodos((prev) =>
+          prev.map((t) => (t.id === data.todo.id ? data.todo : t))
+        );
+      }
+      closeModal();
+      return;
     } else {
       throw new Error(`Unexpected modalMode: ${modalMode}`);
     }
-    closeModal();
-    await fetchTodos();
   };
 
   const deleteTodo = async (todoId: number) => {
@@ -143,7 +155,7 @@ export function DooitView({ projectId }: { projectId: string }) {
     });
     setDeleteConfirmId(null);
     setExpandedTodoId(null);
-    await fetchTodos();
+    setTodos((prev) => prev.filter((t) => t.id !== todoId));
   };
 
   if (loading) {
