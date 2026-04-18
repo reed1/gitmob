@@ -26,6 +26,43 @@ export default function ProjectCard({
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [urlModalOpen, setUrlModalOpen] = useState(false);
+  const [customModalOpen, setCustomModalOpen] = useState(false);
+  const [customInterface, setCustomInterface] = useState<'remote' | 'ttyd'>(
+    'remote'
+  );
+  const [customBypassPermissions, setCustomBypassPermissions] = useState(true);
+
+  async function launchCustom() {
+    setCustomModalOpen(false);
+    const body = JSON.stringify({
+      bypassPermissions: customBypassPermissions,
+    });
+    const headers = { 'Content-Type': 'application/json' };
+    if (customInterface === 'remote') {
+      const res = await apiFetch(`/api/projects/${project.id}/claude-remote`, {
+        method: 'POST',
+        headers,
+        body,
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.open(data.url, '_blank');
+      }
+    } else if (customInterface === 'ttyd') {
+      const res = await apiFetch(`/api/projects/${project.id}/claude-ttyd`, {
+        method: 'POST',
+        headers,
+        body,
+      });
+      const data = await res.json();
+      if (data.url) {
+        const wrapperUrl = `/ttyd?url=${encodeURIComponent(data.url)}&session=${encodeURIComponent(data.tmuxSession)}`;
+        openExternal(window.location.origin + wrapperUrl);
+      }
+    } else {
+      throw new Error(`Unexpected interface: ${customInterface}`);
+    }
+  }
 
   const urls = project.urls ?? {};
   const urlEntries = Object.entries(urls);
@@ -184,21 +221,15 @@ export default function ProjectCard({
                 Claude Remote
               </button>
               <button
-                onClick={async () => {
+                onClick={() => {
                   setMenuOpen(false);
-                  const res = await apiFetch(
-                    `/api/projects/${project.id}/claude-ttyd`,
-                    { method: 'POST' }
-                  );
-                  const data = await res.json();
-                  if (data.url) {
-                    const wrapperUrl = `/ttyd?url=${encodeURIComponent(data.url)}&session=${encodeURIComponent(data.tmuxSession)}`;
-                    openExternal(window.location.origin + wrapperUrl);
-                  }
+                  setCustomInterface('remote');
+                  setCustomBypassPermissions(true);
+                  setCustomModalOpen(true);
                 }}
                 className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
               >
-                Claude TTYD
+                Claude Custom
               </button>
               <button
                 onClick={() => {
@@ -223,6 +254,80 @@ export default function ProjectCard({
           </>
         )}
       </div>
+
+      {customModalOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/50"
+            onClick={() => setCustomModalOpen(false)}
+          />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="bg-background border border-foreground/20 rounded-lg shadow-xl max-w-sm w-full">
+              <div className="px-4 py-3 border-b border-foreground/10">
+                <h3 className="font-medium">Launch Claude Code</h3>
+              </div>
+              <div className="px-4 py-3 space-y-3">
+                <div>
+                  <div className="text-xs text-foreground/60 mb-1.5">
+                    Interface
+                  </div>
+                  <div className="flex gap-2">
+                    <label className="flex-1 flex items-center justify-center gap-2 text-sm border border-foreground/20 rounded-lg px-3 py-2 cursor-pointer has-[:checked]:bg-foreground/10 has-[:checked]:border-foreground/40">
+                      <input
+                        type="radio"
+                        name={`custom-iface-${project.id}`}
+                        value="remote"
+                        checked={customInterface === 'remote'}
+                        onChange={() => setCustomInterface('remote')}
+                        className="w-4 h-4"
+                      />
+                      Remote
+                    </label>
+                    <label className="flex-1 flex items-center justify-center gap-2 text-sm border border-foreground/20 rounded-lg px-3 py-2 cursor-pointer has-[:checked]:bg-foreground/10 has-[:checked]:border-foreground/40">
+                      <input
+                        type="radio"
+                        name={`custom-iface-${project.id}`}
+                        value="ttyd"
+                        checked={customInterface === 'ttyd'}
+                        onChange={() => setCustomInterface('ttyd')}
+                        className="w-4 h-4"
+                      />
+                      TTYD
+                    </label>
+                  </div>
+                </div>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={customBypassPermissions}
+                    onChange={(e) =>
+                      setCustomBypassPermissions(e.target.checked)
+                    }
+                    className="w-4 h-4"
+                  />
+                  <span className="font-mono text-xs">
+                    --permission-mode bypassPermissions
+                  </span>
+                </label>
+              </div>
+              <div className="px-4 py-3 border-t border-foreground/10 flex justify-end gap-2">
+                <button
+                  onClick={() => setCustomModalOpen(false)}
+                  className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={launchCustom}
+                  className="px-3 py-1.5 text-sm rounded-lg bg-foreground text-background hover:opacity-90"
+                >
+                  Launch
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {urlModalOpen && (
         <>

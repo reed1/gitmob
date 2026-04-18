@@ -31,11 +31,22 @@ export async function POST(
     return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   }
 
+  let bypassPermissions = true;
+  try {
+    const body = await request.json();
+    if (typeof body?.bypassPermissions === 'boolean') {
+      bypassPermissions = body.bypassPermissions;
+    }
+  } catch {}
+
   const port = await findFreePort();
   const tmuxSession = `gitmob-ttyd-${port}`;
 
+  const claudeCmd = bypassPermissions
+    ? 'claude --permission-mode bypassPermissions'
+    : 'claude';
   execSync(
-    `tmux new-session -d -s ${tmuxSession} -c ${JSON.stringify(project.path)} claude`
+    `tmux new-session -d -s ${tmuxSession} -c ${JSON.stringify(project.path)} ${claudeCmd}`
   );
   execSync(`tmux set -t ${tmuxSession} status off`);
   execSync(`tmux set -t ${tmuxSession} mouse off`);
