@@ -205,22 +205,6 @@ export default function ProjectCard({
                 Stop proc
               </button>
               <button
-                onClick={async () => {
-                  setMenuOpen(false);
-                  const res = await apiFetch(
-                    `/api/projects/${project.id}/claude-remote`,
-                    { method: 'POST' }
-                  );
-                  const data = await res.json();
-                  if (data.url) {
-                    window.open(data.url, '_blank');
-                  }
-                }}
-                className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
-              >
-                Claude Remote
-              </button>
-              <button
                 onClick={() => {
                   setMenuOpen(false);
                   setCustomInterface('remote');
@@ -229,7 +213,7 @@ export default function ProjectCard({
                 }}
                 className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
               >
-                Claude Custom
+                Claude
               </button>
               <button
                 onClick={() => {
@@ -305,9 +289,7 @@ export default function ProjectCard({
                     }
                     className="w-4 h-4"
                   />
-                  <span className="font-mono text-xs">
-                    --permission-mode bypassPermissions
-                  </span>
+                  <span>Bypass permissions</span>
                 </label>
               </div>
               <div className="px-4 py-3 border-t border-foreground/10 flex justify-end gap-2">
