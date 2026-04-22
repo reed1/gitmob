@@ -25,6 +25,7 @@ export function ChangesView({
   const [isUntracked, setIsUntracked] = useState(false);
   const [isFullDiff, setIsFullDiff] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -197,15 +198,7 @@ export function ChangesView({
                   {!isStaged && (
                     <button
                       onClick={() => {
-                        const msg = isUntracked
-                          ? `Delete untracked file ${selectedFile}? This cannot be undone.`
-                          : `Discard changes to ${selectedFile}? This cannot be undone.`;
-                        if (window.confirm(msg)) {
-                          handleAction(
-                            isUntracked ? 'discard-untracked' : 'discard',
-                            selectedFile
-                          );
-                        }
+                        setConfirmDiscard(true);
                         setMenuOpen(false);
                       }}
                       className="w-full px-4 py-2 text-sm text-left text-red-400 hover:bg-foreground/10 active:bg-foreground/15"
@@ -257,6 +250,50 @@ export function ChangesView({
             })}
           </div>
         </div>
+        {confirmDiscard && (
+          <>
+            <div
+              className="fixed inset-0 z-40 bg-black/50"
+              onClick={() => setConfirmDiscard(false)}
+            />
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <div className="bg-background border border-foreground/20 rounded-lg shadow-xl max-w-sm w-full">
+                <div className="px-4 py-3 border-b border-foreground/10">
+                  <h3 className="font-medium">
+                    {isUntracked ? 'Delete file?' : 'Discard changes?'}
+                  </h3>
+                </div>
+                <div className="px-4 py-3 text-sm text-foreground/80">
+                  {isUntracked
+                    ? 'Delete untracked file '
+                    : 'Discard changes to '}
+                  <span className="font-mono break-all">{selectedFile}</span>?
+                  This cannot be undone.
+                </div>
+                <div className="px-4 py-3 border-t border-foreground/10 flex justify-end gap-2">
+                  <button
+                    onClick={() => setConfirmDiscard(false)}
+                    className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      setConfirmDiscard(false);
+                      handleAction(
+                        isUntracked ? 'discard-untracked' : 'discard',
+                        selectedFile
+                      );
+                    }}
+                    className="px-3 py-1.5 text-sm rounded-lg bg-red-600 text-white hover:opacity-90"
+                  >
+                    {isUntracked ? 'Delete' : 'Discard'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     );
   }
