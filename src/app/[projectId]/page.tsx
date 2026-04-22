@@ -10,6 +10,7 @@ import { ProcessView } from './components/ProcessView';
 import { CLIView } from './components/CLIView';
 import { DooitView } from './components/DooitView';
 import { apiFetch } from '../../lib/api';
+import ProjectContextMenu from '../ProjectContextMenu';
 
 const tabs = [
   { id: 'dooit', label: 'Dooit' },
@@ -157,8 +158,8 @@ export default function ProjectPage() {
               </span>
             </div>
           </div>
-          {((tab === 'changes' && showingDiff) ||
-            (tab === 'files' && showingFile)) && (
+          {(tab === 'changes' && showingDiff) ||
+          (tab === 'files' && showingFile) ? (
             <label className="flex items-center gap-2 text-sm text-foreground/60 cursor-pointer">
               <input
                 type="checkbox"
@@ -181,6 +182,8 @@ export default function ProjectPage() {
               </div>
               Wrap
             </label>
+          ) : (
+            project && <ProjectContextMenu project={project} />
           )}
         </div>
 

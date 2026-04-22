@@ -41,7 +41,9 @@ export async function GET(
       const untracked = searchParams.get('untracked') === 'true';
       const file = searchParams.get('file');
       if (file && untracked) {
-        return NextResponse.json({ diff: await getUntrackedFileDiff(project.path, file) });
+        return NextResponse.json({
+          diff: await getUntrackedFileDiff(project.path, file),
+        });
       }
       const diff = file
         ? await getFileDiff(project.path, file, staged, full)
@@ -59,7 +61,10 @@ export async function GET(
     case 'shorten-message': {
       const message = searchParams.get('message');
       if (!message) {
-        return NextResponse.json({ error: 'Message required' }, { status: 400 });
+        return NextResponse.json(
+          { error: 'Message required' },
+          { status: 400 }
+        );
       }
       const prompts = [
         'Shorten this commit message to half of its length. Try to preserve the key information.',

@@ -54,13 +54,28 @@ export function ChangesView({
 
   const allFiles = status
     ? [
-        ...status.staged.map((f) => ({ path: f.path, isStaged: true, isUntracked: false })),
-        ...status.unstaged.map((f) => ({ path: f.path, isStaged: false, isUntracked: false })),
-        ...status.untracked.map((f) => ({ path: f, isStaged: false, isUntracked: true })),
+        ...status.staged.map((f) => ({
+          path: f.path,
+          isStaged: true,
+          isUntracked: false,
+        })),
+        ...status.unstaged.map((f) => ({
+          path: f.path,
+          isStaged: false,
+          isUntracked: false,
+        })),
+        ...status.untracked.map((f) => ({
+          path: f,
+          isStaged: false,
+          isUntracked: true,
+        })),
       ]
     : [];
   const currentIndex = allFiles.findIndex(
-    (f) => f.path === selectedFile && f.isStaged === isStaged && f.isUntracked === isUntracked
+    (f) =>
+      f.path === selectedFile &&
+      f.isStaged === isStaged &&
+      f.isUntracked === isUntracked
   );
   const hasPrev = currentIndex > 0;
   const hasNext = currentIndex < allFiles.length - 1;
@@ -74,7 +89,11 @@ export function ChangesView({
     setMenuOpen(false);
   };
 
-  const loadDiff = async (file: string, staged: boolean, full: boolean = false) => {
+  const loadDiff = async (
+    file: string,
+    staged: boolean,
+    full: boolean = false
+  ) => {
     const res = await fetch(
       `/api/projects/${projectId}/git?action=diff&file=${encodeURIComponent(file)}&staged=${staged}&full=${full}`
     );
@@ -108,7 +127,11 @@ export function ChangesView({
       <div className="flex flex-col h-full">
         <div className="sticky top-0 bg-background border-b border-foreground/10 px-4 py-2 flex items-center justify-between">
           <button
-            onClick={() => { setSelectedFile(null); setIsFullDiff(false); setIsUntracked(false); }}
+            onClick={() => {
+              setSelectedFile(null);
+              setIsFullDiff(false);
+              setIsUntracked(false);
+            }}
             className="text-foreground/50 hover:text-foreground"
           >
             <svg
@@ -178,7 +201,10 @@ export function ChangesView({
                           ? `Delete untracked file ${selectedFile}? This cannot be undone.`
                           : `Discard changes to ${selectedFile}? This cannot be undone.`;
                         if (window.confirm(msg)) {
-                          handleAction(isUntracked ? 'discard-untracked' : 'discard', selectedFile);
+                          handleAction(
+                            isUntracked ? 'discard-untracked' : 'discard',
+                            selectedFile
+                          );
                         }
                         setMenuOpen(false);
                       }}
