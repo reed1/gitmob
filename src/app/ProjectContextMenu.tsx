@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { apiFetch } from '../lib/api';
 
 const DOOIT_DOMAIN = process.env.NEXT_PUBLIC_DOOIT_DOMAIN;
@@ -25,11 +26,13 @@ export default function ProjectContextMenu({
     'remote'
   );
   const [customBypassPermissions, setCustomBypassPermissions] = useState(true);
+  const [customChromeMcp, setCustomChromeMcp] = useState(false);
 
   async function launchCustom() {
     setCustomModalOpen(false);
     const body = JSON.stringify({
       bypassPermissions: customBypassPermissions,
+      chromeMcp: customChromeMcp,
     });
     const headers = { 'Content-Type': 'application/json' };
     if (customInterface === 'remote') {
@@ -133,6 +136,7 @@ export default function ProjectContextMenu({
                   setMenuOpen(false);
                   setCustomInterface('remote');
                   setCustomBypassPermissions(true);
+                  setCustomChromeMcp(false);
                   setCustomModalOpen(true);
                 }}
                 className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
@@ -163,7 +167,7 @@ export default function ProjectContextMenu({
         )}
       </div>
 
-      {customModalOpen && (
+      {customModalOpen && createPortal(
         <>
           <div
             className="fixed inset-0 z-40 bg-black/50"
@@ -180,13 +184,20 @@ export default function ProjectContextMenu({
                     Interface
                   </div>
                   <div className="flex gap-2">
-                    <label className="flex-1 flex items-center justify-center gap-2 text-sm border border-foreground/20 rounded-lg px-3 py-2 cursor-pointer has-[:checked]:bg-foreground/10 has-[:checked]:border-foreground/40">
+                    <label
+                      className={`flex-1 flex items-center justify-center gap-2 text-sm border rounded-lg px-3 py-2 has-[:checked]:bg-foreground/10 has-[:checked]:border-foreground/40 ${
+                        customChromeMcp
+                          ? 'border-foreground/10 text-foreground/30 cursor-not-allowed'
+                          : 'border-foreground/20 cursor-pointer'
+                      }`}
+                    >
                       <input
                         type="radio"
                         name={`custom-iface-${project.id}`}
                         value="remote"
                         checked={customInterface === 'remote'}
                         onChange={() => setCustomInterface('remote')}
+                        disabled={customChromeMcp}
                         className="w-4 h-4"
                       />
                       Remote
@@ -215,6 +226,24 @@ export default function ProjectContextMenu({
                   />
                   <span>Bypass permissions</span>
                 </label>
+                <label className="flex items-start gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={customChromeMcp}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setCustomChromeMcp(checked);
+                      if (checked) setCustomInterface('ttyd');
+                    }}
+                    className="w-4 h-4 mt-0.5"
+                  />
+                  <span>
+                    Chrome DevTools MCP
+                    <span className="block text-xs text-foreground/50">
+                      Headless chromium · TTYD only
+                    </span>
+                  </span>
+                </label>
               </div>
               <div className="px-4 py-3 border-t border-foreground/10 flex justify-end gap-2">
                 <button
@@ -232,10 +261,11 @@ export default function ProjectContextMenu({
               </div>
             </div>
           </div>
-        </>
+        </>,
+        document.body
       )}
 
-      {urlModalOpen && (
+      {urlModalOpen && createPortal(
         <>
           <div
             className="fixed inset-0 z-40 bg-black/50"
@@ -272,7 +302,8 @@ export default function ProjectContextMenu({
               </div>
             </div>
           </div>
-        </>
+        </>,
+        document.body
       )}
     </>
   );
