@@ -3,6 +3,7 @@ import { createServer } from 'net';
 import { spawn, execSync } from 'child_process';
 import { getProject } from '@/lib/projects';
 import { registerSession } from '@/lib/claude-sessions';
+import { startChromeMcp, ChromeMcpHandle } from '@/lib/chrome-mcp';
 
 function findFreePort(): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -32,19 +33,31 @@ export async function POST(
   }
 
   let bypassPermissions = true;
+  let chromeMcp = false;
   try {
     const body = await request.json();
     if (typeof body?.bypassPermissions === 'boolean') {
       bypassPermissions = body.bypassPermissions;
     }
+    if (typeof body?.chromeMcp === 'boolean') {
+      chromeMcp = body.chromeMcp;
+    }
   } catch {}
+
+  let chromeHandle: ChromeMcpHandle | null = null;
+  if (chromeMcp) {
+    chromeHandle = await startChromeMcp();
+  }
 
   const port = await findFreePort();
   const tmuxSession = `gitmob-ttyd-${port}`;
 
-  const claudeCmd = bypassPermissions
+  let claudeCmd = bypassPermissions
     ? 'claude --permission-mode bypassPermissions'
     : 'claude';
+  if (chromeHandle) {
+    claudeCmd += ` --mcp-config ${JSON.stringify(chromeHandle.mcpConfigPath)}`;
+  }
   execSync(
     `tmux new-session -d -s ${tmuxSession} -c ${JSON.stringify(project.path)} ${claudeCmd}`
   );
@@ -92,6 +105,7 @@ export async function POST(
     pid,
     startedAt: Date.now(),
     type: 'ttyd',
+    auxPid: chromeHandle?.chromiumPid,
   });
 
   return NextResponse.json({ url, pid, tmuxSession });

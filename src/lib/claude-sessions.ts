@@ -17,13 +17,16 @@ function getDb(): Database.Database {
       project_path TEXT NOT NULL,
       url TEXT NOT NULL,
       started_at INTEGER NOT NULL,
-      type TEXT NOT NULL
+      type TEXT NOT NULL,
+      aux_pid INTEGER
     )
   `);
   const columns = db.prepare('PRAGMA table_info(sessions)').all() as {
     name: string;
   }[];
-  if (!columns.some((c) => c.name === 'type')) {
+  const required = ['type', 'aux_pid'];
+  const hasAll = required.every((n) => columns.some((c) => c.name === n));
+  if (!hasAll) {
     db.exec('DROP TABLE sessions');
     db.exec(`
       CREATE TABLE sessions (
@@ -32,7 +35,8 @@ function getDb(): Database.Database {
         project_path TEXT NOT NULL,
         url TEXT NOT NULL,
         started_at INTEGER NOT NULL,
-        type TEXT NOT NULL
+        type TEXT NOT NULL,
+        aux_pid INTEGER
       )
     `);
   }
@@ -48,20 +52,22 @@ export interface ClaudeSession {
   pid: number;
   startedAt: number;
   type: SessionType;
+  auxPid?: number;
 }
 
 export function registerSession(session: ClaudeSession) {
   const db = getDb();
   try {
     db.prepare(
-      'INSERT OR REPLACE INTO sessions (pid, project_id, project_path, url, started_at, type) VALUES (?, ?, ?, ?, ?, ?)'
+      'INSERT OR REPLACE INTO sessions (pid, project_id, project_path, url, started_at, type, aux_pid) VALUES (?, ?, ?, ?, ?, ?, ?)'
     ).run(
       session.pid,
       session.projectId,
       session.projectPath,
       session.url,
       session.startedAt,
-      session.type
+      session.type,
+      session.auxPid ?? null
     );
   } finally {
     db.close();
@@ -86,7 +92,7 @@ export function getSessionStatuses(): ClaudeSessionStatus[] {
   try {
     const rows = db
       .prepare(
-        'SELECT pid, project_id, project_path, url, started_at, type FROM sessions ORDER BY started_at DESC'
+        'SELECT pid, project_id, project_path, url, started_at, type, aux_pid FROM sessions ORDER BY started_at DESC'
       )
       .all() as {
       pid: number;
@@ -95,6 +101,7 @@ export function getSessionStatuses(): ClaudeSessionStatus[] {
       url: string;
       started_at: number;
       type: SessionType;
+      aux_pid: number | null;
     }[];
 
     return rows.map((row) => ({
@@ -104,6 +111,7 @@ export function getSessionStatuses(): ClaudeSessionStatus[] {
       url: row.url,
       startedAt: row.started_at,
       type: row.type,
+      auxPid: row.aux_pid ?? undefined,
       alive: isProcessAlive(row.pid),
     }));
   } finally {
@@ -111,9 +119,24 @@ export function getSessionStatuses(): ClaudeSessionStatus[] {
   }
 }
 
-export function removeSession(pid: number) {
+function killSilently(pid: number) {
+  try {
+    process.kill(pid);
+  } catch {}
+}
+
+export function removeSession(pid: number, opts?: { killProcesses?: boolean }) {
   const db = getDb();
   try {
+    if (opts?.killProcesses) {
+      const row = db
+        .prepare('SELECT aux_pid FROM sessions WHERE pid = ?')
+        .get(pid) as { aux_pid: number | null } | undefined;
+      killSilently(pid);
+      if (row?.aux_pid) {
+        killSilently(row.aux_pid);
+      }
+    }
     db.prepare('DELETE FROM sessions WHERE pid = ?').run(pid);
   } finally {
     db.close();
@@ -122,14 +145,18 @@ export function removeSession(pid: number) {
 
 export function clearDeadSessions() {
   const statuses = getSessionStatuses();
-  const deadPids = statuses.filter((s) => !s.alive).map((s) => s.pid);
-  if (deadPids.length === 0) return;
+  const dead = statuses.filter((s) => !s.alive);
+  if (dead.length === 0) return;
+
+  for (const s of dead) {
+    if (s.auxPid) killSilently(s.auxPid);
+  }
 
   const db = getDb();
   try {
-    const placeholders = deadPids.map(() => '?').join(',');
+    const placeholders = dead.map(() => '?').join(',');
     db.prepare(`DELETE FROM sessions WHERE pid IN (${placeholders})`).run(
-      ...deadPids
+      ...dead.map((s) => s.pid)
     );
   } finally {
     db.close();

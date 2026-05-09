@@ -12,12 +12,7 @@ export async function GET() {
 
 export async function DELETE(request: NextRequest) {
   const { pid, kill } = await request.json();
-  if (kill) {
-    try {
-      process.kill(pid);
-    } catch {}
-  }
-  removeSession(pid);
+  removeSession(pid, { killProcesses: !!kill });
   return NextResponse.json({ ok: true });
 }
 
