@@ -170,149 +170,155 @@ export default function ProjectContextMenu({
         )}
       </div>
 
-      {customModalOpen && createPortal(
-        <>
-          <div
-            className="fixed inset-0 z-40 bg-black/50"
-            onClick={() => setCustomModalOpen(false)}
-          />
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="bg-background border border-foreground/20 rounded-lg shadow-xl max-w-sm w-full">
-              <div className="px-4 py-3 border-b border-foreground/10">
-                <h3 className="font-medium">Launch Claude Code</h3>
-              </div>
-              <div className="px-4 py-3 space-y-3">
-                <div>
-                  <div className="text-xs text-foreground/60 mb-1.5">
-                    Interface
+      {customModalOpen &&
+        createPortal(
+          <>
+            <div
+              className="fixed inset-0 z-40 bg-black/50"
+              onClick={() => setCustomModalOpen(false)}
+            />
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <div className="bg-background border border-foreground/20 rounded-lg shadow-xl max-w-sm w-full">
+                <div className="px-4 py-3 border-b border-foreground/10">
+                  <h3 className="font-medium">Launch Claude Code</h3>
+                </div>
+                <div className="px-4 py-3 space-y-3">
+                  <div>
+                    <div className="text-xs text-foreground/60 mb-1.5">
+                      Interface
+                    </div>
+                    <div className="flex gap-2">
+                      <label
+                        className={`flex-1 flex items-center justify-center gap-2 text-sm border rounded-lg px-3 py-2 has-[:checked]:bg-foreground/10 has-[:checked]:border-foreground/40 ${
+                          customChromeMcp
+                            ? 'border-foreground/10 text-foreground/30 cursor-not-allowed'
+                            : 'border-foreground/20 cursor-pointer'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name={`custom-iface-${project.id}`}
+                          value="remote"
+                          checked={customInterface === 'remote'}
+                          onChange={() => setCustomInterface('remote')}
+                          disabled={customChromeMcp}
+                          className="w-4 h-4"
+                        />
+                        Remote
+                      </label>
+                      <label className="flex-1 flex items-center justify-center gap-2 text-sm border border-foreground/20 rounded-lg px-3 py-2 cursor-pointer has-[:checked]:bg-foreground/10 has-[:checked]:border-foreground/40">
+                        <input
+                          type="radio"
+                          name={`custom-iface-${project.id}`}
+                          value="ttyd"
+                          checked={customInterface === 'ttyd'}
+                          onChange={() => setCustomInterface('ttyd')}
+                          className="w-4 h-4"
+                        />
+                        TTYD
+                      </label>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <label
-                      className={`flex-1 flex items-center justify-center gap-2 text-sm border rounded-lg px-3 py-2 has-[:checked]:bg-foreground/10 has-[:checked]:border-foreground/40 ${
-                        customChromeMcp
-                          ? 'border-foreground/10 text-foreground/30 cursor-not-allowed'
-                          : 'border-foreground/20 cursor-pointer'
-                      }`}
+                  <div>
+                    <div className="text-xs text-foreground/60 mb-1.5">
+                      Permission mode
+                    </div>
+                    <select
+                      value={customPermissionMode}
+                      onChange={(e) =>
+                        setCustomPermissionMode(
+                          e.target.value as PermissionMode
+                        )
+                      }
+                      className="w-full text-sm border border-foreground/20 rounded-lg px-3 py-2 bg-background"
                     >
-                      <input
-                        type="radio"
-                        name={`custom-iface-${project.id}`}
-                        value="remote"
-                        checked={customInterface === 'remote'}
-                        onChange={() => setCustomInterface('remote')}
-                        disabled={customChromeMcp}
-                        className="w-4 h-4"
-                      />
-                      Remote
-                    </label>
-                    <label className="flex-1 flex items-center justify-center gap-2 text-sm border border-foreground/20 rounded-lg px-3 py-2 cursor-pointer has-[:checked]:bg-foreground/10 has-[:checked]:border-foreground/40">
-                      <input
-                        type="radio"
-                        name={`custom-iface-${project.id}`}
-                        value="ttyd"
-                        checked={customInterface === 'ttyd'}
-                        onChange={() => setCustomInterface('ttyd')}
-                        className="w-4 h-4"
-                      />
-                      TTYD
-                    </label>
+                      <option value="auto">Auto</option>
+                      <option value="default">Default</option>
+                      <option value="bypassPermissions">
+                        Skip permissions
+                      </option>
+                    </select>
                   </div>
-                </div>
-                <div>
-                  <div className="text-xs text-foreground/60 mb-1.5">
-                    Permission mode
-                  </div>
-                  <select
-                    value={customPermissionMode}
-                    onChange={(e) =>
-                      setCustomPermissionMode(e.target.value as PermissionMode)
-                    }
-                    className="w-full text-sm border border-foreground/20 rounded-lg px-3 py-2 bg-background"
-                  >
-                    <option value="auto">Auto</option>
-                    <option value="default">Default</option>
-                    <option value="bypassPermissions">Skip permissions</option>
-                  </select>
-                </div>
-                <label className="flex items-start gap-2 text-sm cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={customChromeMcp}
-                    onChange={(e) => {
-                      const checked = e.target.checked;
-                      setCustomChromeMcp(checked);
-                      if (checked) setCustomInterface('ttyd');
-                    }}
-                    className="w-4 h-4 mt-0.5"
-                  />
-                  <span>
-                    Chrome DevTools MCP
-                    <span className="block text-xs text-foreground/50">
-                      Headless chromium · TTYD only
+                  <label className="flex items-start gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={customChromeMcp}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setCustomChromeMcp(checked);
+                        if (checked) setCustomInterface('ttyd');
+                      }}
+                      className="w-4 h-4 mt-0.5"
+                    />
+                    <span>
+                      Chrome DevTools MCP
+                      <span className="block text-xs text-foreground/50">
+                        Headless chromium · TTYD only
+                      </span>
                     </span>
-                  </span>
-                </label>
-              </div>
-              <div className="px-4 py-3 border-t border-foreground/10 flex justify-end gap-2">
-                <button
-                  onClick={() => setCustomModalOpen(false)}
-                  className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={launchCustom}
-                  className="px-3 py-1.5 text-sm rounded-lg bg-foreground text-background hover:opacity-90"
-                >
-                  Launch
-                </button>
-              </div>
-            </div>
-          </div>
-        </>,
-        document.body
-      )}
-
-      {urlModalOpen && createPortal(
-        <>
-          <div
-            className="fixed inset-0 z-40 bg-black/50"
-            onClick={() => setUrlModalOpen(false)}
-          />
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="bg-background border border-foreground/20 rounded-lg shadow-xl max-w-sm w-full">
-              <div className="px-4 py-3 border-b border-foreground/10">
-                <h3 className="font-medium">Select URL</h3>
-              </div>
-              <div className="py-2">
-                {urlEntries.map(([key, url]) => (
+                  </label>
+                </div>
+                <div className="px-4 py-3 border-t border-foreground/10 flex justify-end gap-2">
                   <button
-                    key={key}
-                    onClick={() => {
-                      window.open(url, '_blank');
-                      setUrlModalOpen(false);
-                    }}
-                    className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
+                    onClick={() => setCustomModalOpen(false)}
+                    className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
                   >
-                    <span>{key}</span>
-                    <span className="text-foreground/40"> :: </span>
-                    <span className="text-blue-500">{url}</span>
+                    Cancel
                   </button>
-                ))}
-              </div>
-              <div className="px-4 py-3 border-t border-foreground/10 flex justify-end">
-                <button
-                  onClick={() => setUrlModalOpen(false)}
-                  className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
-                >
-                  Cancel
-                </button>
+                  <button
+                    onClick={launchCustom}
+                    className="px-3 py-1.5 text-sm rounded-lg bg-foreground text-background hover:opacity-90"
+                  >
+                    Launch
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        </>,
-        document.body
-      )}
+          </>,
+          document.body
+        )}
+
+      {urlModalOpen &&
+        createPortal(
+          <>
+            <div
+              className="fixed inset-0 z-40 bg-black/50"
+              onClick={() => setUrlModalOpen(false)}
+            />
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <div className="bg-background border border-foreground/20 rounded-lg shadow-xl max-w-sm w-full">
+                <div className="px-4 py-3 border-b border-foreground/10">
+                  <h3 className="font-medium">Select URL</h3>
+                </div>
+                <div className="py-2">
+                  {urlEntries.map(([key, url]) => (
+                    <button
+                      key={key}
+                      onClick={() => {
+                        window.open(url, '_blank');
+                        setUrlModalOpen(false);
+                      }}
+                      className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
+                    >
+                      <span>{key}</span>
+                      <span className="text-foreground/40"> :: </span>
+                      <span className="text-blue-500">{url}</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="px-4 py-3 border-t border-foreground/10 flex justify-end">
+                  <button
+                    onClick={() => setUrlModalOpen(false)}
+                    className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </>,
+          document.body
+        )}
     </>
   );
 }
