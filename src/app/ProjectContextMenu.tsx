@@ -6,6 +6,8 @@ import { apiFetch } from '../lib/api';
 
 const DOOIT_DOMAIN = process.env.NEXT_PUBLIC_DOOIT_DOMAIN;
 
+type PermissionMode = 'auto' | 'default' | 'bypassPermissions';
+
 function openExternal(url: string) {
   window.open(`https://href.li/?${url}`, '_blank');
 }
@@ -25,13 +27,14 @@ export default function ProjectContextMenu({
   const [customInterface, setCustomInterface] = useState<'remote' | 'ttyd'>(
     'remote'
   );
-  const [customBypassPermissions, setCustomBypassPermissions] = useState(true);
+  const [customPermissionMode, setCustomPermissionMode] =
+    useState<PermissionMode>('auto');
   const [customChromeMcp, setCustomChromeMcp] = useState(false);
 
   async function launchCustom() {
     setCustomModalOpen(false);
     const body = JSON.stringify({
-      bypassPermissions: customBypassPermissions,
+      permissionMode: customPermissionMode,
       chromeMcp: customChromeMcp,
     });
     const headers = { 'Content-Type': 'application/json' };
@@ -135,7 +138,7 @@ export default function ProjectContextMenu({
                 onClick={() => {
                   setMenuOpen(false);
                   setCustomInterface('remote');
-                  setCustomBypassPermissions(true);
+                  setCustomPermissionMode('auto');
                   setCustomChromeMcp(false);
                   setCustomModalOpen(true);
                 }}
@@ -215,17 +218,22 @@ export default function ProjectContextMenu({
                     </label>
                   </div>
                 </div>
-                <label className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={customBypassPermissions}
+                <div>
+                  <div className="text-xs text-foreground/60 mb-1.5">
+                    Permission mode
+                  </div>
+                  <select
+                    value={customPermissionMode}
                     onChange={(e) =>
-                      setCustomBypassPermissions(e.target.checked)
+                      setCustomPermissionMode(e.target.value as PermissionMode)
                     }
-                    className="w-4 h-4"
-                  />
-                  <span>Bypass permissions</span>
-                </label>
+                    className="w-full text-sm border border-foreground/20 rounded-lg px-3 py-2 bg-background"
+                  >
+                    <option value="auto">Auto</option>
+                    <option value="default">Default</option>
+                    <option value="bypassPermissions">Skip permissions</option>
+                  </select>
+                </div>
                 <label className="flex items-start gap-2 text-sm cursor-pointer">
                   <input
                     type="checkbox"

@@ -32,12 +32,23 @@ export async function POST(
     return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   }
 
-  let bypassPermissions = true;
+  const ALLOWED_PERMISSION_MODES = [
+    'auto',
+    'default',
+    'bypassPermissions',
+  ] as const;
+  type PermissionMode = (typeof ALLOWED_PERMISSION_MODES)[number];
+  let permissionMode: PermissionMode = 'auto';
   let chromeMcp = false;
   try {
     const body = await request.json();
-    if (typeof body?.bypassPermissions === 'boolean') {
-      bypassPermissions = body.bypassPermissions;
+    if (
+      typeof body?.permissionMode === 'string' &&
+      (ALLOWED_PERMISSION_MODES as readonly string[]).includes(
+        body.permissionMode
+      )
+    ) {
+      permissionMode = body.permissionMode as PermissionMode;
     }
     if (typeof body?.chromeMcp === 'boolean') {
       chromeMcp = body.chromeMcp;
@@ -52,9 +63,7 @@ export async function POST(
   const port = await findFreePort();
   const tmuxSession = `gitmob-ttyd-${port}`;
 
-  let claudeCmd = bypassPermissions
-    ? 'claude --permission-mode bypassPermissions'
-    : 'claude';
+  let claudeCmd = `claude --permission-mode ${permissionMode}`;
   if (chromeHandle) {
     claudeCmd += ` --mcp-config ${JSON.stringify(chromeHandle.mcpConfigPath)}`;
   }

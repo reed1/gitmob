@@ -14,11 +14,22 @@ export async function POST(
     return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   }
 
-  let bypassPermissions = true;
+  const ALLOWED_PERMISSION_MODES = [
+    'auto',
+    'default',
+    'bypassPermissions',
+  ] as const;
+  type PermissionMode = (typeof ALLOWED_PERMISSION_MODES)[number];
+  let permissionMode: PermissionMode = 'auto';
   try {
     const body = await request.json();
-    if (typeof body?.bypassPermissions === 'boolean') {
-      bypassPermissions = body.bypassPermissions;
+    if (
+      typeof body?.permissionMode === 'string' &&
+      (ALLOWED_PERMISSION_MODES as readonly string[]).includes(
+        body.permissionMode
+      )
+    ) {
+      permissionMode = body.permissionMode as PermissionMode;
     }
   } catch {}
 
@@ -31,9 +42,7 @@ export async function POST(
   const url = await new Promise<string>((resolve, reject) => {
     const folderName = project.path.split('/').pop() || id;
     const args = ['remote-control', '--name', folderName];
-    if (bypassPermissions) {
-      args.push('--permission-mode', 'bypassPermissions');
-    }
+    args.push('--permission-mode', permissionMode);
     const child = spawn('claude', args, {
       cwd: project.path,
       detached: true,
