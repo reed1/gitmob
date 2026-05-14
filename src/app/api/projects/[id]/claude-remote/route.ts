@@ -47,6 +47,7 @@ export async function POST(
       cwd: project.path,
       detached: true,
       stdio: ['ignore', logFd, logFd],
+      env: { ...process.env, CLAUDE_CODE_NO_FLICKER: '1' },
     });
     childPid = child.pid ?? 0;
     child.unref();

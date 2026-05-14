@@ -63,7 +63,7 @@ export async function POST(
   const port = await findFreePort();
   const tmuxSession = `gitmob-ttyd-${port}`;
 
-  let claudeCmd = `claude --permission-mode ${permissionMode}`;
+  let claudeCmd = `CLAUDE_CODE_NO_FLICKER=1 claude --permission-mode ${permissionMode}`;
   if (chromeHandle) {
     claudeCmd += ` --mcp-config ${JSON.stringify(chromeHandle.mcpConfigPath)}`;
   }
