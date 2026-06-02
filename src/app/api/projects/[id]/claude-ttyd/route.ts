@@ -63,17 +63,35 @@ export async function POST(
   const port = await findFreePort();
   const tmuxSession = `gitmob-ttyd-${port}`;
 
-  let claudeCmd = `CLAUDE_CODE_NO_FLICKER=1 claude --permission-mode ${permissionMode}`;
+  let claudeCmd = `claude --permission-mode ${permissionMode}`;
   if (chromeHandle) {
     claudeCmd += ` --mcp-config ${JSON.stringify(chromeHandle.mcpConfigPath)}`;
   }
-  execSync(
-    `tmux new-session -d -s ${tmuxSession} -c ${JSON.stringify(project.path)} ${claudeCmd}`
-  );
-  execSync(`tmux set -t ${tmuxSession} status off`);
-  execSync(`tmux set -t ${tmuxSession} mouse off`);
-  execSync(`tmux setw -t ${tmuxSession} alternate-screen off`);
-  execSync(`tmux set -t ${tmuxSession} terminal-overrides ',*:smcup@:rmcup@'`);
+  try {
+    execSync(
+      `tmux new-session -d -s ${tmuxSession} -e CLAUDE_CODE_NO_FLICKER=1 -c ${JSON.stringify(project.path)} ${claudeCmd}`
+    );
+    execSync(`tmux set -t ${tmuxSession} status off`);
+    execSync(`tmux set -t ${tmuxSession} mouse off`);
+    execSync(`tmux setw -t ${tmuxSession} alternate-screen off`);
+    execSync(
+      `tmux set -t ${tmuxSession} terminal-overrides ',*:smcup@:rmcup@'`
+    );
+  } catch (err) {
+    try {
+      execSync(`tmux kill-session -t ${tmuxSession}`, { stdio: 'ignore' });
+    } catch {}
+    if (chromeHandle?.chromiumPid) {
+      try {
+        process.kill(chromeHandle.chromiumPid);
+      } catch {}
+    }
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json(
+      { error: `Failed to start tmux session: ${message}` },
+      { status: 500 }
+    );
+  }
 
   const child = spawn(
     'ttyd',
