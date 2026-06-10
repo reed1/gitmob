@@ -11,7 +11,7 @@
     "build:android": "./android/build.sh"
   },
   "dependencies": {
-    "better-sqlite3": "^12.6.2",
+    "better-sqlite3": "^12.10.0",
     "next": "16.1.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -30,12 +30,5 @@
     "prettier": "^3.7.4",
     "tailwindcss": "^4",
     "typescript": "^5"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "better-sqlite3",
-      "sharp",
-      "unrs-resolver"
-    ]
   }
 }

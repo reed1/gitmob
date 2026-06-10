@@ -39,51 +39,97 @@ export async function POST(
   const logFd = openSync(logFile, 'w');
 
   let childPid = 0;
-  const url = await new Promise<string>((resolve, reject) => {
-    const folderName = project.path.split('/').pop() || id;
-    const args = ['remote-control', '--name', folderName];
-    args.push('--permission-mode', permissionMode);
-    const child = spawn('claude', args, {
-      cwd: project.path,
-      detached: true,
-      stdio: ['ignore', logFd, logFd],
-      env: { ...process.env, CLAUDE_CODE_NO_FLICKER: '1' },
+  try {
+    const url = await new Promise<string>((resolve, reject) => {
+      const folderName = project.path.split('/').pop() || id;
+      const args = [
+        'remote-control',
+        '--name',
+        folderName,
+        '--permission-mode',
+        permissionMode,
+      ];
+      const child = spawn('claude', args, {
+        cwd: project.path,
+        detached: true,
+        stdio: ['ignore', logFd, logFd],
+        env: { ...process.env, CLAUDE_CODE_NO_FLICKER: '1' },
+      });
+      childPid = child.pid ?? 0;
+      child.unref();
+
+      const readLog = () => {
+        try {
+          return readFileSync(logFile, 'utf-8').trim();
+        } catch {
+          return '';
+        }
+      };
+
+      let settled = false;
+      const finish = (fn: () => void) => {
+        if (settled) return;
+        settled = true;
+        clearInterval(poll);
+        clearTimeout(timeout);
+        child.removeListener('error', onError);
+        child.removeListener('exit', onExit);
+        fn();
+      };
+
+      const onError = (err: Error) =>
+        finish(() =>
+          reject(new Error(`Failed to launch \`claude\`: ${err.message}`))
+        );
+
+      const onExit = (code: number | null) =>
+        finish(() =>
+          reject(
+            new Error(
+              `\`claude remote-control\` exited (code ${code}) before producing a URL:\n${readLog()}`
+            )
+          )
+        );
+
+      child.on('error', onError);
+      child.on('exit', onExit);
+
+      const timeout = setTimeout(() => {
+        child.kill();
+        finish(() =>
+          reject(
+            new Error(
+              `Timed out after 10s waiting for the remote-control URL:\n${readLog()}`
+            )
+          )
+        );
+      }, 10000);
+
+      const poll = setInterval(() => {
+        const match = readLog().match(/https:\/\/\S+/);
+        if (match) {
+          finish(() => resolve(match[0]));
+        }
+      }, 200);
     });
-    childPid = child.pid ?? 0;
-    child.unref();
 
-    const cleanup = () => {
-      clearInterval(poll);
-      clearTimeout(timeout);
-      try {
-        unlinkSync(logFile);
-      } catch {}
-    };
+    unlinkSync(logFile);
 
-    const timeout = setTimeout(() => {
-      cleanup();
-      child.kill();
-      reject(new Error('Timed out waiting for URL'));
-    }, 10000);
+    registerSession({
+      projectId: id,
+      projectPath: project.path,
+      url,
+      pid: childPid,
+      startedAt: Date.now(),
+      type: 'remote',
+    });
 
-    const poll = setInterval(() => {
-      const content = readFileSync(logFile, 'utf-8');
-      const match = content.match(/https:\/\/\S+/);
-      if (match) {
-        cleanup();
-        resolve(match[0]);
-      }
-    }, 200);
-  });
-
-  registerSession({
-    projectId: id,
-    projectPath: project.path,
-    url,
-    pid: childPid,
-    startedAt: Date.now(),
-    type: 'remote',
-  });
-
-  return NextResponse.json({ url, pid: childPid });
+    return NextResponse.json({ url, pid: childPid });
+  } catch (err) {
+    try {
+      unlinkSync(logFile);
+    } catch {}
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
