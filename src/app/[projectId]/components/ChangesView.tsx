@@ -322,10 +322,12 @@ export function ChangesView({
               }}
               className="w-full px-4 py-3 text-left flex items-center gap-2 active:bg-foreground/5"
             >
-              <span className="text-xs font-mono w-5 text-green-400">
+              <span className="text-xs font-mono w-5 shrink-0 text-green-400">
                 {file.status}
               </span>
-              <span className="truncate text-sm font-mono">{file.path}</span>
+              <span className="truncate text-sm font-mono min-w-0">
+                {file.path}
+              </span>
             </button>
           ))}
         </section>
@@ -346,10 +348,12 @@ export function ChangesView({
               }}
               className="w-full px-4 py-3 text-left flex items-center gap-2 active:bg-foreground/5"
             >
-              <span className="text-xs font-mono w-5 text-yellow-400">
+              <span className="text-xs font-mono w-5 shrink-0 text-yellow-400">
                 {file.status}
               </span>
-              <span className="truncate text-sm font-mono">{file.path}</span>
+              <span className="truncate text-sm font-mono min-w-0">
+                {file.path}
+              </span>
             </button>
           ))}
         </section>
@@ -372,10 +376,10 @@ export function ChangesView({
               }}
               className="w-full px-4 py-3 text-left flex items-center gap-2 active:bg-foreground/5"
             >
-              <span className="text-xs font-mono w-5 text-foreground/40">
+              <span className="text-xs font-mono w-5 shrink-0 text-foreground/40">
                 ?
               </span>
-              <span className="truncate text-sm font-mono">{file}</span>
+              <span className="truncate text-sm font-mono min-w-0">{file}</span>
             </button>
           ))}
         </section>
