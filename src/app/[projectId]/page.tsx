@@ -129,7 +129,7 @@ export default function ProjectPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-dvh bg-background flex flex-col">
       <header className="sticky top-0 z-10 border-b border-foreground/10 bg-background/95 backdrop-blur">
         <div className="px-4 py-3 flex items-center gap-3">
           <button
@@ -249,7 +249,7 @@ export default function ProjectPage() {
         </div>
       </header>
 
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 min-h-0 overflow-auto">
         {tab === 'files' && (
           <FileBrowser
             projectId={projectId}

@@ -225,7 +225,7 @@ export function ChangesView({
             </div>
           </div>
         </div>
-        <div className="flex-1 overflow-auto p-4 text-xs font-mono">
+        <div className="flex-1 min-h-0 overflow-auto p-4 text-xs font-mono">
           <div
             className={
               wordWrap

@@ -89,7 +89,7 @@ function FileViewer({
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 min-h-0 overflow-auto">
         {loading ? (
           <div className="p-4 text-center text-foreground/50">Loading...</div>
         ) : content ? (

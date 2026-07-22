@@ -99,7 +99,7 @@ export function CLIView({ projectPath }: { projectPath: string }) {
       </div>
 
       {(loading || output !== null) && (
-        <pre className="mt-4 flex-1 p-3 bg-foreground/5 border border-foreground/10 rounded-lg text-xs font-mono whitespace-pre-wrap overflow-auto">
+        <pre className="mt-4 flex-1 min-h-0 p-3 bg-foreground/5 border border-foreground/10 rounded-lg text-xs font-mono whitespace-pre-wrap overflow-auto">
           {loading && !output ? 'Running...' : output || '(no output)'}
         </pre>
       )}
