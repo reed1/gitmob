@@ -40,6 +40,7 @@ export async function POST(
   type PermissionMode = (typeof ALLOWED_PERMISSION_MODES)[number];
   let permissionMode: PermissionMode = 'auto';
   let chromeMcp = false;
+  let chromeProfile: string | null = null;
   try {
     const body = await request.json();
     if (
@@ -53,11 +54,19 @@ export async function POST(
     if (typeof body?.chromeMcp === 'boolean') {
       chromeMcp = body.chromeMcp;
     }
+    if (typeof body?.chromeProfile === 'string' && body.chromeProfile) {
+      chromeProfile = body.chromeProfile;
+    }
   } catch {}
 
   let chromeHandle: ChromeMcpHandle | null = null;
   if (chromeMcp) {
-    chromeHandle = await startChromeMcp();
+    try {
+      chromeHandle = await startChromeMcp(chromeProfile);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return NextResponse.json({ error: message }, { status: 409 });
+    }
   }
 
   const port = await findFreePort();

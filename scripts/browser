@@ -1,0 +1,129 @@
+#!/usr/bin/env python3
+"""Manage the chromium profiles shared with gitmob's Chrome DevTools MCP.
+
+Open a profile here, sign in to whatever the agent needs, then pick the same
+profile when launching Claude Code with the MCP checkbox.
+"""
+
+import argparse
+import json
+import os
+import re
+import shutil
+import sys
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+ROOT = Path(
+    os.environ.get(
+        "GITMOB_CHROMIUM_PROFILES",
+        Path.home() / ".local/share/gitmob/chromium-profiles",
+    )
+)
+CHROMIUM = os.environ.get("GITMOB_CHROMIUM", "chromium")
+PROFILE_ID_RE = re.compile(r"^[a-zA-Z0-9._-]+$")
+
+
+def profile_dir(profile_id: str) -> Path:
+    if not PROFILE_ID_RE.match(profile_id):
+        sys.exit(f"invalid profile id: {profile_id}")
+    return ROOT / profile_id
+
+
+def running_port(directory: Path) -> int | None:
+    """DevToolsActivePort lingers after a crash, so probe before believing it."""
+    port_file = directory / "DevToolsActivePort"
+    if not port_file.is_file():
+        return None
+    try:
+        port = int(port_file.read_text().splitlines()[0].strip())
+    except (ValueError, IndexError):
+        return None
+    try:
+        with urllib.request.urlopen(
+            f"http://127.0.0.1:{port}/json/version", timeout=1
+        ) as res:
+            json.load(res)
+    except (urllib.error.URLError, OSError, json.JSONDecodeError):
+        return None
+    return port
+
+
+def cmd_list(_args) -> None:
+    dirs = sorted(d for d in ROOT.iterdir() if d.is_dir()) if ROOT.is_dir() else []
+    if not dirs:
+        print("no profiles yet")
+        return
+    for directory in dirs:
+        port = running_port(directory)
+        status = f"running (devtools :{port})" if port else "stopped"
+        print(f"{directory.name:<24} {status}")
+
+
+def cmd_open(args) -> None:
+    directory = profile_dir(args.id)
+    if not directory.is_dir():
+        directory.mkdir(parents=True)
+        print(f"created profile '{args.id}'")
+    os.execvp(
+        CHROMIUM,
+        [
+            CHROMIUM,
+            f"--user-data-dir={directory}",
+            "--remote-debugging-port=0",
+            "--no-first-run",
+            "--no-default-browser-check",
+            args.url,
+        ],
+    )
+
+
+def cmd_path(args) -> None:
+    print(profile_dir(args.id))
+
+
+def cmd_rm(args) -> None:
+    directory = profile_dir(args.id)
+    if not directory.is_dir():
+        sys.exit(f"no such profile: {args.id}")
+    if running_port(directory):
+        sys.exit(f"profile '{args.id}' is running; close it first")
+    reply = input(f"delete profile '{args.id}' and all its logins? [y/N] ")
+    if reply.lower() != "y":
+        sys.exit("aborted")
+    shutil.rmtree(directory)
+    print(f"deleted '{args.id}'")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=f"env: GITMOB_CHROMIUM_PROFILES={ROOT}\n     GITMOB_CHROMIUM={CHROMIUM}",
+    )
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    sub.add_parser("list", help="list profiles and whether they are running").set_defaults(
+        func=cmd_list
+    )
+
+    p_open = sub.add_parser("open", help="open a profile on the desktop, creating it if needed")
+    p_open.add_argument("id")
+    p_open.add_argument("url", nargs="?", default="about:blank")
+    p_open.set_defaults(func=cmd_open)
+
+    p_path = sub.add_parser("path", help="print the user-data-dir for a profile")
+    p_path.add_argument("id")
+    p_path.set_defaults(func=cmd_path)
+
+    p_rm = sub.add_parser("rm", help="delete a profile and its logins")
+    p_rm.add_argument("id")
+    p_rm.set_defaults(func=cmd_rm)
+
+    args = parser.parse_args()
+    args.func(args)
+
+
+if __name__ == "__main__":
+    main()

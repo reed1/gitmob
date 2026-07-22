@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { apiFetch } from '../lib/api';
 
@@ -10,6 +10,11 @@ type PermissionMode = 'auto' | 'default' | 'bypassPermissions';
 
 function openExternal(url: string) {
   window.open(`https://href.li/?${url}`, '_blank');
+}
+
+interface ChromeProfile {
+  id: string;
+  running: boolean;
 }
 
 interface Props {
@@ -30,12 +35,22 @@ export default function ProjectContextMenu({
   const [customPermissionMode, setCustomPermissionMode] =
     useState<PermissionMode>('auto');
   const [customChromeMcp, setCustomChromeMcp] = useState(false);
+  const [customChromeProfile, setCustomChromeProfile] = useState('');
+  const [chromeProfiles, setChromeProfiles] = useState<ChromeProfile[]>([]);
+
+  useEffect(() => {
+    if (!customChromeMcp) return;
+    apiFetch('/api/chromium-profiles')
+      .then((res) => res.json())
+      .then((data) => setChromeProfiles(data.profiles ?? []));
+  }, [customChromeMcp]);
 
   async function launchCustom() {
     setCustomModalOpen(false);
     const body = JSON.stringify({
       permissionMode: customPermissionMode,
       chromeMcp: customChromeMcp,
+      chromeProfile: customChromeProfile || null,
     });
     const headers = { 'Content-Type': 'application/json' };
     if (customInterface === 'remote') {
@@ -140,6 +155,7 @@ export default function ProjectContextMenu({
                   setCustomInterface('remote');
                   setCustomPermissionMode('auto');
                   setCustomChromeMcp(false);
+                  setCustomChromeProfile('');
                   setCustomModalOpen(true);
                 }}
                 className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
@@ -257,6 +273,30 @@ export default function ProjectContextMenu({
                       </span>
                     </span>
                   </label>
+                  {customChromeMcp && (
+                    <div>
+                      <div className="text-xs text-foreground/60 mb-1.5">
+                        Browser profile
+                      </div>
+                      <select
+                        value={customChromeProfile}
+                        onChange={(e) => setCustomChromeProfile(e.target.value)}
+                        className="w-full text-sm border border-foreground/20 rounded-lg px-3 py-2 bg-background"
+                      >
+                        <option value="">Throwaway (discarded after)</option>
+                        {chromeProfiles.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.id}
+                            {p.running ? ' (running)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="block text-xs text-foreground/50 mt-1">
+                        Create profiles with{' '}
+                        <code>scripts/browser open &lt;id&gt;</code>
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div className="px-4 py-3 border-t border-foreground/10 flex justify-end gap-2">
                   <button
