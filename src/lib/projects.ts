@@ -10,6 +10,7 @@ export interface Project {
   id: string;
   path: string;
   tags?: string[];
+  pinned?: boolean;
   repo?: string;
   urls?: Record<string, string>;
   cmd?: Record<
@@ -25,12 +26,15 @@ export interface Project {
 }
 
 export function getProjects(): Project[] {
-  const data = JSON.parse(readFileSync(PROJECTS_FILE, 'utf-8'));
+  const data: Record<string, Omit<Project, 'id'>> = JSON.parse(
+    readFileSync(PROJECTS_FILE, 'utf-8')
+  );
 
-  return Object.entries(data).map(([id, raw]: [string, any]) => ({
+  return Object.entries(data).map(([id, raw]) => ({
     id,
     path: raw.path?.replace(/^~/, homedir()) || '',
     tags: raw.tags,
+    pinned: raw.pinned,
     repo: raw.repo,
     urls: raw.urls,
     cmd: raw.cmd,

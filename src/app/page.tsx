@@ -79,7 +79,8 @@ export default function Home() {
     p.hasPendingMessage ||
     p.downSites.length > 0;
   const active = filtered.filter(isActive);
-  const others = filtered.filter((p) => !isActive(p));
+  const pinned = filtered.filter((p) => !isActive(p) && p.pinned);
+  const others = filtered.filter((p) => !isActive(p) && !p.pinned);
 
   if (loading) {
     return (
@@ -274,10 +275,25 @@ export default function Home() {
           </section>
         )}
 
+        {pinned.length > 0 && (
+          <section>
+            <h2 className="text-sm font-medium text-foreground/60 mb-2">
+              Pinned
+            </h2>
+            <div className="space-y-2">
+              {pinned.map((project) => (
+                <ProjectCard key={project.id} project={project} />
+              ))}
+            </div>
+          </section>
+        )}
+
         {others.length > 0 && (
           <section>
             <h2 className="text-sm font-medium text-foreground/60 mb-2">
-              {active.length > 0 ? 'All Projects' : 'Projects'}
+              {active.length > 0 || pinned.length > 0
+                ? 'All Projects'
+                : 'Projects'}
             </h2>
             <div className="space-y-2">
               {others.map((project) => (
