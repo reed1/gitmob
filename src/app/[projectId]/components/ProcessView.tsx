@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { apiFetch } from '../../../lib/api';
+import { ProcessLogView } from './ProcessLogView';
 
 interface ProcessInfo {
   name: string;
@@ -29,6 +31,9 @@ export function ProcessView({
   const [hasProcesses, setHasProcesses] = useState(true);
   const [loading, setLoading] = useState(true);
   const [monitors, setMonitors] = useState<MonitorStatus[]>([]);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const logProcess = searchParams.get('logs');
 
   const fetchStatus = useCallback(async () => {
     const res = await fetch(`/api/projects/${projectId}/process?action=status`);
@@ -51,6 +56,12 @@ export function ProcessView({
       .catch(() => {});
   }, [projectId]);
 
+  const openLogs = (processName: string) => {
+    router.push(
+      `/${projectId}?tab=process&logs=${encodeURIComponent(processName)}`
+    );
+  };
+
   const handleAction = async (
     action: 'start' | 'stop' | 'restart',
     processName: string
@@ -63,6 +74,16 @@ export function ProcessView({
     await new Promise((r) => setTimeout(r, 500));
     await fetchStatus();
   };
+
+  if (logProcess) {
+    return (
+      <ProcessLogView
+        projectId={projectId}
+        processName={logProcess}
+        onBack={() => router.back()}
+      />
+    );
+  }
 
   if (loading) {
     return (
@@ -96,9 +117,9 @@ export function ProcessView({
             key={proc.name}
             className="flex items-center justify-between p-3 bg-foreground/5 border border-foreground/10 rounded-lg"
           >
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 min-w-0">
               <div
-                className={`w-2.5 h-2.5 rounded-full ${
+                className={`w-2.5 h-2.5 shrink-0 rounded-full ${
                   isGroup
                     ? fullyRunning
                       ? 'bg-green-500'
@@ -110,12 +131,12 @@ export function ProcessView({
                       : 'bg-foreground/30'
                 }`}
               />
-              <div>
-                <div className="font-medium">
+              <div className="min-w-0">
+                <div className="font-medium truncate">
                   {isGroup ? `@${proc.name}` : proc.name}
                 </div>
                 {isGroup ? (
-                  <div className="text-xs text-foreground/50">
+                  <div className="text-xs text-foreground/50 truncate">
                     {running}/{total} running · {proc.members!.join(', ')}
                   </div>
                 ) : (
@@ -128,18 +149,26 @@ export function ProcessView({
                 )}
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-1.5 shrink-0">
+              {!isGroup && (
+                <button
+                  onClick={() => openLogs(proc.name)}
+                  className="px-2 py-1.5 text-xs bg-foreground/10 border border-foreground/15 rounded active:opacity-80"
+                >
+                  Logs
+                </button>
+              )}
               {proc.running ? (
                 <>
                   <button
                     onClick={() => handleAction('restart', proc.name)}
-                    className="px-3 py-1.5 text-sm bg-yellow-600 text-white rounded active:opacity-80"
+                    className="px-2 py-1.5 text-xs bg-yellow-600 text-white rounded active:opacity-80"
                   >
                     Restart
                   </button>
                   <button
                     onClick={() => handleAction('stop', proc.name)}
-                    className="px-3 py-1.5 text-sm bg-red-600 text-white rounded active:opacity-80"
+                    className="px-2 py-1.5 text-xs bg-red-600 text-white rounded active:opacity-80"
                   >
                     Stop
                   </button>
@@ -147,7 +176,7 @@ export function ProcessView({
               ) : (
                 <button
                   onClick={() => handleAction('start', proc.name)}
-                  className="px-3 py-1.5 text-sm bg-green-600 text-white rounded active:opacity-80"
+                  className="px-2 py-1.5 text-xs bg-green-600 text-white rounded active:opacity-80"
                 >
                   Start
                 </button>

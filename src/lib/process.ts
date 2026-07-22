@@ -1,4 +1,4 @@
-import { exec, execSync, spawn } from 'child_process';
+import { exec, execFileSync, execSync, spawn } from 'child_process';
 import { Project } from './projects';
 
 const SESSION_PREFIX = 'rvp-';
@@ -43,6 +43,28 @@ export function listWindows(projectId: string): string[] {
   } catch {
     return [];
   }
+}
+
+export interface ProcessLog {
+  windowExists: boolean;
+  output: string;
+}
+
+export function captureLog(
+  projectId: string,
+  windowName: string,
+  lines = 2000
+): ProcessLog {
+  const target = `${getSessionName(projectId)}:${windowName}`;
+  if (!listWindows(projectId).includes(windowName)) {
+    return { windowExists: false, output: '' };
+  }
+  const output = execFileSync(
+    'tmux',
+    ['capture-pane', '-t', target, '-p', '-J', '-S', `-${lines}`],
+    { encoding: 'utf-8', maxBuffer: 16 * 1024 * 1024 }
+  );
+  return { windowExists: true, output: output.replace(/\s+$/, '') };
 }
 
 export async function getAllRunningProcesses(): Promise<

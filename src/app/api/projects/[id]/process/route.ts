@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getProject } from '@/lib/projects';
 import {
+  captureLog,
   getProcessStatus,
   startProcess,
   stopProcess,
@@ -27,6 +28,14 @@ export async function GET(
       processes,
       hasProcesses: processes.length > 0,
     });
+  }
+
+  if (action === 'logs') {
+    const name = request.nextUrl.searchParams.get('name');
+    if (!name) {
+      return NextResponse.json({ error: 'Missing name' }, { status: 400 });
+    }
+    return NextResponse.json(captureLog(id, name));
   }
 
   return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
