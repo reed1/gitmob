@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3';
-import { mkdirSync, existsSync } from 'fs';
+import { mkdirSync, existsSync, readFileSync, readdirSync, statSync } from 'fs';
+import { homedir } from 'os';
 
 const DB_DIR = '/tmp/gitmob';
 const DB_PATH = `${DB_DIR}/claude-sessions.db`;
@@ -141,6 +142,112 @@ export function removeSession(pid: number, opts?: { killProcesses?: boolean }) {
   } finally {
     db.close();
   }
+}
+
+const IDLE_TIMEOUT_MS = 3 * 60 * 60 * 1000;
+
+interface SdkSession {
+  pid: number;
+  ppid: number | null;
+  sessionId: string;
+  cwd: string;
+}
+
+function readProcPpid(pid: number): number | null {
+  try {
+    const stat = readFileSync(`/proc/${pid}/stat`, 'utf-8');
+    const afterComm = stat.slice(stat.lastIndexOf(')') + 2);
+    const ppid = parseInt(afterComm.split(' ')[1], 10);
+    return Number.isNaN(ppid) ? null : ppid;
+  } catch {
+    return null;
+  }
+}
+
+function readSdkSessions(): SdkSession[] {
+  const dir = `${homedir()}/.claude/sessions`;
+  let files: string[];
+  try {
+    files = readdirSync(dir);
+  } catch {
+    return [];
+  }
+  const out: SdkSession[] = [];
+  for (const file of files) {
+    if (!file.endsWith('.json')) continue;
+    try {
+      const data = JSON.parse(readFileSync(`${dir}/${file}`, 'utf-8'));
+      if (
+        typeof data.pid === 'number' &&
+        typeof data.sessionId === 'string' &&
+        typeof data.cwd === 'string' &&
+        isProcessAlive(data.pid)
+      ) {
+        out.push({
+          pid: data.pid,
+          ppid: readProcPpid(data.pid),
+          sessionId: data.sessionId,
+          cwd: data.cwd,
+        });
+      }
+    } catch {}
+  }
+  return out;
+}
+
+function transcriptMtime(sessionId: string, cwd: string): number | null {
+  const encoded = cwd.replace(/[/.]/g, '-');
+  const path = `${homedir()}/.claude/projects/${encoded}/${sessionId}.jsonl`;
+  try {
+    return statSync(path).mtimeMs;
+  } catch {
+    return null;
+  }
+}
+
+export interface ReapedSession {
+  pid: number;
+  projectId: string;
+  idleMs: number;
+}
+
+// Terminates remote sessions whose child code sessions have all been idle
+// (no transcript writes) for longer than idleMs. A `claude remote-control`
+// host spawns one or more sdk-cli children; we treat the host as idle only
+// when the most recent activity across all its children exceeds the timeout.
+export function reapIdleSessions(idleMs = IDLE_TIMEOUT_MS): ReapedSession[] {
+  clearDeadSessions();
+  const now = Date.now();
+  const hosts = getSessionStatuses().filter(
+    (s) => s.type === 'remote' && s.alive
+  );
+  const sdkSessions = readSdkSessions();
+  const reaped: ReapedSession[] = [];
+
+  for (const host of hosts) {
+    const children = sdkSessions.filter((c) => c.ppid === host.pid);
+    let lastActive: number;
+    if (children.length === 0) {
+      lastActive = host.startedAt;
+    } else {
+      const mtimes = children
+        .map((c) => transcriptMtime(c.sessionId, c.cwd))
+        .filter((m): m is number => m !== null);
+      lastActive = mtimes.length > 0 ? Math.max(...mtimes) : host.startedAt;
+    }
+
+    if (now - lastActive > idleMs) {
+      for (const child of children) killSilently(child.pid);
+      removeSession(host.pid, { killProcesses: true });
+      reaped.push({
+        pid: host.pid,
+        projectId: host.projectId,
+        idleMs: now - lastActive,
+      });
+    }
+  }
+
+  return reaped;
 }
 
 export function clearDeadSessions() {
