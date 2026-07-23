@@ -9,7 +9,6 @@ import { ActionsView } from './components/ActionsView';
 import { ProcessView } from './components/ProcessView';
 import { CLIView } from './components/CLIView';
 import { DooitView } from './components/DooitView';
-import { apiFetch } from '../../lib/api';
 import ProjectContextMenu from '../ProjectContextMenu';
 
 const tabs = [
@@ -34,19 +33,21 @@ export default function ProjectPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [project, setProject] = useState<Project | null>(null);
-  const [tab, setTab] = useState<Tab>(() => getInitialTab(searchParams));
+  const tab = getInitialTab(searchParams);
+  const fileParam = searchParams.get('file');
+  const showingDiff = tab === 'changes' && fileParam !== null;
+  const showingFile = tab === 'files' && fileParam !== null;
   const [branch, setBranch] = useState<string>('');
   const [status, setStatus] = useState<GitStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [wordWrap, setWordWrap] = useState(true);
-  const [showingDiff, setShowingDiff] = useState(false);
-  const [showingFile, setShowingFile] = useState(false);
-  const [viewFilePath, setViewFilePath] = useState<string | null>(null);
-  const [viewFileFromGitUntracked, setViewFileFromGitUntracked] =
-    useState(false);
   const [commitMessage, setCommitMessage] = useState('');
   const [pendingSource, setPendingSource] = useState<string | null>(null);
   const [pendingLoaded, setPendingLoaded] = useState(false);
+
+  const goToTab = (id: Tab) => {
+    router.replace(`/${projectId}?tab=${id}`);
+  };
 
   const navRef = useRef<HTMLElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -71,26 +72,6 @@ export default function ProjectPage() {
       window.removeEventListener('resize', updateScrollIndicators);
     };
   }, [updateScrollIndicators, loading]);
-
-  const [returnTab, setReturnTab] = useState<Tab | null>(null);
-
-  const goToFile = (filePath: string, fromGitUntracked = false) => {
-    setReturnTab(tab);
-    setViewFilePath(filePath);
-    setViewFileFromGitUntracked(fromGitUntracked);
-    setTab('files');
-  };
-
-  const handleStageFromPreview = async (filePath: string) => {
-    await apiFetch(`/api/projects/${projectId}/git`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'stage', file: filePath }),
-    });
-    setViewFileFromGitUntracked(false);
-    setTab('changes');
-    refreshStatus();
-  };
 
   useEffect(() => {
     async function load() {
@@ -192,7 +173,7 @@ export default function ProjectPage() {
             {tabs.map(({ id, label }) => (
               <button
                 key={id}
-                onClick={() => setTab(id)}
+                onClick={() => goToTab(id)}
                 className={`shrink-0 px-4 py-2.5 text-sm font-medium transition-colors ${
                   tab === id
                     ? 'text-foreground border-b-2 border-foreground'
@@ -251,22 +232,7 @@ export default function ProjectPage() {
 
       <main className="flex-1 min-h-0 overflow-auto">
         {tab === 'files' && (
-          <FileBrowser
-            projectId={projectId}
-            wordWrap={wordWrap}
-            onShowingFileChange={setShowingFile}
-            initialFilePath={viewFilePath}
-            onInitialFileConsumed={() => setViewFilePath(null)}
-            fromGitUntracked={viewFileFromGitUntracked}
-            onStageRequest={handleStageFromPreview}
-            onClearGitContext={() => setViewFileFromGitUntracked(false)}
-            onReturnToSource={() => {
-              if (returnTab) {
-                setTab(returnTab);
-                setReturnTab(null);
-              }
-            }}
-          />
+          <FileBrowser projectId={projectId} wordWrap={wordWrap} />
         )}
         {tab === 'changes' && (
           <ChangesView
@@ -274,8 +240,6 @@ export default function ProjectPage() {
             status={status}
             onRefresh={refreshStatus}
             wordWrap={wordWrap}
-            onShowingDiffChange={setShowingDiff}
-            onGoToFile={goToFile}
           />
         )}
         {tab === 'actions' && (

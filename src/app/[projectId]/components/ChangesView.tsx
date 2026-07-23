@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { GitStatus } from '../types';
 import { apiFetch } from '../../../lib/api';
 
@@ -9,28 +10,42 @@ export function ChangesView({
   status,
   onRefresh,
   wordWrap,
-  onShowingDiffChange,
-  onGoToFile,
 }: {
   projectId: string;
   status: GitStatus | null;
   onRefresh: () => Promise<void>;
   wordWrap: boolean;
-  onShowingDiffChange: (showing: boolean) => void;
-  onGoToFile: (filePath: string, fromGitUntracked?: boolean) => void;
 }) {
-  const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const selectedFile = searchParams.get('file');
+  const isStaged = searchParams.get('staged') === '1';
+  const isUntracked = searchParams.get('untracked') === '1';
   const [diff, setDiff] = useState<string>('');
-  const [isStaged, setIsStaged] = useState(false);
-  const [isUntracked, setIsUntracked] = useState(false);
   const [isFullDiff, setIsFullDiff] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  const openFile = (
+    file: string,
+    staged: boolean,
+    untracked: boolean,
+    replace = false
+  ) => {
+    const params = new URLSearchParams({ tab: 'changes', file });
+    if (staged) params.set('staged', '1');
+    if (untracked) params.set('untracked', '1');
+    const url = `/${projectId}?${params}`;
+    if (replace) router.replace(url);
+    else router.push(url);
+  };
+
+  const closeFile = () => router.back();
+
   useEffect(() => {
-    onShowingDiffChange(selectedFile !== null);
-  }, [selectedFile, onShowingDiffChange]);
+    setIsFullDiff(false);
+  }, [selectedFile, isStaged, isUntracked]);
 
   useEffect(() => {
     if (selectedFile) {
@@ -83,11 +98,8 @@ export function ChangesView({
 
   const navigateTo = (index: number) => {
     const file = allFiles[index];
-    setIsFullDiff(false);
-    setSelectedFile(file.path);
-    setIsStaged(file.isStaged);
-    setIsUntracked(file.isUntracked);
     setMenuOpen(false);
+    openFile(file.path, file.isStaged, file.isUntracked, true);
   };
 
   const loadDiff = async (
@@ -116,10 +128,8 @@ export function ChangesView({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action, file }),
     });
-    setSelectedFile(null);
     setDiff('');
-    setIsFullDiff(false);
-    setIsUntracked(false);
+    router.replace(`/${projectId}?tab=changes`);
     onRefresh();
   };
 
@@ -128,11 +138,7 @@ export function ChangesView({
       <div className="flex flex-col h-full">
         <div className="sticky top-0 bg-background border-b border-foreground/10 px-4 py-2 flex items-center justify-between">
           <button
-            onClick={() => {
-              setSelectedFile(null);
-              setIsFullDiff(false);
-              setIsUntracked(false);
-            }}
+            onClick={closeFile}
             className="text-foreground/50 hover:text-foreground"
           >
             <svg
@@ -177,8 +183,10 @@ export function ChangesView({
                 <div className="absolute right-0 top-full mt-1 bg-background border border-foreground/20 rounded shadow-lg z-50 min-w-40">
                   <button
                     onClick={() => {
-                      onGoToFile(selectedFile);
                       setMenuOpen(false);
+                      router.push(
+                        `/${projectId}?tab=files&file=${encodeURIComponent(selectedFile)}`
+                      );
                     }}
                     className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 active:bg-foreground/15"
                   >
@@ -315,11 +323,7 @@ export function ChangesView({
           {status.staged.map((file) => (
             <button
               key={file.path}
-              onClick={() => {
-                setSelectedFile(file.path);
-                setIsStaged(true);
-                setIsUntracked(false);
-              }}
+              onClick={() => openFile(file.path, true, false)}
               className="w-full px-4 py-3 text-left flex items-center gap-2 active:bg-foreground/5"
             >
               <span className="text-xs font-mono w-5 shrink-0 text-green-400">
@@ -341,11 +345,7 @@ export function ChangesView({
           {status.unstaged.map((file) => (
             <button
               key={file.path}
-              onClick={() => {
-                setSelectedFile(file.path);
-                setIsStaged(false);
-                setIsUntracked(false);
-              }}
+              onClick={() => openFile(file.path, false, false)}
               className="w-full px-4 py-3 text-left flex items-center gap-2 active:bg-foreground/5"
             >
               <span className="text-xs font-mono w-5 shrink-0 text-yellow-400">
@@ -369,11 +369,7 @@ export function ChangesView({
           {status.untracked.map((file) => (
             <button
               key={file}
-              onClick={() => {
-                setSelectedFile(file);
-                setIsStaged(false);
-                setIsUntracked(true);
-              }}
+              onClick={() => openFile(file, false, true)}
               className="w-full px-4 py-3 text-left flex items-center gap-2 active:bg-foreground/5"
             >
               <span className="text-xs font-mono w-5 shrink-0 text-foreground/40">

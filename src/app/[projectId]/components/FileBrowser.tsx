@@ -1,21 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 function FileViewer({
   projectId,
   filePath,
   wordWrap,
   onClose,
-  showStageButton,
-  onStage,
 }: {
   projectId: string;
   filePath: string;
   wordWrap: boolean;
   onClose: () => void;
-  showStageButton: boolean;
-  onStage: () => void;
 }) {
   const [content, setContent] = useState<{
     highlighted: string;
@@ -75,14 +72,6 @@ function FileViewer({
               </div>
             )}
           </div>
-          {showStageButton && (
-            <button
-              onClick={onStage}
-              className="px-3 py-1.5 text-sm bg-green-600 text-white rounded active:opacity-80"
-            >
-              Stage
-            </button>
-          )}
         </div>
         <div className="mt-1 text-xs text-foreground/40 truncate">
           {filePath}
@@ -120,43 +109,18 @@ function FileViewer({
 export function FileBrowser({
   projectId,
   wordWrap,
-  onShowingFileChange,
-  initialFilePath,
-  onInitialFileConsumed,
-  fromGitUntracked,
-  onStageRequest,
-  onClearGitContext,
-  onReturnToSource,
 }: {
   projectId: string;
   wordWrap: boolean;
-  onShowingFileChange: (showing: boolean) => void;
-  initialFilePath: string | null;
-  onInitialFileConsumed: () => void;
-  fromGitUntracked: boolean;
-  onStageRequest: (filePath: string) => void;
-  onClearGitContext: () => void;
-  onReturnToSource?: () => void;
 }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const selectedFile = searchParams.get('file');
   const [path, setPath] = useState('');
   const [entries, setEntries] = useState<
     { name: string; path: string; isDirectory: boolean }[]
   >([]);
   const [loading, setLoading] = useState(true);
-  const [selectedFile, setSelectedFile] = useState<string | null>(null);
-  const [openedFromExternal, setOpenedFromExternal] = useState(false);
-
-  useEffect(() => {
-    if (initialFilePath) {
-      setSelectedFile(initialFilePath);
-      setOpenedFromExternal(true);
-      onInitialFileConsumed();
-    }
-  }, [initialFilePath, onInitialFileConsumed]);
-
-  useEffect(() => {
-    onShowingFileChange(selectedFile !== null);
-  }, [selectedFile, onShowingFileChange]);
 
   useEffect(() => {
     async function load() {
@@ -174,9 +138,9 @@ export function FileBrowser({
     if (entry.isDirectory) {
       setPath(entry.path);
     } else {
-      onClearGitContext();
-      setOpenedFromExternal(false);
-      setSelectedFile(entry.path);
+      router.push(
+        `/${projectId}?tab=files&file=${encodeURIComponent(entry.path)}`
+      );
     }
   };
 
@@ -192,15 +156,7 @@ export function FileBrowser({
         projectId={projectId}
         filePath={selectedFile}
         wordWrap={wordWrap}
-        onClose={() => {
-          setSelectedFile(null);
-          if (openedFromExternal) {
-            setOpenedFromExternal(false);
-            onReturnToSource?.();
-          }
-        }}
-        showStageButton={fromGitUntracked}
-        onStage={() => onStageRequest(selectedFile)}
+        onClose={() => router.back()}
       />
     );
   }
