@@ -77,7 +77,8 @@ export default function Home() {
     p.editing ||
     p.hasRunningProcess ||
     p.hasPendingMessage ||
-    p.downSites.length > 0;
+    p.downSites.length > 0 ||
+    p.envCheckFailed;
   const active = filtered.filter(isActive);
   const pinned = filtered.filter((p) => !isActive(p) && p.pinned);
   const others = filtered.filter((p) => !isActive(p) && !p.pinned);

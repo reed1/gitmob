@@ -3,6 +3,7 @@ import { getProjects } from '@/lib/projects';
 import { hasChanges } from '@/lib/git';
 import { getAllRunningProcesses } from '@/lib/process';
 import { getDownSites } from '@/lib/upmon';
+import { getEnvCheckFailures } from '@/lib/env-check';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
@@ -54,19 +55,21 @@ async function processWithWorkers<T, R>(
 export async function GET() {
   const projects = getProjects();
 
-  const [allRunningProcesses, downSites, projectResults] = await Promise.all([
-    getAllRunningProcesses(),
-    getDownSites(),
-    processWithWorkers(projects, WORKERS, async (project) => {
-      try {
-        const editing = await hasChanges(project.path);
-        const pendingMessage = hasPendingMessage(project.path);
-        return { id: project.id, editing, hasPendingMessage: pendingMessage };
-      } catch {
-        return { id: project.id, editing: false, hasPendingMessage: false };
-      }
-    }),
-  ]);
+  const [allRunningProcesses, downSites, envCheckFailures, projectResults] =
+    await Promise.all([
+      getAllRunningProcesses(),
+      getDownSites(),
+      getEnvCheckFailures(),
+      processWithWorkers(projects, WORKERS, async (project) => {
+        try {
+          const editing = await hasChanges(project.path);
+          const pendingMessage = hasPendingMessage(project.path);
+          return { id: project.id, editing, hasPendingMessage: pendingMessage };
+        } catch {
+          return { id: project.id, editing: false, hasPendingMessage: false };
+        }
+      }),
+    ]);
 
   const resultMap: Record<
     string,
@@ -85,6 +88,7 @@ export async function GET() {
     hasPendingMessage: resultMap[p.id]?.hasPendingMessage ?? false,
     hasRunningProcess: !!allRunningProcesses[p.id],
     downSites: downSites[p.id] ?? [],
+    envCheckFailed: envCheckFailures[p.id] ?? false,
   }));
 
   return NextResponse.json(result);

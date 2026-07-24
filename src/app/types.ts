@@ -8,4 +8,5 @@ export interface Project {
   hasPendingMessage: boolean;
   hasRunningProcess: boolean;
   downSites: string[];
+  envCheckFailed: boolean;
 }
