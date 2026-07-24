@@ -12,7 +12,7 @@ export function ProcessLogView({
   onBack: () => void;
 }) {
   const [output, setOutput] = useState('');
-  const [windowExists, setWindowExists] = useState(true);
+  const [unitExists, setUnitExists] = useState(true);
   const [loading, setLoading] = useState(true);
   const [wrap, setWrap] = useState(false);
   const preRef = useRef<HTMLPreElement>(null);
@@ -23,7 +23,7 @@ export function ProcessLogView({
     );
     const data = await res.json();
     setOutput(data.output ?? '');
-    setWindowExists(data.windowExists ?? false);
+    setUnitExists(data.unitExists ?? false);
     setLoading(false);
   }, [projectId, processName]);
 
@@ -80,9 +80,9 @@ export function ProcessLogView({
         <div className="p-4 text-center text-foreground/50">
           Loading logs...
         </div>
-      ) : !windowExists ? (
+      ) : !unitExists ? (
         <div className="p-4 text-center text-foreground/50">
-          No tmux window for{' '}
+          No logs for{' '}
           <code className="px-1 bg-foreground/10 rounded">{processName}</code>.
           <div className="mt-2 text-sm">
             Logs are only available after the process has been started at least

@@ -34,4 +34,4 @@ Source SVG: `android/icon.svg` — all PNGs are generated from this via `rsvg-co
 
 - Projects loaded from `~/.cache/rlocal/rofi-vscode/projects.generated.json`
 - CLI commands run as detached processes, output to `~/.local/share/gitmob/cli-jobs/{jobId}.log`
-- Process management via tmux sessions (`rvp-{projectId}`) and `rv` CLI tool
+- Process management via transient systemd user units (`rvp-{projectId}-{cmd}.service`, logs via journalctl) and `rv` CLI tool

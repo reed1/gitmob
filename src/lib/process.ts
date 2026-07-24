@@ -1,7 +1,7 @@
 import { exec, execFileSync, execSync, spawn } from 'child_process';
 import { Project } from './projects';
 
-const SESSION_PREFIX = 'rvp-';
+const UNIT_PREFIX = 'rvp-';
 
 export interface ProcessInfo {
   name: string;
@@ -18,53 +18,32 @@ export interface ProcessDefinition {
   members?: string[];
 }
 
-export function getSessionName(projectId: string): string {
-  return `${SESSION_PREFIX}${projectId}`;
+// Must mirror _sanitize_unit_part in rofi-vscode/rv_proc.py so names line up.
+function sanitizeUnitPart(part: string): string {
+  return part.replace(/[^A-Za-z0-9:_.\-]/g, '_');
 }
 
-export function sessionExists(projectId: string): boolean {
-  const sessionName = getSessionName(projectId);
-  try {
-    execSync(`tmux has-session -t ${sessionName}`, { stdio: 'ignore' });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-export function listWindows(projectId: string): string[] {
-  const sessionName = getSessionName(projectId);
-  try {
-    const result = execSync(
-      `tmux list-windows -t ${sessionName} -F "#{window_name}"`,
-      { encoding: 'utf-8' }
-    );
-    return result.trim().split('\n').filter(Boolean);
-  } catch {
-    return [];
-  }
+export function getUnitName(projectId: string, cmdName: string): string {
+  return `${UNIT_PREFIX}${sanitizeUnitPart(projectId)}-${sanitizeUnitPart(cmdName)}.service`;
 }
 
 export interface ProcessLog {
-  windowExists: boolean;
+  unitExists: boolean;
   output: string;
 }
 
 export function captureLog(
   projectId: string,
-  windowName: string,
+  cmdName: string,
   lines = 2000
 ): ProcessLog {
-  const target = `${getSessionName(projectId)}:${windowName}`;
-  if (!listWindows(projectId).includes(windowName)) {
-    return { windowExists: false, output: '' };
-  }
+  const unit = getUnitName(projectId, cmdName);
   const output = execFileSync(
-    'tmux',
-    ['capture-pane', '-t', target, '-p', '-J', '-S', `-${lines}`],
+    'journalctl',
+    ['--user', '-u', unit, '-n', String(lines), '-o', 'cat', '--no-pager', '-q'],
     { encoding: 'utf-8', maxBuffer: 16 * 1024 * 1024 }
-  );
-  return { windowExists: true, output: output.replace(/\s+$/, '') };
+  ).replace(/\s+$/, '');
+  return { unitExists: output.length > 0, output };
 }
 
 export async function getAllRunningProcesses(): Promise<
@@ -80,10 +59,12 @@ export async function getAllRunningProcesses(): Promise<
         const entries = JSON.parse(stdout) as Array<{
           project: string;
           command: string;
+          state: string;
         }>;
 
         const map: Record<string, string[]> = {};
         for (const entry of entries) {
+          if (entry.state !== 'running') continue;
           if (!map[entry.project]) {
             map[entry.project] = [];
           }
@@ -107,12 +88,13 @@ function getRunningProcesses(projectId: string): RunningProcessMap {
     const entries = JSON.parse(result) as Array<{
       project: string;
       command: string;
+      state: string;
       pid: string;
       uptime: string;
     }>;
     const map: RunningProcessMap = {};
     for (const entry of entries) {
-      if (entry.project === projectId) {
+      if (entry.project === projectId && entry.state === 'running') {
         map[entry.command] = { pid: entry.pid, uptime: entry.uptime };
       }
     }
@@ -308,7 +290,6 @@ export async function restartProcess(
   if (members && members.length > 0) {
     const stopResult = await stopProcess(projectId, processName, cmd);
     if (!stopResult.success) return stopResult;
-    await new Promise((r) => setTimeout(r, 500));
     return runRv(['proc', 'start', projectId, processName]);
   }
   return runRv(['proc', 'restart', projectId, processName]);
