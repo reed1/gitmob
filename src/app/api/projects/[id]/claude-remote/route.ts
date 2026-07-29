@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { spawn } from 'child_process';
 import { openSync, readFileSync, unlinkSync, mkdirSync } from 'fs';
 import { getProject } from '@/lib/projects';
-import { registerSession } from '@/lib/claude-sessions';
 
 export async function POST(
   request: NextRequest,
@@ -114,15 +113,6 @@ export async function POST(
     });
 
     unlinkSync(logFile);
-
-    registerSession({
-      projectId: id,
-      projectPath: project.path,
-      url,
-      pid: childPid,
-      startedAt: Date.now(),
-      type: 'remote',
-    });
 
     return NextResponse.json({ url, pid: childPid });
   } catch (err) {

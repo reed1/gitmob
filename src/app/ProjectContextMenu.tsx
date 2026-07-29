@@ -1,21 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { apiFetch } from '../lib/api';
 
 const DOOIT_DOMAIN = process.env.NEXT_PUBLIC_DOOIT_DOMAIN;
 
 type PermissionMode = 'auto' | 'default' | 'bypassPermissions';
-
-function openExternal(url: string) {
-  window.open(`https://href.li/?${url}`, '_blank');
-}
-
-interface ChromeProfile {
-  id: string;
-  running: boolean;
-}
 
 interface Props {
   project: { id: string; urls?: Record<string, string> };
@@ -29,53 +20,19 @@ export default function ProjectContextMenu({
   const [menuOpen, setMenuOpen] = useState(false);
   const [urlModalOpen, setUrlModalOpen] = useState(false);
   const [customModalOpen, setCustomModalOpen] = useState(false);
-  const [customInterface, setCustomInterface] = useState<'remote' | 'ttyd'>(
-    'remote'
-  );
   const [customPermissionMode, setCustomPermissionMode] =
     useState<PermissionMode>('auto');
-  const [customChromeMcp, setCustomChromeMcp] = useState(false);
-  const [customChromeProfile, setCustomChromeProfile] = useState('');
-  const [chromeProfiles, setChromeProfiles] = useState<ChromeProfile[]>([]);
-
-  useEffect(() => {
-    if (!customChromeMcp) return;
-    apiFetch('/api/chromium-profiles')
-      .then((res) => res.json())
-      .then((data) => setChromeProfiles(data.profiles ?? []));
-  }, [customChromeMcp]);
 
   async function launchCustom() {
     setCustomModalOpen(false);
-    const body = JSON.stringify({
-      permissionMode: customPermissionMode,
-      chromeMcp: customChromeMcp,
-      chromeProfile: customChromeProfile || null,
+    const res = await apiFetch(`/api/projects/${project.id}/claude-remote`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ permissionMode: customPermissionMode }),
     });
-    const headers = { 'Content-Type': 'application/json' };
-    if (customInterface === 'remote') {
-      const res = await apiFetch(`/api/projects/${project.id}/claude-remote`, {
-        method: 'POST',
-        headers,
-        body,
-      });
-      const data = await res.json();
-      if (data.url) {
-        window.open(data.url, '_blank');
-      }
-    } else if (customInterface === 'ttyd') {
-      const res = await apiFetch(`/api/projects/${project.id}/claude-ttyd`, {
-        method: 'POST',
-        headers,
-        body,
-      });
-      const data = await res.json();
-      if (data.url) {
-        const wrapperUrl = `/ttyd?url=${encodeURIComponent(data.url)}&session=${encodeURIComponent(data.tmuxSession)}`;
-        openExternal(window.location.origin + wrapperUrl);
-      }
-    } else {
-      throw new Error(`Unexpected interface: ${customInterface}`);
+    const data = await res.json();
+    if (data.url) {
+      window.open(data.url, '_blank');
     }
   }
 
@@ -152,10 +109,7 @@ export default function ProjectContextMenu({
               <button
                 onClick={() => {
                   setMenuOpen(false);
-                  setCustomInterface('remote');
                   setCustomPermissionMode('auto');
-                  setCustomChromeMcp(false);
-                  setCustomChromeProfile('');
                   setCustomModalOpen(true);
                 }}
                 className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
@@ -201,42 +155,6 @@ export default function ProjectContextMenu({
                 <div className="px-4 py-3 space-y-3">
                   <div>
                     <div className="text-xs text-foreground/60 mb-1.5">
-                      Interface
-                    </div>
-                    <div className="flex gap-2">
-                      <label
-                        className={`flex-1 flex items-center justify-center gap-2 text-sm border rounded-lg px-3 py-2 has-[:checked]:bg-foreground/10 has-[:checked]:border-foreground/40 ${
-                          customChromeMcp
-                            ? 'border-foreground/10 text-foreground/30 cursor-not-allowed'
-                            : 'border-foreground/20 cursor-pointer'
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name={`custom-iface-${project.id}`}
-                          value="remote"
-                          checked={customInterface === 'remote'}
-                          onChange={() => setCustomInterface('remote')}
-                          disabled={customChromeMcp}
-                          className="w-4 h-4"
-                        />
-                        Remote
-                      </label>
-                      <label className="flex-1 flex items-center justify-center gap-2 text-sm border border-foreground/20 rounded-lg px-3 py-2 cursor-pointer has-[:checked]:bg-foreground/10 has-[:checked]:border-foreground/40">
-                        <input
-                          type="radio"
-                          name={`custom-iface-${project.id}`}
-                          value="ttyd"
-                          checked={customInterface === 'ttyd'}
-                          onChange={() => setCustomInterface('ttyd')}
-                          className="w-4 h-4"
-                        />
-                        TTYD
-                      </label>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-foreground/60 mb-1.5">
                       Permission mode
                     </div>
                     <select
@@ -255,48 +173,6 @@ export default function ProjectContextMenu({
                       </option>
                     </select>
                   </div>
-                  <label className="flex items-start gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={customChromeMcp}
-                      onChange={(e) => {
-                        const checked = e.target.checked;
-                        setCustomChromeMcp(checked);
-                        if (checked) setCustomInterface('ttyd');
-                      }}
-                      className="w-4 h-4 mt-0.5"
-                    />
-                    <span>
-                      Chrome DevTools MCP
-                      <span className="block text-xs text-foreground/50">
-                        Headless chromium · TTYD only
-                      </span>
-                    </span>
-                  </label>
-                  {customChromeMcp && (
-                    <div>
-                      <div className="text-xs text-foreground/60 mb-1.5">
-                        Browser profile
-                      </div>
-                      <select
-                        value={customChromeProfile}
-                        onChange={(e) => setCustomChromeProfile(e.target.value)}
-                        className="w-full text-sm border border-foreground/20 rounded-lg px-3 py-2 bg-background"
-                      >
-                        <option value="">Throwaway (discarded after)</option>
-                        {chromeProfiles.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.id}
-                            {p.running ? ' (running)' : ''}
-                          </option>
-                        ))}
-                      </select>
-                      <span className="block text-xs text-foreground/50 mt-1">
-                        Create profiles with{' '}
-                        <code>scripts/browser open &lt;id&gt;</code>
-                      </span>
-                    </div>
-                  )}
                 </div>
                 <div className="px-4 py-3 border-t border-foreground/10 flex justify-end gap-2">
                   <button

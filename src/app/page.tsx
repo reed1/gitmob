@@ -1,10 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import ProjectCard from './ProjectCard';
 import { Project } from './types';
-import { addToast, apiFetch } from '../lib/api';
+import { addToast } from '../lib/api';
 
 async function fetchHealthWithTimeout(
   timeoutMs: number
@@ -38,7 +37,6 @@ async function waitForNewServer(
 }
 
 export default function Home() {
-  const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -153,35 +151,6 @@ export default function Home() {
                     onClick={() => setMenuOpen(false)}
                   />
                   <div className="absolute right-0 top-full mt-1 z-20 bg-background border border-foreground/20 rounded-lg shadow-lg py-1 min-w-[180px]">
-                    <button
-                      onClick={() => {
-                        setMenuOpen(false);
-                        router.push('/claude-sessions');
-                      }}
-                      className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 flex items-center gap-2"
-                    >
-                      <span className="w-4" />
-                      Claude Remote Manager
-                    </button>
-                    <button
-                      onClick={async () => {
-                        setMenuOpen(false);
-                        const res = await apiFetch('/api/chromium-profiles', {
-                          method: 'POST',
-                        });
-                        if (!res.ok) return;
-                        const data = await res.json();
-                        addToast(
-                          data.closed === 0
-                            ? 'No browsers were running'
-                            : `Closed ${data.closed} browser${data.closed === 1 ? '' : 's'}`
-                        );
-                      }}
-                      className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 flex items-center gap-2"
-                    >
-                      <span className="w-4" />
-                      Close all browsers
-                    </button>
                     <button
                       onClick={async () => {
                         setMenuOpen(false);
