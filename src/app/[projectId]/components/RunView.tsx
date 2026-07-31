@@ -3,9 +3,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { apiFetch } from '../../../lib/api';
-import { ProcessLogView } from './ProcessLogView';
+import { RunLogView } from './RunLogView';
 
-interface ProcessInfo {
+interface RunInfo {
   name: string;
   running: boolean;
   pid?: string;
@@ -20,26 +20,26 @@ interface MonitorStatus {
   is_up: boolean;
 }
 
-export function ProcessView({
+export function RunView({
   projectId,
   urls,
 }: {
   projectId: string;
   urls?: Record<string, string>;
 }) {
-  const [processes, setProcesses] = useState<ProcessInfo[]>([]);
-  const [hasProcesses, setHasProcesses] = useState(true);
+  const [runs, setRuns] = useState<RunInfo[]>([]);
+  const [hasRuns, setHasRuns] = useState(true);
   const [loading, setLoading] = useState(true);
   const [monitors, setMonitors] = useState<MonitorStatus[]>([]);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const logProcess = searchParams.get('logs');
+  const logRun = searchParams.get('logs');
 
   const fetchStatus = useCallback(async () => {
-    const res = await fetch(`/api/projects/${projectId}/process?action=status`);
+    const res = await fetch(`/api/projects/${projectId}/run?action=status`);
     const data = await res.json();
-    setProcesses(data.processes || []);
-    setHasProcesses(data.hasProcesses);
+    setRuns(data.runs || []);
+    setHasRuns(data.hasRuns);
     setLoading(false);
   }, [projectId]);
 
@@ -56,30 +56,28 @@ export function ProcessView({
       .catch(() => {});
   }, [projectId]);
 
-  const openLogs = (processName: string) => {
-    router.push(
-      `/${projectId}?tab=process&logs=${encodeURIComponent(processName)}`
-    );
+  const openLogs = (runName: string) => {
+    router.push(`/${projectId}?tab=run&logs=${encodeURIComponent(runName)}`);
   };
 
   const handleAction = async (
     action: 'start' | 'stop' | 'restart',
-    processName: string
+    runName: string
   ) => {
-    await apiFetch(`/api/projects/${projectId}/process`, {
+    await apiFetch(`/api/projects/${projectId}/run`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, processName }),
+      body: JSON.stringify({ action, runName }),
     });
     await new Promise((r) => setTimeout(r, 500));
     await fetchStatus();
   };
 
-  if (logProcess) {
+  if (logRun) {
     return (
-      <ProcessLogView
+      <RunLogView
         projectId={projectId}
-        processName={logProcess}
+        runName={logRun}
         onBack={() => router.back()}
       />
     );
@@ -87,19 +85,17 @@ export function ProcessView({
 
   if (loading) {
     return (
-      <div className="p-4 text-center text-foreground/50">
-        Loading processes...
-      </div>
+      <div className="p-4 text-center text-foreground/50">Loading runs...</div>
     );
   }
 
-  if (!hasProcesses) {
+  if (!hasRuns) {
     return (
       <div className="p-4 text-center text-foreground/50">
-        No processes configured for this project.
+        No runs configured for this project.
         <div className="mt-2 text-sm">
           Add a <code className="px-1 bg-foreground/10 rounded">cmd</code>{' '}
-          section to the project YAML to define processes.
+          section to the project YAML to define runs.
         </div>
       </div>
     );
@@ -107,14 +103,14 @@ export function ProcessView({
 
   return (
     <div className="p-4 space-y-3">
-      {processes.map((proc) => {
-        const isGroup = !!proc.members;
-        const total = proc.members?.length ?? 0;
-        const running = proc.runningMembers ?? 0;
-        const fullyRunning = isGroup ? running === total : proc.running;
+      {runs.map((run) => {
+        const isGroup = !!run.members;
+        const total = run.members?.length ?? 0;
+        const running = run.runningMembers ?? 0;
+        const fullyRunning = isGroup ? running === total : run.running;
         return (
           <div
-            key={proc.name}
+            key={run.name}
             className="flex items-center justify-between p-3 bg-foreground/5 border border-foreground/10 rounded-lg"
           >
             <div className="flex items-center gap-3 min-w-0">
@@ -126,24 +122,24 @@ export function ProcessView({
                       : running > 0
                         ? 'bg-yellow-500'
                         : 'bg-foreground/30'
-                    : proc.running
+                    : run.running
                       ? 'bg-green-500'
                       : 'bg-foreground/30'
                 }`}
               />
               <div className="min-w-0">
                 <div className="font-medium truncate">
-                  {isGroup ? `@${proc.name}` : proc.name}
+                  {isGroup ? `@${run.name}` : run.name}
                 </div>
                 {isGroup ? (
                   <div className="text-xs text-foreground/50 truncate">
-                    {running}/{total} running · {proc.members!.join(', ')}
+                    {running}/{total} running · {run.members!.join(', ')}
                   </div>
                 ) : (
-                  proc.running &&
-                  proc.uptime && (
+                  run.running &&
+                  run.uptime && (
                     <div className="text-xs text-foreground/50">
-                      PID {proc.pid} · {proc.uptime}
+                      PID {run.pid} · {run.uptime}
                     </div>
                   )
                 )}
@@ -152,22 +148,22 @@ export function ProcessView({
             <div className="flex gap-1.5 shrink-0">
               {!isGroup && (
                 <button
-                  onClick={() => openLogs(proc.name)}
+                  onClick={() => openLogs(run.name)}
                   className="px-2 py-1.5 text-xs bg-foreground/10 border border-foreground/15 rounded active:opacity-80"
                 >
                   Logs
                 </button>
               )}
-              {proc.running ? (
+              {run.running ? (
                 <>
                   <button
-                    onClick={() => handleAction('restart', proc.name)}
+                    onClick={() => handleAction('restart', run.name)}
                     className="px-2 py-1.5 text-xs bg-yellow-600 text-white rounded active:opacity-80"
                   >
                     Restart
                   </button>
                   <button
-                    onClick={() => handleAction('stop', proc.name)}
+                    onClick={() => handleAction('stop', run.name)}
                     className="px-2 py-1.5 text-xs bg-red-600 text-white rounded active:opacity-80"
                   >
                     Stop
@@ -175,7 +171,7 @@ export function ProcessView({
                 </>
               ) : (
                 <button
-                  onClick={() => handleAction('start', proc.name)}
+                  onClick={() => handleAction('start', run.name)}
                   className="px-2 py-1.5 text-xs bg-green-600 text-white rounded active:opacity-80"
                 >
                   Start

@@ -3,7 +3,7 @@ import { Project } from './projects';
 
 const UNIT_PREFIX = 'rvp-';
 
-export interface ProcessInfo {
+export interface RunInfo {
   name: string;
   running: boolean;
   pid?: string;
@@ -12,13 +12,13 @@ export interface ProcessInfo {
   runningMembers?: number;
 }
 
-export interface ProcessDefinition {
+export interface RunDefinition {
   name: string;
   commands?: string[];
   members?: string[];
 }
 
-// Must mirror _sanitize_unit_part in rofi-vscode/rv_proc.py so names line up.
+// Must mirror _sanitize_unit_part in rofi-vscode/shared/proc.py so names line up.
 function sanitizeUnitPart(part: string): string {
   return part.replace(/[^A-Za-z0-9:_.\-]/g, '_');
 }
@@ -27,7 +27,7 @@ export function getUnitName(projectId: string, cmdName: string): string {
   return `${UNIT_PREFIX}${sanitizeUnitPart(projectId)}-${sanitizeUnitPart(cmdName)}.service`;
 }
 
-export interface ProcessLog {
+export interface RunLog {
   unitExists: boolean;
   output: string;
 }
@@ -36,21 +36,29 @@ export function captureLog(
   projectId: string,
   cmdName: string,
   lines = 2000
-): ProcessLog {
+): RunLog {
   const unit = getUnitName(projectId, cmdName);
   const output = execFileSync(
     'journalctl',
-    ['--user', '-u', unit, '-n', String(lines), '-o', 'cat', '--no-pager', '-q'],
+    [
+      '--user',
+      '-u',
+      unit,
+      '-n',
+      String(lines),
+      '-o',
+      'cat',
+      '--no-pager',
+      '-q',
+    ],
     { encoding: 'utf-8', maxBuffer: 16 * 1024 * 1024 }
   ).replace(/\s+$/, '');
   return { unitExists: output.length > 0, output };
 }
 
-export async function getAllRunningProcesses(): Promise<
-  Record<string, string[]>
-> {
+export async function getAllRunning(): Promise<Record<string, string[]>> {
   return new Promise((resolve) => {
-    exec('rv proc status --json', (error, stdout) => {
+    exec('rv run status --json', (error, stdout) => {
       if (error) {
         resolve({});
         return;
@@ -78,13 +86,13 @@ export async function getAllRunningProcesses(): Promise<
   });
 }
 
-interface RunningProcessMap {
+interface RunningUnitMap {
   [key: string]: { pid: string; uptime: string };
 }
 
-function getRunningProcesses(projectId: string): RunningProcessMap {
+function getRunningUnits(projectId: string): RunningUnitMap {
   try {
-    const result = execSync('rv proc status --json', { encoding: 'utf-8' });
+    const result = execSync('rv run status --json', { encoding: 'utf-8' });
     const entries = JSON.parse(result) as Array<{
       project: string;
       command: string;
@@ -92,7 +100,7 @@ function getRunningProcesses(projectId: string): RunningProcessMap {
       pid: string;
       uptime: string;
     }>;
-    const map: RunningProcessMap = {};
+    const map: RunningUnitMap = {};
     for (const entry of entries) {
       if (entry.project === projectId && entry.state === 'running') {
         map[entry.command] = { pid: entry.pid, uptime: entry.uptime };
@@ -161,12 +169,10 @@ export function getGroupMembers(
   return resolveGroupMembers(cmd, name, new Set());
 }
 
-export function parseProcessDefinitions(
-  cmd: Project['cmd']
-): ProcessDefinition[] {
+export function parseRunDefinitions(cmd: Project['cmd']): RunDefinition[] {
   if (!cmd) return [];
 
-  const definitions: ProcessDefinition[] = [];
+  const definitions: RunDefinition[] = [];
 
   for (const [name, value] of Object.entries(cmd)) {
     if (typeof value === 'string') {
@@ -196,14 +202,14 @@ export function parseProcessDefinitions(
   return definitions;
 }
 
-export function getProcessStatus(
+export function getRunStatus(
   projectId: string,
   cmd: Project['cmd']
-): ProcessInfo[] {
-  const definitions = parseProcessDefinitions(cmd);
+): RunInfo[] {
+  const definitions = parseRunDefinitions(cmd);
   if (definitions.length === 0) return [];
 
-  const runningMap = getRunningProcesses(projectId);
+  const runningMap = getRunningUnits(projectId);
 
   return definitions.map((def) => {
     if (def.members) {
@@ -223,6 +229,11 @@ export function getProcessStatus(
       uptime: running?.uptime,
     };
   });
+}
+
+// Starting is 'rv run' in systemd mode; the lifecycle verbs are subcommands of it.
+function startArgs(projectId: string, runName: string): string[] {
+  return ['run', '--mode', 'systemd', '--project', projectId, '--cmd', runName];
 }
 
 function runRv(args: string[]): Promise<{ success: boolean; error?: string }> {
@@ -248,28 +259,28 @@ function runRv(args: string[]): Promise<{ success: boolean; error?: string }> {
   });
 }
 
-export async function startProcess(
+export async function startRun(
   projectId: string,
-  processName: string
+  runName: string
 ): Promise<{ success: boolean; error?: string }> {
-  return runRv(['proc', 'start', projectId, processName]);
+  return runRv(startArgs(projectId, runName));
 }
 
-export async function stopProcess(
+export async function stopRun(
   projectId: string,
-  processName: string,
+  runName: string,
   cmd?: Project['cmd']
 ): Promise<{ success: boolean; error?: string }> {
-  const members = getGroupMembers(cmd, processName);
+  const members = getGroupMembers(cmd, runName);
   if (members && members.length > 0) {
-    const runningMap = getRunningProcesses(projectId);
+    const runningMap = getRunningUnits(projectId);
     const runningMembers = members.filter((m) => runningMap[m]);
     if (runningMembers.length === 0) {
       return { success: true };
     }
     const errors: string[] = [];
     for (const member of runningMembers) {
-      const result = await runRv(['proc', 'stop', projectId, member]);
+      const result = await runRv(['run', 'stop', projectId, member]);
       if (!result.success && result.error)
         errors.push(`${member}: ${result.error}`);
     }
@@ -278,28 +289,28 @@ export async function stopProcess(
     }
     return { success: true };
   }
-  return runRv(['proc', 'stop', projectId, processName]);
+  return runRv(['run', 'stop', projectId, runName]);
 }
 
-export async function restartProcess(
+export async function restartRun(
   projectId: string,
-  processName: string,
+  runName: string,
   cmd?: Project['cmd']
 ): Promise<{ success: boolean; error?: string }> {
-  const members = getGroupMembers(cmd, processName);
+  const members = getGroupMembers(cmd, runName);
   if (members && members.length > 0) {
-    const stopResult = await stopProcess(projectId, processName, cmd);
+    const stopResult = await stopRun(projectId, runName, cmd);
     if (!stopResult.success) return stopResult;
-    return runRv(['proc', 'start', projectId, processName]);
+    return runRv(startArgs(projectId, runName));
   }
-  return runRv(['proc', 'restart', projectId, processName]);
+  return runRv(['run', 'restart', projectId, runName]);
 }
 
-export async function stopAllProcesses(
+export async function stopAllRuns(
   projectId: string
 ): Promise<{ success: boolean; error?: string }> {
   return new Promise((resolve) => {
-    exec(`rv proc stop ${projectId}`, (error, _, stderr) => {
+    exec(`rv run stop ${projectId}`, (error, _, stderr) => {
       if (error) {
         resolve({ success: false, error: stderr || error.message });
       } else {

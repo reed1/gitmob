@@ -39,7 +39,7 @@ export default function ProjectContextMenu({
   const urls = project.urls ?? {};
   const urlEntries = Object.entries(urls);
   const hasUrls = urlEntries.length > 0;
-  const stopProcEnabled = hasRunningProcess !== false;
+  const stopRunEnabled = hasRunningProcess !== false;
 
   return (
     <>
@@ -88,8 +88,8 @@ export default function ProjectContextMenu({
               <button
                 onClick={async () => {
                   setMenuOpen(false);
-                  if (stopProcEnabled) {
-                    await apiFetch(`/api/projects/${project.id}/process`, {
+                  if (stopRunEnabled) {
+                    await apiFetch(`/api/projects/${project.id}/run`, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ action: 'stopAll' }),
@@ -97,14 +97,14 @@ export default function ProjectContextMenu({
                     window.location.reload();
                   }
                 }}
-                disabled={!stopProcEnabled}
+                disabled={!stopRunEnabled}
                 className={`block w-full px-4 py-2 text-sm text-left ${
-                  stopProcEnabled
+                  stopRunEnabled
                     ? 'hover:bg-foreground/10'
                     : 'text-foreground/30 cursor-not-allowed'
                 }`}
               >
-                Stop proc
+                Stop run
               </button>
               <button
                 onClick={() => {

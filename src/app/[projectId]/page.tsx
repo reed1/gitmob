@@ -6,7 +6,7 @@ import { Project, GitStatus, Tab } from './types';
 import { FileBrowser } from './components/FileBrowser';
 import { ChangesView } from './components/ChangesView';
 import { ActionsView } from './components/ActionsView';
-import { ProcessView } from './components/ProcessView';
+import { RunView } from './components/RunView';
 import { CLIView } from './components/CLIView';
 import { DooitView } from './components/DooitView';
 import ProjectContextMenu from '../ProjectContextMenu';
@@ -17,7 +17,7 @@ const tabs = [
   { id: 'changes', label: 'Changes' },
   { id: 'actions', label: 'Actions' },
   { id: 'cli', label: 'CLI' },
-  { id: 'process', label: 'Proc' },
+  { id: 'run', label: 'Run' },
 ] as const;
 
 const validTabs = new Set<string>(tabs.map((t) => t.id));
@@ -254,8 +254,8 @@ export default function ProjectPage() {
             setPendingLoaded={setPendingLoaded}
           />
         )}
-        {tab === 'process' && (
-          <ProcessView projectId={projectId} urls={project?.urls} />
+        {tab === 'run' && (
+          <RunView projectId={projectId} urls={project?.urls} />
         )}
         {tab === 'cli' && project && <CLIView projectPath={project.path} />}
         {tab === 'dooit' && <DooitView projectId={projectId} />}

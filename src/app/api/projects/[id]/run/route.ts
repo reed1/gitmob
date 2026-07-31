@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getProject } from '@/lib/projects';
 import {
   captureLog,
-  getProcessStatus,
-  startProcess,
-  stopProcess,
-  restartProcess,
-  stopAllProcesses,
-} from '@/lib/process';
+  getRunStatus,
+  startRun,
+  stopRun,
+  restartRun,
+  stopAllRuns,
+} from '@/lib/run';
 
 export async function GET(
   request: NextRequest,
@@ -23,10 +23,10 @@ export async function GET(
   const action = request.nextUrl.searchParams.get('action');
 
   if (action === 'status') {
-    const processes = getProcessStatus(id, project.cmd);
+    const runs = getRunStatus(id, project.cmd);
     return NextResponse.json({
-      processes,
-      hasProcesses: processes.length > 0,
+      runs,
+      hasRuns: runs.length > 0,
     });
   }
 
@@ -53,7 +53,7 @@ export async function POST(
   }
 
   const body = await request.json();
-  const { action, processName } = body;
+  const { action, runName } = body;
 
   if (!action) {
     return NextResponse.json({ error: 'Missing action' }, { status: 400 });
@@ -62,15 +62,15 @@ export async function POST(
   let result: { success: boolean; error?: string };
 
   if (action === 'stopAll') {
-    result = await stopAllProcesses(id);
-  } else if (!processName) {
-    return NextResponse.json({ error: 'Missing processName' }, { status: 400 });
+    result = await stopAllRuns(id);
+  } else if (!runName) {
+    return NextResponse.json({ error: 'Missing runName' }, { status: 400 });
   } else if (action === 'start') {
-    result = await startProcess(id, processName);
+    result = await startRun(id, runName);
   } else if (action === 'stop') {
-    result = await stopProcess(id, processName, project.cmd);
+    result = await stopRun(id, runName, project.cmd);
   } else if (action === 'restart') {
-    result = await restartProcess(id, processName, project.cmd);
+    result = await restartRun(id, runName, project.cmd);
   } else {
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   }

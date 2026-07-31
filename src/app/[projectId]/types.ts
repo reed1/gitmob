@@ -11,4 +11,4 @@ export interface GitStatus {
   untracked: string[];
 }
 
-export type Tab = 'files' | 'changes' | 'actions' | 'process' | 'cli' | 'dooit';
+export type Tab = 'files' | 'changes' | 'actions' | 'run' | 'cli' | 'dooit';

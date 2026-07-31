@@ -8,9 +8,9 @@ React 19, Next.js 16, TypeScript, Tailwind CSS 4, simple-git
 
 ## Structure
 
-- `/src/lib` - Core logic (git.ts, process.ts, projects.ts, files.ts)
+- `/src/lib` - Core logic (git.ts, run.ts, projects.ts, files.ts)
 - `/src/app/api` - API routes (projects, cli jobs, dooit todos)
-- `/src/app/[projectId]/components` - Project views (FileBrowser, ChangesView, ActionsView, ProcessView, CLIView, DooitView)
+- `/src/app/[projectId]/components` - Project views (FileBrowser, ChangesView, ActionsView, RunView, CLIView, DooitView)
 
 ## Development
 
@@ -21,17 +21,10 @@ pnpm build && pnpm start
 
 ## App Icons
 
-Source SVG: `android/icon.svg` — all PNGs are generated from this via `rsvg-convert`. Do NOT put SVG in `src/app/` as it triggers a Turbopack build crash.
-
-- `src/app/icon.png` (180x180) - Next.js auto-discovered web icon; Android app symlinks to this
-- `src/app/apple-icon.png` (180x180) - Next.js auto-discovered Apple touch icon
-- `src/app/favicon.ico` (16+32) - Next.js auto-discovered browser tab icon
-- `public/icon-192.png` (192x192) - PWA manifest (`src/app/manifest.json`)
-- `public/icon-512.png` (512x512) - PWA manifest (`src/app/manifest.json`)
-- `android/icon.png` - Symlink → `../src/app/icon.png`
+All PNGs/ICO are generated from `android/icon.svg` via `android/gen-icons.sh`; edit the SVG and regenerate rather than editing them by hand. Do NOT put an SVG in `src/app/` — it crashes the Turbopack build.
 
 ## Key Patterns
 
 - Projects loaded from `~/.cache/rlocal/rofi-vscode/projects.generated.json`
 - CLI commands run as detached processes, output to `~/.local/share/gitmob/cli-jobs/{jobId}.log`
-- Process management via transient systemd user units (`rvp-{projectId}-{cmd}.service`, logs via journalctl) and `rv` CLI tool
+- The Run tab shells out to the `rv` CLI to manage transient systemd user units (`rvp-{projectId}-{cmd}.service`, logs read via journalctl). Note the asymmetry: starting is `rv run --mode systemd --project X --cmd Y`, while `stop`/`restart`/`status` are subcommands of `rv run`.

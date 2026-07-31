@@ -5,7 +5,7 @@ import { Project } from './types';
 import ProjectContextMenu from './ProjectContextMenu';
 
 function getDefaultTab(project: Project): string {
-  if (project.downSites.length > 0) return 'process';
+  if (project.downSites.length > 0) return 'run';
   if (project.editing) return 'changes';
   return 'dooit';
 }

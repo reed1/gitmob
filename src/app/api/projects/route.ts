@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getProjects } from '@/lib/projects';
 import { hasChanges } from '@/lib/git';
-import { getAllRunningProcesses } from '@/lib/process';
+import { getAllRunning } from '@/lib/run';
 import { getDownSites } from '@/lib/upmon';
 import { getEnvCheckFailures } from '@/lib/env-check';
 import { existsSync } from 'fs';
@@ -57,7 +57,7 @@ export async function GET() {
 
   const [allRunningProcesses, downSites, envCheckFailures, projectResults] =
     await Promise.all([
-      getAllRunningProcesses(),
+      getAllRunning(),
       getDownSites(),
       getEnvCheckFailures(),
       processWithWorkers(projects, WORKERS, async (project) => {

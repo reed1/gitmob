@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-export function ProcessLogView({
+export function RunLogView({
   projectId,
-  processName,
+  runName,
   onBack,
 }: {
   projectId: string;
-  processName: string;
+  runName: string;
   onBack: () => void;
 }) {
   const [output, setOutput] = useState('');
@@ -19,13 +19,13 @@ export function ProcessLogView({
 
   const fetchLog = useCallback(async () => {
     const res = await fetch(
-      `/api/projects/${projectId}/process?action=logs&name=${encodeURIComponent(processName)}`
+      `/api/projects/${projectId}/run?action=logs&name=${encodeURIComponent(runName)}`
     );
     const data = await res.json();
     setOutput(data.output ?? '');
     setUnitExists(data.unitExists ?? false);
     setLoading(false);
-  }, [projectId, processName]);
+  }, [projectId, runName]);
 
   useEffect(() => {
     fetchLog();
@@ -57,7 +57,7 @@ export function ProcessLogView({
             />
           </svg>
         </button>
-        <div className="flex-1 min-w-0 font-medium truncate">{processName}</div>
+        <div className="flex-1 min-w-0 font-medium truncate">{runName}</div>
         <button
           onClick={() => setWrap((w) => !w)}
           className={`px-2 py-1 text-xs rounded border ${
@@ -83,7 +83,7 @@ export function ProcessLogView({
       ) : !unitExists ? (
         <div className="p-4 text-center text-foreground/50">
           No logs for{' '}
-          <code className="px-1 bg-foreground/10 rounded">{processName}</code>.
+          <code className="px-1 bg-foreground/10 rounded">{runName}</code>.
           <div className="mt-2 text-sm">
             Logs are only available after the process has been started at least
             once.
