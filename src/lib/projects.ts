@@ -6,6 +6,12 @@ const PROJECTS_FILE =
   process.env.PROJECTS_FILE ||
   join(homedir(), '.cache/rlocal/rofi-vscode/projects.generated.json');
 
+export interface PushTarget {
+  ssh: string;
+  path?: string;
+  git_relay?: string;
+}
+
 export interface Project {
   id: string;
   path: string;
@@ -13,6 +19,7 @@ export interface Project {
   pinned?: boolean;
   repo?: string;
   urls?: Record<string, string>;
+  push?: Record<string, PushTarget>;
   cmd?: Record<
     string,
     | string
@@ -37,6 +44,7 @@ export function getProjects(): Project[] {
     pinned: raw.pinned,
     repo: raw.repo,
     urls: raw.urls,
+    push: raw.push,
     cmd: raw.cmd,
   }));
 }

@@ -3,6 +3,7 @@ export interface Project {
   path: string;
   tags?: string[];
   urls?: Record<string, string>;
+  push?: Record<string, { ssh: string; path?: string }>;
 }
 
 export interface GitStatus {
@@ -11,4 +12,11 @@ export interface GitStatus {
   untracked: string[];
 }
 
-export type Tab = 'files' | 'changes' | 'actions' | 'run' | 'cli' | 'dooit';
+export type Tab =
+  | 'files'
+  | 'changes'
+  | 'actions'
+  | 'run'
+  | 'cli'
+  | 'dooit'
+  | 'sudo';

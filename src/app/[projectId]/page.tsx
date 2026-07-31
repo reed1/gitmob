@@ -9,6 +9,7 @@ import { ActionsView } from './components/ActionsView';
 import { RunView } from './components/RunView';
 import { CLIView } from './components/CLIView';
 import { DooitView } from './components/DooitView';
+import { SudoView } from './components/SudoView';
 import ProjectContextMenu from '../ProjectContextMenu';
 
 const tabs = [
@@ -18,6 +19,7 @@ const tabs = [
   { id: 'actions', label: 'Actions' },
   { id: 'cli', label: 'CLI' },
   { id: 'run', label: 'Run' },
+  { id: 'sudo', label: 'Sudo' },
 ] as const;
 
 const validTabs = new Set<string>(tabs.map((t) => t.id));
@@ -109,6 +111,9 @@ export default function ProjectPage() {
     );
   }
 
+  const hasPushTargets = Object.keys(project?.push ?? {}).length > 0;
+  const visibleTabs = tabs.filter((t) => t.id !== 'sudo' || hasPushTargets);
+
   return (
     <div className="h-dvh bg-background flex flex-col">
       <header className="sticky top-0 z-10 border-b border-foreground/10 bg-background/95 backdrop-blur">
@@ -170,7 +175,7 @@ export default function ProjectPage() {
 
         <div className="relative border-t border-foreground/10">
           <nav ref={navRef} className="flex overflow-x-auto scrollbar-hide">
-            {tabs.map(({ id, label }) => (
+            {visibleTabs.map(({ id, label }) => (
               <button
                 key={id}
                 onClick={() => goToTab(id)}
@@ -259,6 +264,7 @@ export default function ProjectPage() {
         )}
         {tab === 'cli' && project && <CLIView projectPath={project.path} />}
         {tab === 'dooit' && <DooitView projectId={projectId} />}
+        {tab === 'sudo' && <SudoView projectId={projectId} />}
       </main>
     </div>
   );

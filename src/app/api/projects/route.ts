@@ -4,6 +4,7 @@ import { hasChanges } from '@/lib/git';
 import { getAllRunning } from '@/lib/run';
 import { getDownSites } from '@/lib/upmon';
 import { getEnvCheckFailures } from '@/lib/env-check';
+import { getSudoEnabledProjects } from '@/lib/sudo';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
@@ -55,21 +56,27 @@ async function processWithWorkers<T, R>(
 export async function GET() {
   const projects = getProjects();
 
-  const [allRunningProcesses, downSites, envCheckFailures, projectResults] =
-    await Promise.all([
-      getAllRunning(),
-      getDownSites(),
-      getEnvCheckFailures(),
-      processWithWorkers(projects, WORKERS, async (project) => {
-        try {
-          const editing = await hasChanges(project.path);
-          const pendingMessage = hasPendingMessage(project.path);
-          return { id: project.id, editing, hasPendingMessage: pendingMessage };
-        } catch {
-          return { id: project.id, editing: false, hasPendingMessage: false };
-        }
-      }),
-    ]);
+  const [
+    allRunningProcesses,
+    downSites,
+    envCheckFailures,
+    sudoEnabled,
+    projectResults,
+  ] = await Promise.all([
+    getAllRunning(),
+    getDownSites(),
+    getEnvCheckFailures(),
+    getSudoEnabledProjects(),
+    processWithWorkers(projects, WORKERS, async (project) => {
+      try {
+        const editing = await hasChanges(project.path);
+        const pendingMessage = hasPendingMessage(project.path);
+        return { id: project.id, editing, hasPendingMessage: pendingMessage };
+      } catch {
+        return { id: project.id, editing: false, hasPendingMessage: false };
+      }
+    }),
+  ]);
 
   const resultMap: Record<
     string,
@@ -89,6 +96,7 @@ export async function GET() {
     hasRunningProcess: !!allRunningProcesses[p.id],
     downSites: downSites[p.id] ?? [],
     envCheckFailed: envCheckFailures[p.id] ?? false,
+    sudoEnabled: sudoEnabled[p.id] ?? false,
   }));
 
   return NextResponse.json(result);

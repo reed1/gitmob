@@ -9,4 +9,5 @@ export interface Project {
   hasRunningProcess: boolean;
   downSites: string[];
   envCheckFailed: boolean;
+  sudoEnabled: boolean;
 }

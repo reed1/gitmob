@@ -10,7 +10,7 @@ React 19, Next.js 16, TypeScript, Tailwind CSS 4, simple-git
 
 - `/src/lib` - Core logic (git.ts, run.ts, projects.ts, files.ts)
 - `/src/app/api` - API routes (projects, cli jobs, dooit todos)
-- `/src/app/[projectId]/components` - Project views (FileBrowser, ChangesView, ActionsView, RunView, CLIView, DooitView)
+- `/src/app/[projectId]/components` - Project views (FileBrowser, ChangesView, ActionsView, RunView, CLIView, DooitView, SudoView)
 
 ## Development
 
@@ -27,4 +27,5 @@ All PNGs/ICO are generated from `android/icon.svg` via `android/gen-icons.sh`; e
 
 - Projects loaded from `~/.cache/rlocal/rofi-vscode/projects.generated.json`
 - CLI commands run as detached processes, output to `~/.local/share/gitmob/cli-jobs/{jobId}.log`
+- Sudo state comes only from `pt sudo list --json` (per project, cwd set to it) and `pt sudo list --all-projects --json` (the project-list sweep, ~120ms). `pt` owns the cache and the target-to-server mapping — do not read its cache files here. Toggling is `pt sudo <target> on|off|status`, which does the SSH work. If `pt` fails, the Sudo tab shows the error rather than reporting targets as disabled.
 - The Run tab shells out to the `rv` CLI to manage transient systemd user units (`rvp-{projectId}-{cmd}.service`, logs read via journalctl). Note the asymmetry: starting is `rv run --mode systemd --project X --cmd Y`, while `stop`/`restart`/`status` are subcommands of `rv run`.
