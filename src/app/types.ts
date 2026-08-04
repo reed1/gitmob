@@ -10,4 +10,5 @@ export interface Project {
   downSites: string[];
   envCheckFailed: boolean;
   sudoEnabled: boolean;
+  claudeSessions: number;
 }

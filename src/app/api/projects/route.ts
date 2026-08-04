@@ -5,6 +5,7 @@ import { getAllRunning } from '@/lib/run';
 import { getDownSites } from '@/lib/upmon';
 import { getEnvCheckFailures } from '@/lib/env-check';
 import { getSudoEnabledProjects } from '@/lib/sudo';
+import { getClaudeSessionCounts } from '@/lib/desktop';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
@@ -61,12 +62,14 @@ export async function GET() {
     downSites,
     envCheckFailures,
     sudoEnabled,
+    claudeSessions,
     projectResults,
   ] = await Promise.all([
     getAllRunning(),
     getDownSites(),
     getEnvCheckFailures(),
     getSudoEnabledProjects(),
+    getClaudeSessionCounts(),
     processWithWorkers(projects, WORKERS, async (project) => {
       try {
         const editing = await hasChanges(project.path);
@@ -97,6 +100,7 @@ export async function GET() {
     downSites: downSites[p.id] ?? [],
     envCheckFailed: envCheckFailures[p.id] ?? false,
     sudoEnabled: sudoEnabled[p.id] ?? false,
+    claudeSessions: claudeSessions[p.id] ?? 0,
   }));
 
   return NextResponse.json(result);

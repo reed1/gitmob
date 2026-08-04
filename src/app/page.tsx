@@ -77,7 +77,8 @@ export default function Home() {
     p.hasPendingMessage ||
     p.downSites.length > 0 ||
     p.envCheckFailed ||
-    p.sudoEnabled;
+    p.sudoEnabled ||
+    p.claudeSessions > 0;
   const active = filtered.filter(isActive);
   const pinned = filtered.filter((p) => !isActive(p) && p.pinned);
   const others = filtered.filter((p) => !isActive(p) && !p.pinned);
