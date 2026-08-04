@@ -19,4 +19,5 @@ export type Tab =
   | 'run'
   | 'cli'
   | 'dooit'
+  | 'desktop'
   | 'sudo';
