@@ -77,7 +77,7 @@ export function DesktopView({
       body: JSON.stringify({ windowId: target.windowId, name }),
     });
     if (res.ok) {
-      addToast(`Sent /remote-control ${name}`);
+      addToast(`Sent /remote-control ${name}`, 'success');
       openScreen(target.windowId);
     }
   };

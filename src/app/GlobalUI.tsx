@@ -2,6 +2,12 @@
 
 import { useSyncExternalStore } from 'react';
 import { subscribe, getSnapshot, dismissToast } from '../lib/api';
+import type { ToastVariant } from '../lib/api';
+
+const TOAST_STYLES: Record<ToastVariant, string> = {
+  error: 'bg-red-600',
+  success: 'bg-emerald-600',
+};
 
 let cachedSnapshot = getSnapshot();
 function getSnapshotMemoized() {
@@ -35,7 +41,7 @@ export default function GlobalUI() {
           {toasts.map((toast) => (
             <div
               key={toast.id}
-              className="pointer-events-auto bg-red-600 text-white px-4 py-3 rounded-lg shadow-lg text-sm flex items-start gap-2"
+              className={`pointer-events-auto ${TOAST_STYLES[toast.variant]} text-white px-4 py-3 rounded-lg shadow-lg text-sm flex items-start gap-2`}
             >
               <span className="flex-1 break-words">{toast.message}</span>
               <button

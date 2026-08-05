@@ -1,8 +1,11 @@
 type Listener = () => void;
 
-interface Toast {
+export type ToastVariant = 'error' | 'success';
+
+export interface Toast {
   id: number;
   message: string;
+  variant: ToastVariant;
 }
 
 let activeRequests = 0;
@@ -29,9 +32,9 @@ export function dismissToast(id: number) {
   notify();
 }
 
-export function addToast(message: string) {
+export function addToast(message: string, variant: ToastVariant = 'error') {
   const id = nextToastId++;
-  toasts = [...toasts, { id, message }];
+  toasts = [...toasts, { id, message, variant }];
   notify();
   setTimeout(() => dismissToast(id), 5000);
 }
