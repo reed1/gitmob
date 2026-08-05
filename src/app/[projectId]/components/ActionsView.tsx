@@ -3,6 +3,22 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '../../../lib/api';
 
+function ArrowIcon({ direction }: { direction: 'up' | 'down' }) {
+  return (
+    <svg
+      className={`w-4 h-4 ${direction === 'down' ? 'rotate-180' : ''}`}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 19V5M5 12l7-7 7 7" />
+    </svg>
+  );
+}
+
 export function ActionsView({
   projectId,
   onRefresh,
@@ -148,7 +164,7 @@ export function ActionsView({
         <button
           onClick={() => handleAction('commit', { message: commitMessage })}
           disabled={!commitMessage.trim()}
-          className="mt-2 w-full py-3 bg-foreground text-background font-medium rounded-lg active:opacity-80 disabled:opacity-50"
+          className="mt-2 w-full py-2.5 text-sm bg-foreground text-background font-medium rounded-lg active:opacity-80 disabled:bg-foreground/10 disabled:text-foreground/40"
         >
           Commit
         </button>
@@ -156,17 +172,19 @@ export function ActionsView({
 
       <section>
         <h3 className="text-sm font-medium text-foreground/60 mb-3">Sync</h3>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-2">
           <button
             onClick={() => handleAction('pull')}
-            className="py-3 bg-blue-600 text-white font-medium rounded-lg active:opacity-80 disabled:opacity-50"
+            className="flex items-center justify-center gap-2 py-2.5 text-sm font-medium bg-blue-500/15 text-blue-400 border border-blue-500/30 rounded-lg active:opacity-80"
           >
+            <ArrowIcon direction="down" />
             Pull
           </button>
           <button
             onClick={() => handleAction('push')}
-            className="py-3 bg-green-600 text-white font-medium rounded-lg active:opacity-80 disabled:opacity-50"
+            className="flex items-center justify-center gap-2 py-2.5 text-sm font-medium bg-green-500/15 text-green-400 border border-green-500/30 rounded-lg active:opacity-80"
           >
+            <ArrowIcon direction="up" />
             Push
           </button>
         </div>
