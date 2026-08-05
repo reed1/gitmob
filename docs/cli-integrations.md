@@ -27,7 +27,9 @@ Note the asymmetry: starting is `rv run --mode systemd --project X --cmd Y`, whi
 
 `src/lib/desktop.ts`, read by the Desktop tab and the project list.
 
-- `claudex desktop list <projectId>` — the Claude Code sessions on that project's code workspace.
+- `claudex desktop list <projectId>` — the Claude Code sessions on that project's workspaces. A
+  window counts wherever the project's number prefixes the workspace name, so a session dragged
+  from the code slot to the browser one stays on the project's list.
 - `claudex desktop list --all-projects` — session counts per project, the project-list sweep
   (~120ms) behind the sparkle icon that promotes a project with a live session to Active.
 - `claudex desktop screen <windowId>` — that window's current terminal content.

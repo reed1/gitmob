@@ -125,7 +125,7 @@ export function DesktopView({
         <code className="px-1 bg-foreground/10 rounded">{projectId}</code> is
         not open on the desktop.
         <div className="mt-2 text-sm">
-          Switch to it there to give it a code workspace.
+          Switch to it there to give it workspaces.
         </div>
       </div>
     );
@@ -134,7 +134,7 @@ export function DesktopView({
   if (sessions.length === 0) {
     return (
       <div className="p-4 text-center text-foreground/50">
-        No Claude sessions on workspace {workspaces.join(', ')}.
+        No Claude sessions on this project&apos;s workspaces.
       </div>
     );
   }
