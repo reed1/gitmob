@@ -9,14 +9,14 @@ const DOOIT_DOMAIN = process.env.NEXT_PUBLIC_DOOIT_DOMAIN;
 type PermissionMode = 'auto' | 'default' | 'bypassPermissions';
 
 interface Props {
-  project: { id: string; urls?: Record<string, string> };
-  hasRunningProcess?: boolean;
+  project: {
+    id: string;
+    urls?: Record<string, string>;
+    githubUrl: string | null;
+  };
 }
 
-export default function ProjectContextMenu({
-  project,
-  hasRunningProcess,
-}: Props) {
+export default function ProjectContextMenu({ project }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [urlModalOpen, setUrlModalOpen] = useState(false);
   const [customModalOpen, setCustomModalOpen] = useState(false);
@@ -39,7 +39,6 @@ export default function ProjectContextMenu({
   const urls = project.urls ?? {};
   const urlEntries = Object.entries(urls);
   const hasUrls = urlEntries.length > 0;
-  const stopRunEnabled = hasRunningProcess !== false;
 
   return (
     <>
@@ -86,25 +85,20 @@ export default function ProjectContextMenu({
                 Open URL
               </button>
               <button
-                onClick={async () => {
+                onClick={() => {
                   setMenuOpen(false);
-                  if (stopRunEnabled) {
-                    await apiFetch(`/api/projects/${project.id}/run`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ action: 'stopAll' }),
-                    });
-                    window.location.reload();
+                  if (project.githubUrl) {
+                    window.open(project.githubUrl, '_blank');
                   }
                 }}
-                disabled={!stopRunEnabled}
+                disabled={!project.githubUrl}
                 className={`block w-full px-4 py-2 text-sm text-left ${
-                  stopRunEnabled
+                  project.githubUrl
                     ? 'hover:bg-foreground/10'
                     : 'text-foreground/30 cursor-not-allowed'
                 }`}
               >
-                Stop run
+                {project.githubUrl ? 'Github' : 'Github (not available)'}
               </button>
               <button
                 onClick={() => {

@@ -6,6 +6,7 @@ import { getDownSites } from '@/lib/upmon';
 import { getEnvCheckFailures } from '@/lib/env-check';
 import { getSudoEnabledProjects } from '@/lib/sudo';
 import { getClaudeSessionCounts } from '@/lib/desktop';
+import { getGithubCommitsUrl } from '@/lib/github';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
@@ -71,24 +72,40 @@ export async function GET() {
     getSudoEnabledProjects(),
     getClaudeSessionCounts(),
     processWithWorkers(projects, WORKERS, async (project) => {
+      const githubUrl = await getGithubCommitsUrl(project.path);
       try {
         const editing = await hasChanges(project.path);
         const pendingMessage = hasPendingMessage(project.path);
-        return { id: project.id, editing, hasPendingMessage: pendingMessage };
+        return {
+          id: project.id,
+          editing,
+          hasPendingMessage: pendingMessage,
+          githubUrl,
+        };
       } catch {
-        return { id: project.id, editing: false, hasPendingMessage: false };
+        return {
+          id: project.id,
+          editing: false,
+          hasPendingMessage: false,
+          githubUrl,
+        };
       }
     }),
   ]);
 
   const resultMap: Record<
     string,
-    { editing: boolean; hasPendingMessage: boolean }
+    {
+      editing: boolean;
+      hasPendingMessage: boolean;
+      githubUrl: string | null;
+    }
   > = {};
   for (const r of projectResults) {
     resultMap[r.id] = {
       editing: r.editing,
       hasPendingMessage: r.hasPendingMessage,
+      githubUrl: r.githubUrl,
     };
   }
 
@@ -101,6 +118,7 @@ export async function GET() {
     envCheckFailed: envCheckFailures[p.id] ?? false,
     sudoEnabled: sudoEnabled[p.id] ?? false,
     claudeSessions: claudeSessions[p.id] ?? 0,
+    githubUrl: resultMap[p.id]?.githubUrl ?? null,
   }));
 
   return NextResponse.json(result);

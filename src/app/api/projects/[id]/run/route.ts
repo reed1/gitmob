@@ -6,7 +6,6 @@ import {
   startRun,
   stopRun,
   restartRun,
-  stopAllRuns,
 } from '@/lib/run';
 
 export async function GET(
@@ -61,9 +60,7 @@ export async function POST(
 
   let result: { success: boolean; error?: string };
 
-  if (action === 'stopAll') {
-    result = await stopAllRuns(id);
-  } else if (!runName) {
+  if (!runName) {
     return NextResponse.json({ error: 'Missing runName' }, { status: 400 });
   } else if (action === 'start') {
     result = await startRun(id, runName);

@@ -305,17 +305,3 @@ export async function restartRun(
   }
   return runRv(['run', 'restart', projectId, runName]);
 }
-
-export async function stopAllRuns(
-  projectId: string
-): Promise<{ success: boolean; error?: string }> {
-  return new Promise((resolve) => {
-    exec(`rv run stop ${projectId}`, (error, _, stderr) => {
-      if (error) {
-        resolve({ success: false, error: stderr || error.message });
-      } else {
-        resolve({ success: true });
-      }
-    });
-  });
-}

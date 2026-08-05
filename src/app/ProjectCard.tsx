@@ -146,10 +146,7 @@ export default function ProjectCard({
           </div>
         )}
       </div>
-      <ProjectContextMenu
-        project={project}
-        hasRunningProcess={project.hasRunningProcess}
-      />
+      <ProjectContextMenu project={project} />
     </div>
   );
 }

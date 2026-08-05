@@ -11,4 +11,5 @@ export interface Project {
   envCheckFailed: boolean;
   sudoEnabled: boolean;
   claudeSessions: number;
+  githubUrl: string | null;
 }
