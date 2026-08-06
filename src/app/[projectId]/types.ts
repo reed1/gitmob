@@ -20,5 +20,5 @@ export type Tab =
   | 'run'
   | 'cli'
   | 'dooit'
-  | 'desktop'
+  | 'claude'
   | 'sudo';

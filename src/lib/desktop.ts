@@ -73,7 +73,7 @@ export async function getClaudeSessionCounts(): Promise<
   Record<string, number>
 > {
   try {
-    return JSON.parse(await claudexDesktop(['list', '--all-projects']));
+    return JSON.parse(await claudexDesktop(['count']));
   } catch {
     // The project list still has to render without a desktop; the Desktop tab reports why.
     return {};

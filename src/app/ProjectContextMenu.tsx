@@ -25,7 +25,7 @@ export default function ProjectContextMenu({ project }: Props) {
 
   async function launchCustom() {
     setCustomModalOpen(false);
-    const res = await apiFetch(`/api/projects/${project.id}/claude-remote`, {
+    const res = await apiFetch(`/api/projects/${project.id}/remote`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ permissionMode: customPermissionMode }),

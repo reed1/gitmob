@@ -9,7 +9,7 @@ import { ActionsView } from './components/ActionsView';
 import { RunView } from './components/RunView';
 import { CLIView } from './components/CLIView';
 import { DooitView } from './components/DooitView';
-import { DesktopView } from './components/DesktopView';
+import { ClaudeView } from './components/ClaudeView';
 import { SudoView } from './components/SudoView';
 import ProjectContextMenu from '../ProjectContextMenu';
 
@@ -20,7 +20,7 @@ const tabs = [
   { id: 'actions', label: 'Actions' },
   { id: 'cli', label: 'CLI' },
   { id: 'run', label: 'Run' },
-  { id: 'desktop', label: 'Desktop' },
+  { id: 'claude', label: 'Claude' },
   { id: 'sudo', label: 'Sudo' },
 ] as const;
 
@@ -265,8 +265,8 @@ export default function ProjectPage() {
           <RunView projectId={projectId} urls={project?.urls} />
         )}
         {tab === 'cli' && project && <CLIView projectPath={project.path} />}
-        {tab === 'desktop' && project && (
-          <DesktopView projectId={projectId} projectPath={project.path} />
+        {tab === 'claude' && project && (
+          <ClaudeView projectId={projectId} projectPath={project.path} />
         )}
         {tab === 'dooit' && <DooitView projectId={projectId} />}
         {tab === 'sudo' && <SudoView projectId={projectId} />}

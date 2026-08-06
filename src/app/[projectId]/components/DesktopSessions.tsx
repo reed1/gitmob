@@ -1,63 +1,30 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { addToast, apiFetch } from '../../../lib/api';
-import { DesktopScreenView } from './DesktopScreenView';
+import type { DesktopSession } from './ClaudeView';
 
-interface DesktopSession {
-  windowId: string;
-  title: string;
-  workspace: string;
-  projectId: string;
-  focused: boolean;
-  sessionId: string | null;
-  cwd: string | null;
-}
-
-export function DesktopView({
+export function DesktopSessions({
   projectId,
   projectPath,
+  sessions,
+  workspaces,
+  error,
+  onRetry,
+  onOpenScreen,
 }: {
   projectId: string;
   projectPath: string;
+  sessions: DesktopSession[] | null;
+  workspaces: string[];
+  error: string | null;
+  onRetry: () => void;
+  onOpenScreen: (windowId: string) => void;
 }) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const windowParam = searchParams.get('window');
-
-  const [sessions, setSessions] = useState<DesktopSession[] | null>(null);
-  const [workspaces, setWorkspaces] = useState<string[]>([]);
-  const [error, setError] = useState<string | null>(null);
   const [menuWindowId, setMenuWindowId] = useState<string | null>(null);
   const [remoteTarget, setRemoteTarget] = useState<DesktopSession | null>(null);
   const [remoteName, setRemoteName] = useState('');
-
-  const fetchSessions = useCallback(async () => {
-    const res = await fetch(`/api/projects/${projectId}/desktop`);
-    const data = await res.json();
-    if (res.ok) {
-      setSessions(data.sessions);
-      setWorkspaces(data.workspaces);
-      setError(null);
-    } else {
-      setError(data.error || 'Could not read the desktop');
-    }
-  }, [projectId]);
-
-  useEffect(() => {
-    fetchSessions();
-    if (windowParam) return;
-    const interval = setInterval(fetchSessions, 5000);
-    return () => clearInterval(interval);
-  }, [fetchSessions, windowParam]);
-
-  const openScreen = (windowId: string) => {
-    router.push(
-      `/${projectId}?tab=desktop&window=${encodeURIComponent(windowId)}`
-    );
-  };
 
   const openRemoteModal = (session: DesktopSession) => {
     setMenuWindowId(null);
@@ -78,71 +45,49 @@ export function DesktopView({
     });
     if (res.ok) {
       addToast(`Sent /remote-control ${name}`, 'success');
-      openScreen(target.windowId);
+      onOpenScreen(target.windowId);
     }
   };
-
-  if (windowParam) {
-    const session = sessions?.find((s) => s.windowId === windowParam);
-    return (
-      <DesktopScreenView
-        projectId={projectId}
-        windowId={windowParam}
-        title={session?.title || `Window ${windowParam}`}
-        onBack={() => router.back()}
-      />
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-4 space-y-2 text-center">
-        <div className="text-red-500">Could not read the desktop</div>
-        <pre className="p-2 text-xs text-left bg-foreground/5 border border-foreground/10 rounded overflow-x-auto whitespace-pre-wrap">
-          {error}
-        </pre>
-        <button
-          onClick={fetchSessions}
-          className="px-3 py-1.5 text-xs bg-foreground/10 border border-foreground/15 rounded active:opacity-80"
-        >
-          Retry
-        </button>
-      </div>
-    );
-  }
-
-  if (!sessions) {
-    return (
-      <div className="p-4 text-center text-foreground/50">
-        Loading sessions...
-      </div>
-    );
-  }
-
-  if (workspaces.length === 0) {
-    return (
-      <div className="p-4 text-center text-foreground/50">
-        <code className="px-1 bg-foreground/10 rounded">{projectId}</code> is
-        not open on the desktop.
-        <div className="mt-2 text-sm">
-          Switch to it there to give it workspaces.
-        </div>
-      </div>
-    );
-  }
-
-  if (sessions.length === 0) {
-    return (
-      <div className="p-4 text-center text-foreground/50">
-        No Claude sessions on this project&apos;s workspaces.
-      </div>
-    );
-  }
 
   return (
     <>
       <div className="p-4 space-y-3">
-        {sessions.map((session) => {
+        <h2 className="text-xs uppercase tracking-wide text-foreground/40">
+          Desktop
+        </h2>
+
+        {error && (
+          <div className="space-y-2">
+            <pre className="p-2 text-xs bg-foreground/5 border border-foreground/10 rounded overflow-x-auto whitespace-pre-wrap text-red-500">
+              {error}
+            </pre>
+            <button
+              onClick={onRetry}
+              className="px-3 py-1.5 text-xs bg-foreground/10 border border-foreground/15 rounded active:opacity-80"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {!error && sessions === null && (
+          <div className="text-sm text-foreground/40">Loading...</div>
+        )}
+
+        {!error && sessions && workspaces.length === 0 && (
+          <div className="text-sm text-foreground/40">
+            <code className="px-1 bg-foreground/10 rounded">{projectId}</code>{' '}
+            is not open on the desktop.
+          </div>
+        )}
+
+        {!error && sessions?.length === 0 && workspaces.length > 0 && (
+          <div className="text-sm text-foreground/40">
+            No Claude windows on this project&apos;s workspaces.
+          </div>
+        )}
+
+        {sessions?.map((session) => {
           const details = [`ws ${session.workspace}`];
           if (session.projectId !== projectId) details.push(session.projectId);
           if (session.sessionId) details.push(session.sessionId.slice(0, 8));
@@ -153,7 +98,7 @@ export function DesktopView({
               className="flex items-center justify-between gap-2 p-3 bg-foreground/5 border border-foreground/10 rounded-lg"
             >
               <button
-                onClick={() => openScreen(session.windowId)}
+                onClick={() => onOpenScreen(session.windowId)}
                 className="flex items-center gap-3 min-w-0 flex-1 text-left active:opacity-80"
               >
                 <div

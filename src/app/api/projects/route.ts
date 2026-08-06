@@ -6,6 +6,7 @@ import { getDownSites } from '@/lib/upmon';
 import { getEnvCheckFailures } from '@/lib/env-check';
 import { getSudoEnabledProjects } from '@/lib/sudo';
 import { getClaudeSessionCounts } from '@/lib/desktop';
+import { getRemoteCounts } from '@/lib/remote';
 import { getGithubCommitsUrl } from '@/lib/github';
 import { existsSync } from 'fs';
 import { join } from 'path';
@@ -63,7 +64,8 @@ export async function GET() {
     downSites,
     envCheckFailures,
     sudoEnabled,
-    claudeSessions,
+    desktopSessions,
+    remoteSessions,
     projectResults,
   ] = await Promise.all([
     getAllRunning(),
@@ -71,6 +73,7 @@ export async function GET() {
     getEnvCheckFailures(),
     getSudoEnabledProjects(),
     getClaudeSessionCounts(),
+    getRemoteCounts(),
     processWithWorkers(projects, WORKERS, async (project) => {
       const githubUrl = await getGithubCommitsUrl(project.path);
       try {
@@ -117,7 +120,7 @@ export async function GET() {
     downSites: downSites[p.id] ?? [],
     envCheckFailed: envCheckFailures[p.id] ?? false,
     sudoEnabled: sudoEnabled[p.id] ?? false,
-    claudeSessions: claudeSessions[p.id] ?? 0,
+    claudeSessions: (desktopSessions[p.id] ?? 0) + (remoteSessions[p.id] ?? 0),
     githubUrl: resultMap[p.id]?.githubUrl ?? null,
   }));
 
