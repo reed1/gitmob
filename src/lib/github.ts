@@ -10,7 +10,7 @@ function parseGithubRepo(url: string): string | null {
   return match ? match[1] : null;
 }
 
-export async function getGithubCommitsUrl(cwd: string): Promise<string | null> {
+export async function getGithubRepoUrl(cwd: string): Promise<string | null> {
   const remotes = await simpleGit(cwd)
     .getRemotes(true)
     .catch(() => []);
@@ -18,7 +18,7 @@ export async function getGithubCommitsUrl(cwd: string): Promise<string | null> {
   for (const name of REMOTE_PREFERENCE) {
     const remote = remotes.find((r) => r.name === name);
     const repo = remote && parseGithubRepo(remote.refs.fetch);
-    if (repo) return `https://github.com/${repo}/commits`;
+    if (repo) return `https://github.com/${repo}`;
   }
   return null;
 }

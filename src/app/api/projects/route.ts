@@ -7,7 +7,7 @@ import { getEnvCheckFailures } from '@/lib/env-check';
 import { getSudoEnabledProjects } from '@/lib/sudo';
 import { getClaudeSessionCounts } from '@/lib/desktop';
 import { getRemoteCounts } from '@/lib/remote';
-import { getGithubCommitsUrl } from '@/lib/github';
+import { getGithubRepoUrl } from '@/lib/github';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
@@ -75,7 +75,7 @@ export async function GET() {
     getClaudeSessionCounts(),
     getRemoteCounts(),
     processWithWorkers(projects, WORKERS, async (project) => {
-      const githubUrl = await getGithubCommitsUrl(project.path);
+      const githubUrl = await getGithubRepoUrl(project.path);
       try {
         const editing = await hasChanges(project.path);
         const pendingMessage = hasPendingMessage(project.path);

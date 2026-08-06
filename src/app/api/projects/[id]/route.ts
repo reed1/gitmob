@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getProject } from '@/lib/projects';
-import { getGithubCommitsUrl } from '@/lib/github';
+import { getGithubRepoUrl } from '@/lib/github';
 
 export async function GET(
   _request: NextRequest,
@@ -13,7 +13,7 @@ export async function GET(
     return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   }
 
-  const githubUrl = await getGithubCommitsUrl(project.path);
+  const githubUrl = await getGithubRepoUrl(project.path);
 
   return NextResponse.json({ ...project, githubUrl });
 }
