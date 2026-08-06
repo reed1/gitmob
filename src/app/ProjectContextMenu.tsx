@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { apiFetch } from '../lib/api';
-import { openExternalUrl } from '../lib/external-link';
 
 const DOOIT_DOMAIN = process.env.NEXT_PUBLIC_DOOIT_DOMAIN;
 
@@ -89,7 +88,7 @@ export default function ProjectContextMenu({ project }: Props) {
                 onClick={() => {
                   setMenuOpen(false);
                   if (project.githubUrl) {
-                    openExternalUrl(project.githubUrl);
+                    window.open(project.githubUrl, '_blank');
                   }
                 }}
                 disabled={!project.githubUrl}
