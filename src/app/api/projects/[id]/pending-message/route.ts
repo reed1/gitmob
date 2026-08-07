@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getProject } from '@/lib/projects';
 import { readFileSync, unlinkSync, existsSync } from 'fs';
+import { execFileSync } from 'child_process';
 import { join } from 'path';
 import { homedir } from 'os';
 
@@ -77,6 +78,12 @@ export async function DELETE(
   if (existsSync(filepath)) {
     unlinkSync(filepath);
   }
+
+  // The Claude session that sent the message holds the repo's commit lock until the
+  // commit lands, so dropping the message has to hand the lock back too.
+  execFileSync('claudex', ['gitlock', 'release', '--repo', project.path], {
+    stdio: 'ignore',
+  });
 
   return NextResponse.json({ success: true });
 }
