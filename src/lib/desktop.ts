@@ -95,3 +95,7 @@ export async function startRemoteControl(
     '--press-enter',
   ]);
 }
+
+export async function exitSession(windowId: string): Promise<void> {
+  await claudexDesktop(['send', windowId, '/exit', '--press-enter']);
+}

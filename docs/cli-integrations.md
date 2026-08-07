@@ -39,7 +39,8 @@ claudex owns the session registry, the kitty remote sockets and the i3 lookup, s
 ever handles window ids. The server has no DISPLAY, which is why nothing here talks to X itself.
 
 The Desktop section's "Remote" types `/remote-control <name>` into a session that already has a
-window. `claudex remote` below is the other half: sessions that never had one.
+window; "Exit" types `/exit` into one. `claudex remote` below is the other half: sessions that
+never had one.
 
 ## Remote — `claudex`
 

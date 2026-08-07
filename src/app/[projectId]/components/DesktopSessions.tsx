@@ -41,12 +41,24 @@ export function DesktopSessions({
     const res = await apiFetch(`/api/projects/${projectId}/desktop`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ windowId: target.windowId, name }),
+      body: JSON.stringify({
+        windowId: target.windowId,
+        name,
+        action: 'remote',
+      }),
     });
-    if (res.ok) {
-      addToast(`Sent /remote-control ${name}`, 'success');
-      onOpenScreen(target.windowId);
-    }
+    if (res.ok) addToast(`Sent /remote-control ${name}`, 'success');
+  };
+
+  const sendExit = async (session: DesktopSession) => {
+    setMenuWindowId(null);
+
+    const res = await apiFetch(`/api/projects/${projectId}/desktop`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ windowId: session.windowId, action: 'exit' }),
+    });
+    if (res.ok) addToast('Sent /exit', 'success');
   };
 
   return (
@@ -151,6 +163,12 @@ export function DesktopSessions({
                         className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
                       >
                         Remote
+                      </button>
+                      <button
+                        onClick={() => sendExit(session)}
+                        className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
+                      >
+                        Exit
                       </button>
                     </div>
                   </>
