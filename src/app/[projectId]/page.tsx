@@ -268,7 +268,11 @@ export default function ProjectPage() {
         {tab === 'claude' && project && (
           <ClaudeView projectId={projectId} projectPath={project.path} />
         )}
-        {tab === 'dooit' && <DooitView projectId={projectId} />}
+        {/* Todos belong to the repo, not to one checkout of it: rdooit keys its tables by
+            the canonical id, and a worktree id makes no legal table name. */}
+        {tab === 'dooit' && project && (
+          <DooitView projectId={project.canonicalId} />
+        )}
         {tab === 'sudo' && <SudoView projectId={projectId} />}
       </main>
     </div>

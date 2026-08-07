@@ -20,7 +20,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  if (!getProject(id)) {
+  if (!(await getProject(id))) {
     return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   }
 
@@ -36,7 +36,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  if (!getProject(id)) {
+  if (!(await getProject(id))) {
     return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   }
 
@@ -62,7 +62,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  if (!getProject(id)) {
+  if (!(await getProject(id))) {
     return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   }
 

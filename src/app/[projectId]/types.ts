@@ -1,5 +1,7 @@
 export interface Project {
   id: string;
+  canonicalId: string;
+  worktreeName?: string;
   path: string;
   tags?: string[];
   urls?: Record<string, string>;

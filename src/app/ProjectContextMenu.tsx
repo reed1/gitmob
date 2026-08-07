@@ -11,6 +11,7 @@ type PermissionMode = 'auto' | 'default' | 'bypassPermissions';
 interface Props {
   project: {
     id: string;
+    canonicalId: string;
     urls?: Record<string, string>;
     githubUrl: string | null;
   };
@@ -115,7 +116,7 @@ export default function ProjectContextMenu({ project }: Props) {
                   setMenuOpen(false);
                   if (DOOIT_DOMAIN) {
                     window.open(
-                      `${DOOIT_DOMAIN}/frontend/dooit/${project.id}`,
+                      `${DOOIT_DOMAIN}/frontend/dooit/${project.canonicalId}`,
                       '_blank'
                     );
                   }

@@ -43,16 +43,26 @@ export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [restarting, setRestarting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   function refreshProjects() {
     setRefreshing(true);
     fetch('/api/projects')
-      .then((res) => res.json())
-      .then((data) => {
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || `Request failed (${res.status})`);
+        }
         setProjects(data);
-        setLoading(false);
+        setError(null);
       })
-      .finally(() => setRefreshing(false));
+      .catch((err) =>
+        setError(err instanceof Error ? err.message : 'Could not load projects')
+      )
+      .finally(() => {
+        setLoading(false);
+        setRefreshing(false);
+      });
   }
 
   useEffect(() => {
@@ -234,6 +244,17 @@ export default function Home() {
       </header>
 
       <main className="p-4 space-y-6">
+        {error && (
+          <div className="p-4 rounded-lg border border-red-500/50 bg-red-500/10">
+            <div className="text-sm font-medium text-red-500 mb-1">
+              Could not load projects
+            </div>
+            <pre className="text-xs text-foreground/70 whitespace-pre-wrap break-words">
+              {error}
+            </pre>
+          </div>
+        )}
+
         {active.length > 0 && (
           <section>
             <h2 className="text-sm font-medium text-foreground/60 mb-2">
@@ -275,7 +296,7 @@ export default function Home() {
           </section>
         )}
 
-        {filtered.length === 0 && (
+        {filtered.length === 0 && !error && (
           <div className="text-center text-foreground/50 py-8">
             No projects found
           </div>

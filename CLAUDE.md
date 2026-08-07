@@ -25,6 +25,9 @@ All PNGs/ICO are generated from `android/icon.svg` via `android/gen-icons.sh`; e
 
 ## Key Patterns
 
-- Projects loaded from `~/.cache/rlocal/rofi-vscode/projects.generated.json`
+- Projects loaded from `~/.cache/rlocal/rofi-vscode/projects.generated.json`, plus the
+  worktrees open on the desktop — see [docs/cli-integrations.md](docs/cli-integrations.md).
+  A worktree project carries `canonicalId` and `worktreeName` as fields, published by
+  rworkspaces: how an id encodes them is rworkspaces' business, and nothing here parses one.
 - CLI commands run as detached processes, output to `~/.local/share/gitmob/cli-jobs/{jobId}.log`
 - Per-project state (sudo, runs, desktop sessions) belongs to the CLI that owns it — `pt`, `rv`, `claudex`. Shell out to those commands and surface their failures; never read their caches or redo their lookups here. Contracts in [docs/cli-integrations.md](docs/cli-integrations.md).

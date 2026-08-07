@@ -4,6 +4,30 @@ Each of these local CLIs owns a piece of state this app only displays. Shell out
 map its JSON, and let its failures reach the user — reading its cache files or reimplementing its
 lookups here puts two sources of truth on the same state.
 
+## Worktrees — `rw-msg`
+
+`src/lib/workspaces.ts` and `src/lib/worktree.ts`, read by the project list.
+
+- `rw-msg get_state` — the rworkspaces socket's view of the desktop. Each active project
+  carries `worktree_name` (null on a main checkout) and `canonical_project_id` beside its id
+  and path, so this app never takes an id apart to find out what it is looking at. This is
+  also the only place a worktree project is announced: opening one on the desktop is what
+  brings it into existence.
+
+A worktree project has no config of its own. It runs on the config of the project it is a
+checkout of, pointed at the path rworkspaces reports, with the `loc` url rewritten to carry
+the worktree's name — the one derivation left in `src/lib/worktree.ts`, mirrored from
+`rlocal/lib/python/rworktree` because this app cannot import it.
+
+That makes `getProject` async: a configured id answers from the JSON alone, and anything else
+costs one ~80ms socket round trip. Failure there is not swallowed — the project list reports
+it rather than showing a desktop with nothing open on it.
+
+The other CLIs speak these ids directly: `pt` reports one from a worktree cwd, `rv run`
+resolves and reports one, and `claudex desktop|remote` treat a worktree as the project it is.
+What is *not* per-worktree is sudo, env checks and monitored sites — those belong to the repo
+and its servers, so the project list reads them under `canonicalId`, as do the dooit todos.
+
 ## Sudo — `pt`
 
 `src/lib/sudo.ts`, read by the Sudo tab and the project list.
@@ -29,7 +53,8 @@ Note the asymmetry: starting is `rv run --mode systemd --project X --cmd Y`, whi
 
 - `claudex desktop list <projectId>` — the Claude Code sessions on that project's workspaces. A
   window counts wherever the project's number prefixes the workspace name, so a session dragged
-  from the code slot to the browser one stays on the project's list.
+  from the code slot to the browser one stays on the project's list. A worktree is a project of
+  its own here and answers only to its own id.
 - `claudex desktop count` — session counts per project, the project-list sweep (~120ms) behind
   the sparkle icon that promotes a project with a live session to Active.
 - `claudex desktop screen <windowId>` — that window's current terminal content.

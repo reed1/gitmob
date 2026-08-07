@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getProjects } from '@/lib/projects';
+import { getProjectsWithWorktrees } from '@/lib/projects';
 import { hasChanges } from '@/lib/git';
 import { getAllRunning } from '@/lib/run';
 import { getDownSites } from '@/lib/upmon';
@@ -57,7 +57,17 @@ async function processWithWorkers<T, R>(
 }
 
 export async function GET() {
-  const projects = getProjects();
+  // The sweeps below each survive their CLI being down, but the list itself cannot: a project
+  // missing from it is indistinguishable from one that does not exist, so say so instead.
+  let projects;
+  try {
+    projects = await getProjectsWithWorktrees();
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Could not list projects' },
+      { status: 500 }
+    );
+  }
 
   const [
     allRunningProcesses,
@@ -117,9 +127,11 @@ export async function GET() {
     editing: resultMap[p.id]?.editing ?? false,
     hasPendingMessage: resultMap[p.id]?.hasPendingMessage ?? false,
     hasRunningProcess: !!allRunningProcesses[p.id],
-    downSites: downSites[p.id] ?? [],
-    envCheckFailed: envCheckFailures[p.id] ?? false,
-    sudoEnabled: sudoEnabled[p.id] ?? false,
+    // Deploy targets, env files and monitored sites belong to the repo and its servers, not
+    // to one checkout of it, so a worktree reads these under the project it came from.
+    downSites: downSites[p.canonicalId] ?? [],
+    envCheckFailed: envCheckFailures[p.canonicalId] ?? false,
+    sudoEnabled: sudoEnabled[p.canonicalId] ?? false,
     claudeSessions: (desktopSessions[p.id] ?? 0) + (remoteSessions[p.id] ?? 0),
     githubUrl: resultMap[p.id]?.githubUrl ?? null,
   }));

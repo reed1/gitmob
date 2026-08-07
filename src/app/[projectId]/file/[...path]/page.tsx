@@ -14,7 +14,7 @@ interface PageProps {
 
 export default async function FilePage({ params }: PageProps) {
   const { projectId, path } = await params;
-  const project = getProject(projectId);
+  const project = await getProject(projectId);
 
   if (!project) {
     notFound();
