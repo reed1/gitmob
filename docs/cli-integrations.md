@@ -59,6 +59,7 @@ Note the asymmetry: starting is `rv run --mode systemd --project X --cmd Y`, whi
   the sparkle icon that promotes a project with a live session to Active.
 - `claudex desktop screen <windowId>` — that window's current terminal content.
 - `claudex desktop send <windowId> <text> --press-enter` — types into that window.
+- `claudex desktop keys <windowId> <key>` — presses one named key in it, whatever is on screen.
 
 claudex owns the session registry, the kitty remote sockets and the i3 lookup, so this app only
 ever handles window ids. The server has no DISPLAY, which is why nothing here talks to X itself.
@@ -66,6 +67,13 @@ ever handles window ids. The server has no DISPLAY, which is why nothing here ta
 The Desktop section's "Remote" types `/remote-control <name>` into a session that already has a
 window; "Exit" types `/exit` into one. `claudex remote` below is the other half: sessions that
 never had one.
+
+"Send Keys" is the keyboard for a session with nobody at its desktop. Its text box goes out as
+`send --force --paste`: `--force` because the empty-prompt check `send` normally applies would
+refuse the dialogs this exists to answer, and `--paste` so a multi-line box arrives as multiple
+lines instead of submitting at every newline. Its key buttons are `keys`, listed in
+`src/lib/desktop-keys.ts` — the client component cannot import `desktop.ts` for them, since that
+one reaches for child_process.
 
 ## Remote — `claudex`
 

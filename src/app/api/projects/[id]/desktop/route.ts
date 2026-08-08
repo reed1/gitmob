@@ -4,8 +4,11 @@ import {
   exitSession,
   getSessionScreen,
   listDesktopSessions,
+  pressSessionKey,
   startRemoteControl,
+  typeIntoSession,
 } from '@/lib/desktop';
+import { isSpecialKey } from '@/lib/desktop-keys';
 
 export async function GET(
   request: NextRequest,
@@ -44,7 +47,8 @@ export async function POST(
     return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   }
 
-  const { windowId, name, action } = await request.json();
+  const { windowId, name, action, text, key, pressEnter } =
+    await request.json();
 
   if (typeof windowId !== 'string' || !windowId) {
     return NextResponse.json({ error: 'Missing window' }, { status: 400 });
@@ -66,6 +70,21 @@ export async function POST(
       }
       await startRemoteControl(windowId, remoteName);
       return NextResponse.json({ success: true, name: remoteName });
+    } else if (action === 'type') {
+      if (typeof text !== 'string' || !text) {
+        return NextResponse.json({ error: 'Missing text' }, { status: 400 });
+      }
+      await typeIntoSession(windowId, text, pressEnter === true);
+      return NextResponse.json({ success: true });
+    } else if (action === 'key') {
+      if (!isSpecialKey(key)) {
+        return NextResponse.json(
+          { error: `Unexpected key: ${key}` },
+          { status: 400 }
+        );
+      }
+      await pressSessionKey(windowId, key);
+      return NextResponse.json({ success: true });
     } else {
       return NextResponse.json(
         { error: `Unexpected action: ${action}` },

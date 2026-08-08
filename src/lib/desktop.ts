@@ -1,4 +1,5 @@
 import { execFile } from 'child_process';
+import type { SpecialKey } from './desktop-keys';
 
 export interface DesktopSession {
   windowId: string;
@@ -98,4 +99,32 @@ export async function startRemoteControl(
 
 export async function exitSession(windowId: string): Promise<void> {
   await claudexDesktop(['send', windowId, '/exit', '--press-enter']);
+}
+
+/**
+ * Send Keys is a keyboard for a session, so it types past the empty-prompt check `send`
+ * normally applies: the caller has the screen in front of them and may well be answering
+ * the dialog that check exists to protect. `--paste` keeps a multi-line box multi-line
+ * instead of submitting at every newline.
+ */
+export async function typeIntoSession(
+  windowId: string,
+  text: string,
+  pressEnter: boolean
+): Promise<void> {
+  await claudexDesktop([
+    'send',
+    windowId,
+    text,
+    '--force',
+    '--paste',
+    ...(pressEnter ? ['--press-enter'] : []),
+  ]);
+}
+
+export async function pressSessionKey(
+  windowId: string,
+  key: SpecialKey
+): Promise<void> {
+  await claudexDesktop(['keys', windowId, key]);
 }
