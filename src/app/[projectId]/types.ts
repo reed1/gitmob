@@ -18,7 +18,7 @@ export interface GitStatus {
 export type Tab =
   | 'files'
   | 'changes'
-  | 'actions'
+  | 'commit'
   | 'run'
   | 'cli'
   | 'dooit'

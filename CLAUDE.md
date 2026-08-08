@@ -10,7 +10,7 @@ React 19, Next.js 16, TypeScript, Tailwind CSS 4, simple-git
 
 - `/src/lib` - Core logic (git.ts, run.ts, projects.ts, files.ts)
 - `/src/app/api` - API routes (projects, cli jobs, dooit todos)
-- `/src/app/[projectId]/components` - Project views (FileBrowser, ChangesView, ActionsView, RunView, CLIView, DooitView, ClaudeView, SudoView)
+- `/src/app/[projectId]/components` - Project views (FileBrowser, ChangesView, CommitView, RunView, CLIView, DooitView, ClaudeView, SudoView)
 
 ## Development
 

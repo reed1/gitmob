@@ -19,7 +19,7 @@ function ArrowIcon({ direction }: { direction: 'up' | 'down' }) {
   );
 }
 
-export function ActionsView({
+export function CommitView({
   projectId,
   onRefresh,
   commitMessage,

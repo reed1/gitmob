@@ -5,7 +5,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Project, GitStatus, Tab } from './types';
 import { FileBrowser } from './components/FileBrowser';
 import { ChangesView } from './components/ChangesView';
-import { ActionsView } from './components/ActionsView';
+import { CommitView } from './components/CommitView';
 import { RunView } from './components/RunView';
 import { CLIView } from './components/CLIView';
 import { DooitView } from './components/DooitView';
@@ -17,7 +17,7 @@ const tabs = [
   { id: 'dooit', label: 'Dooit' },
   { id: 'files', label: 'Files' },
   { id: 'changes', label: 'Changes' },
-  { id: 'actions', label: 'Actions' },
+  { id: 'commit', label: 'Commit' },
   { id: 'cli', label: 'CLI' },
   { id: 'run', label: 'Run' },
   { id: 'claude', label: 'Claude' },
@@ -249,8 +249,8 @@ export default function ProjectPage() {
             wordWrap={wordWrap}
           />
         )}
-        {tab === 'actions' && (
-          <ActionsView
+        {tab === 'commit' && (
+          <CommitView
             projectId={projectId}
             onRefresh={refreshStatus}
             commitMessage={commitMessage}
