@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { addToast, apiFetch } from '../../../lib/api';
-import { SPECIAL_KEYS, type SpecialKey } from '../../../lib/desktop-keys';
+import { SendKeysModal, SendTextModal } from './DesktopSendModals';
 import type { DesktopSession } from './ClaudeView';
 
 export function DesktopSessions({
@@ -26,9 +26,8 @@ export function DesktopSessions({
   const [menuWindowId, setMenuWindowId] = useState<string | null>(null);
   const [remoteTarget, setRemoteTarget] = useState<DesktopSession | null>(null);
   const [remoteName, setRemoteName] = useState('');
+  const [textTarget, setTextTarget] = useState<DesktopSession | null>(null);
   const [keysTarget, setKeysTarget] = useState<DesktopSession | null>(null);
-  const [keysText, setKeysText] = useState('');
-  const [keysPressEnter, setKeysPressEnter] = useState(true);
 
   const openRemoteModal = (session: DesktopSession) => {
     setMenuWindowId(null);
@@ -52,45 +51,6 @@ export function DesktopSessions({
       }),
     });
     if (res.ok) addToast(`Sent /remote-control ${name}`, 'success');
-  };
-
-  const openKeysModal = (session: DesktopSession) => {
-    setMenuWindowId(null);
-    setKeysText('');
-    setKeysPressEnter(true);
-    setKeysTarget(session);
-  };
-
-  const sendKeysText = async () => {
-    const target = keysTarget;
-    const text = keysText;
-    if (!target || !text) return;
-    setKeysTarget(null);
-
-    const res = await apiFetch(`/api/projects/${projectId}/desktop`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        windowId: target.windowId,
-        action: 'type',
-        text,
-        pressEnter: keysPressEnter,
-      }),
-    });
-    if (res.ok) addToast('Sent text', 'success');
-  };
-
-  // The modal stays open on a key press: answering a dialog is usually Down, Down, Enter.
-  const pressKey = async (key: SpecialKey, label: string) => {
-    const target = keysTarget;
-    if (!target) return;
-
-    const res = await apiFetch(`/api/projects/${projectId}/desktop`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ windowId: target.windowId, action: 'key', key }),
-    });
-    if (res.ok) addToast(`Pressed ${label}`, 'success');
   };
 
   const sendExit = async (session: DesktopSession) => {
@@ -202,7 +162,19 @@ export function DesktopSessions({
                     />
                     <div className="absolute right-0 top-full mt-1 z-20 bg-background border border-foreground/20 rounded-lg shadow-lg py-1 min-w-[120px]">
                       <button
-                        onClick={() => openKeysModal(session)}
+                        onClick={() => {
+                          setMenuWindowId(null);
+                          setTextTarget(session);
+                        }}
+                        className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 whitespace-nowrap"
+                      >
+                        Send Text
+                      </button>
+                      <button
+                        onClick={() => {
+                          setMenuWindowId(null);
+                          setKeysTarget(session);
+                        }}
                         className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 whitespace-nowrap"
                       >
                         Send Keys
@@ -228,78 +200,23 @@ export function DesktopSessions({
         })}
       </div>
 
-      {keysTarget &&
-        createPortal(
-          <>
-            <div
-              className="fixed inset-0 z-40 bg-black/50"
-              onClick={() => setKeysTarget(null)}
-            />
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-              <div className="bg-background border border-foreground/20 rounded-lg shadow-xl max-w-sm w-full max-h-full overflow-y-auto">
-                <div className="px-4 py-3 border-b border-foreground/10">
-                  <h3 className="font-medium">Send keys</h3>
-                  <div className="text-xs text-foreground/50 truncate">
-                    {keysTarget.title}
-                  </div>
-                </div>
+      {textTarget && (
+        <SendTextModal
+          projectId={projectId}
+          windowId={textTarget.windowId}
+          title={textTarget.title}
+          onClose={() => setTextTarget(null)}
+        />
+      )}
 
-                <div className="px-4 py-3 space-y-2">
-                  <textarea
-                    value={keysText}
-                    onChange={(e) => setKeysText(e.target.value)}
-                    rows={4}
-                    autoFocus
-                    placeholder="Text to type into the session"
-                    className="w-full text-sm border border-foreground/20 rounded-lg px-3 py-2 bg-background resize-y"
-                  />
-                  <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={keysPressEnter}
-                      onChange={(e) => setKeysPressEnter(e.target.checked)}
-                      className="w-4 h-4"
-                    />
-                    Press Enter afterwards
-                  </label>
-                  <div className="flex justify-end gap-2">
-                    <button
-                      onClick={() => setKeysTarget(null)}
-                      className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={sendKeysText}
-                      disabled={!keysText}
-                      className="px-3 py-1.5 text-sm rounded-lg bg-foreground text-background hover:opacity-90 disabled:opacity-40"
-                    >
-                      Send
-                    </button>
-                  </div>
-                </div>
-
-                <div className="px-4 py-3 border-t border-foreground/10 space-y-2">
-                  <div className="text-xs text-foreground/60">
-                    or press a key
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    {SPECIAL_KEYS.map(({ key, label }) => (
-                      <button
-                        key={key}
-                        onClick={() => pressKey(key, label)}
-                        className="px-2 py-2 text-xs font-mono rounded-lg bg-foreground/10 border border-foreground/15 active:bg-foreground/20"
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </>,
-          document.body
-        )}
+      {keysTarget && (
+        <SendKeysModal
+          projectId={projectId}
+          windowId={keysTarget.windowId}
+          title={keysTarget.title}
+          onClose={() => setKeysTarget(null)}
+        />
+      )}
 
       {remoteTarget &&
         createPortal(

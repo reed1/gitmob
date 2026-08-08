@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { SendKeysModal, SendTextModal } from './DesktopSendModals';
 
 export function DesktopScreenView({
   projectId,
@@ -17,6 +18,9 @@ export function DesktopScreenView({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [wrap, setWrap] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [textOpen, setTextOpen] = useState(false);
+  const [keysOpen, setKeysOpen] = useState(false);
   const preRef = useRef<HTMLPreElement>(null);
   const scrolledToBottom = useRef(false);
 
@@ -71,22 +75,63 @@ export function DesktopScreenView({
           </svg>
         </button>
         <div className="flex-1 min-w-0 font-medium truncate">{title}</div>
-        <button
-          onClick={() => setWrap((w) => !w)}
-          className={`px-2 py-1 text-xs rounded border ${
-            wrap
-              ? 'bg-foreground/10 border-foreground/20'
-              : 'border-foreground/10 text-foreground/50'
-          }`}
-        >
-          Wrap
-        </button>
-        <button
-          onClick={fetchScreen}
-          className="px-2 py-1 text-xs rounded border border-foreground/10 text-foreground/50"
-        >
-          Refresh
-        </button>
+        <div className="relative shrink-0">
+          <button
+            onClick={() => setMenuOpen((open) => !open)}
+            className="p-2 rounded-lg bg-foreground/10 active:bg-foreground/20 transition-colors"
+          >
+            <svg
+              className="w-5 h-5 text-foreground/60"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 5v.01M12 12v.01M12 19v.01"
+              />
+            </svg>
+          </button>
+          {menuOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-10"
+                onClick={() => setMenuOpen(false)}
+              />
+              <div className="absolute right-0 top-full mt-1 z-20 bg-background border border-foreground/20 rounded-lg shadow-lg py-1 min-w-[140px]">
+                <button
+                  onClick={() => {
+                    setWrap((w) => !w);
+                    setMenuOpen(false);
+                  }}
+                  className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 whitespace-nowrap"
+                >
+                  {wrap ? 'No Wrap' : 'Wrap'}
+                </button>
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setTextOpen(true);
+                  }}
+                  className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 whitespace-nowrap"
+                >
+                  Send Text
+                </button>
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setKeysOpen(true);
+                  }}
+                  className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 whitespace-nowrap"
+                >
+                  Send Keys
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {loading ? (
@@ -115,6 +160,24 @@ export function DesktopScreenView({
         >
           {content || '(empty)'}
         </pre>
+      )}
+
+      {textOpen && (
+        <SendTextModal
+          projectId={projectId}
+          windowId={windowId}
+          title={title}
+          onClose={() => setTextOpen(false)}
+        />
+      )}
+
+      {keysOpen && (
+        <SendKeysModal
+          projectId={projectId}
+          windowId={windowId}
+          title={title}
+          onClose={() => setKeysOpen(false)}
+        />
       )}
     </div>
   );

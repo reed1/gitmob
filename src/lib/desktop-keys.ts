@@ -1,21 +1,29 @@
 /**
- * The keys `claudex desktop keys` accepts, in the order the Send Keys modal shows them.
+ * The keys `claudex desktop keys` accepts, grouped the way the Send Keys modal shows them.
  * Its own module because the modal is a client component and `desktop.ts` reaches for
  * child_process.
  */
-export const SPECIAL_KEYS = [
+export const COMMAND_KEYS = [
   { key: 'enter', label: 'Enter' },
   { key: 'esc', label: 'Esc' },
   { key: 'double-esc', label: 'Double Esc' },
   { key: 'tab', label: 'Tab' },
   { key: 'shift-tab', label: 'Shift+Tab' },
-  { key: 'up', label: 'Up' },
-  { key: 'down', label: 'Down' },
-  { key: 'left', label: 'Left' },
-  { key: 'right', label: 'Right' },
   { key: 'ctrl-c', label: 'Ctrl+C' },
   { key: 'ctrl-d', label: 'Ctrl+D' },
 ] as const;
+
+/** Arrows sit where they do on a keyboard: Up alone, then Left/Down/Right beneath it. */
+export const ARROW_KEY_ROWS = [
+  [{ key: 'up', label: '↑' }],
+  [
+    { key: 'left', label: '←' },
+    { key: 'down', label: '↓' },
+    { key: 'right', label: '→' },
+  ],
+] as const;
+
+export const SPECIAL_KEYS = [...COMMAND_KEYS, ...ARROW_KEY_ROWS.flat()];
 
 export type SpecialKey = (typeof SPECIAL_KEYS)[number]['key'];
 
