@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { addToast, apiFetch } from '../../../lib/api';
-import { SendKeysModal, SendTextModal } from './DesktopSendModals';
 import type { DesktopSession } from './ClaudeView';
 
 export function DesktopSessions({
@@ -26,8 +25,6 @@ export function DesktopSessions({
   const [menuWindowId, setMenuWindowId] = useState<string | null>(null);
   const [remoteTarget, setRemoteTarget] = useState<DesktopSession | null>(null);
   const [remoteName, setRemoteName] = useState('');
-  const [textTarget, setTextTarget] = useState<DesktopSession | null>(null);
-  const [keysTarget, setKeysTarget] = useState<DesktopSession | null>(null);
 
   const openRemoteModal = (session: DesktopSession) => {
     setMenuWindowId(null);
@@ -162,24 +159,6 @@ export function DesktopSessions({
                     />
                     <div className="absolute right-0 top-full mt-1 z-20 bg-background border border-foreground/20 rounded-lg shadow-lg py-1 min-w-[120px]">
                       <button
-                        onClick={() => {
-                          setMenuWindowId(null);
-                          setTextTarget(session);
-                        }}
-                        className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 whitespace-nowrap"
-                      >
-                        Send Text
-                      </button>
-                      <button
-                        onClick={() => {
-                          setMenuWindowId(null);
-                          setKeysTarget(session);
-                        }}
-                        className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 whitespace-nowrap"
-                      >
-                        Send Keys
-                      </button>
-                      <button
                         onClick={() => openRemoteModal(session)}
                         className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
                       >
@@ -199,24 +178,6 @@ export function DesktopSessions({
           );
         })}
       </div>
-
-      {textTarget && (
-        <SendTextModal
-          projectId={projectId}
-          windowId={textTarget.windowId}
-          title={textTarget.title}
-          onClose={() => setTextTarget(null)}
-        />
-      )}
-
-      {keysTarget && (
-        <SendKeysModal
-          projectId={projectId}
-          windowId={keysTarget.windowId}
-          title={keysTarget.title}
-          onClose={() => setKeysTarget(null)}
-        />
-      )}
 
       {remoteTarget &&
         createPortal(
