@@ -20,7 +20,6 @@ export interface Project {
   canonicalId: string;
   worktreeName?: string;
   path: string;
-  tags?: string[];
   pinned?: boolean;
   repo?: string;
   urls?: Record<string, string>;
@@ -46,7 +45,6 @@ export function getProjects(): Project[] {
     id,
     canonicalId: id,
     path: raw.path?.replace(/^~/, homedir()) || '',
-    tags: raw.tags,
     pinned: raw.pinned,
     repo: raw.repo,
     urls: raw.urls,

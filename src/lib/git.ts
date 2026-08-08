@@ -204,17 +204,19 @@ export async function getLog(cwd: string, count: number = 10): Promise<string> {
     .join('\n');
 }
 
-export async function hasChanges(cwd: string): Promise<boolean> {
+export interface RepoSummary {
+  branch: string;
+  hasChanges: boolean;
+}
+
+/** Branch and dirtiness from a single status call, for the project list. */
+export async function getRepoSummary(cwd: string): Promise<RepoSummary> {
   const git = getGit(cwd);
   const status = await git.status();
-  return (
-    status.staged.length > 0 ||
-    status.modified.length > 0 ||
-    status.deleted.length > 0 ||
-    status.renamed.length > 0 ||
-    status.not_added.length > 0 ||
-    status.files.length > 0
-  );
+  return {
+    branch: status.current || 'HEAD',
+    hasChanges: status.files.length > 0,
+  };
 }
 
 export function getDiffSummary(cwd: string): string {

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getProjectsWithWorktrees } from '@/lib/projects';
-import { hasChanges } from '@/lib/git';
+import { getRepoSummary } from '@/lib/git';
 import { getAllRunning } from '@/lib/run';
 import { getDownSites } from '@/lib/upmon';
 import { getEnvCheckFailures } from '@/lib/env-check';
@@ -87,17 +87,19 @@ export async function GET() {
     processWithWorkers(projects, WORKERS, async (project) => {
       const githubUrl = await getGithubRepoUrl(project.path);
       try {
-        const editing = await hasChanges(project.path);
+        const { branch, hasChanges } = await getRepoSummary(project.path);
         const pendingMessage = hasPendingMessage(project.path);
         return {
           id: project.id,
-          editing,
+          branch,
+          editing: hasChanges,
           hasPendingMessage: pendingMessage,
           githubUrl,
         };
       } catch {
         return {
           id: project.id,
+          branch: null,
           editing: false,
           hasPendingMessage: false,
           githubUrl,
@@ -109,6 +111,7 @@ export async function GET() {
   const resultMap: Record<
     string,
     {
+      branch: string | null;
       editing: boolean;
       hasPendingMessage: boolean;
       githubUrl: string | null;
@@ -116,6 +119,7 @@ export async function GET() {
   > = {};
   for (const r of projectResults) {
     resultMap[r.id] = {
+      branch: r.branch,
       editing: r.editing,
       hasPendingMessage: r.hasPendingMessage,
       githubUrl: r.githubUrl,
@@ -124,6 +128,7 @@ export async function GET() {
 
   const result = projects.map((p) => ({
     ...p,
+    branch: resultMap[p.id]?.branch ?? null,
     editing: resultMap[p.id]?.editing ?? false,
     hasPendingMessage: resultMap[p.id]?.hasPendingMessage ?? false,
     hasRunningProcess: !!allRunningProcesses[p.id],

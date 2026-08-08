@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation';
 import { Project } from './types';
 import ProjectContextMenu from './ProjectContextMenu';
 
+const DEFAULT_BRANCHES = new Set(['main', 'master']);
+
 function getDefaultTab(project: Project): string {
   if (project.downSites.length > 0) return 'run';
   if (project.editing) return 'changes';
@@ -133,16 +135,17 @@ export default function ProjectCard({
             </svg>
           )}
         </div>
-        {project.tags && project.tags.length > 0 && (
+        {project.branch && (
           <div className="mt-2 flex flex-wrap gap-1">
-            {project.tags.map((tag) => (
-              <span
-                key={tag}
-                className="text-xs px-2 py-0.5 rounded-full bg-foreground/10"
-              >
-                {tag}
-              </span>
-            ))}
+            <span
+              className={`text-xs px-2 py-0.5 rounded-full ${
+                DEFAULT_BRANCHES.has(project.branch)
+                  ? 'bg-foreground/10 text-foreground/60'
+                  : 'bg-amber-500/15 text-amber-400'
+              }`}
+            >
+              {project.branch}
+            </span>
           </div>
         )}
       </div>

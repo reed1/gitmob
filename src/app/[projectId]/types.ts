@@ -3,7 +3,6 @@ export interface Project {
   canonicalId: string;
   worktreeName?: string;
   path: string;
-  tags?: string[];
   urls?: Record<string, string>;
   push?: Record<string, { ssh: string; path?: string }>;
   githubUrl: string | null;

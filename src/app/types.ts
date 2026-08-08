@@ -3,9 +3,9 @@ export interface Project {
   canonicalId: string;
   worktreeName?: string;
   path: string;
-  tags?: string[];
   pinned?: boolean;
   urls?: Record<string, string>;
+  branch: string | null;
   editing: boolean;
   hasPendingMessage: boolean;
   hasRunningProcess: boolean;
