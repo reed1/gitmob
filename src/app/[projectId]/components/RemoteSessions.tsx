@@ -66,8 +66,7 @@ export function RemoteSessions({ projectId }: { projectId: string }) {
       });
       const data = await res.json();
       if (res.ok) {
-        addToast(`Opened ${data.name}`, 'success');
-        if (data.url) window.open(data.url, '_blank');
+        addToast(`Started ${data.name}`, 'success');
         fetchSessions();
       }
     } finally {
@@ -112,7 +111,7 @@ export function RemoteSessions({ projectId }: { projectId: string }) {
             disabled={starting}
             className="px-3 py-1.5 text-xs rounded-lg bg-blue-500/15 text-blue-500 border border-blue-500/20 active:opacity-80 disabled:opacity-40"
           >
-            {starting ? 'Opening...' : 'New'}
+            {starting ? 'Starting...' : 'New'}
           </button>
         </div>
       </div>
