@@ -137,11 +137,7 @@ export function RemoteSessions({ projectId }: { projectId: string }) {
           key={session.unit}
           className="flex items-center justify-between gap-2 p-3 bg-foreground/5 border border-foreground/10 rounded-lg"
         >
-          <button
-            onClick={() => session.url && window.open(session.url, '_blank')}
-            disabled={!session.url}
-            className="flex items-center gap-3 min-w-0 flex-1 text-left active:opacity-80 disabled:opacity-60"
-          >
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             <div
               className={`w-2.5 h-2.5 shrink-0 rounded-full ${
                 session.active ? 'bg-green-500' : 'bg-foreground/30'
@@ -159,7 +155,7 @@ export function RemoteSessions({ projectId }: { projectId: string }) {
                   .join(' · ')}
               </div>
             </div>
-          </button>
+          </div>
 
           <div className="relative shrink-0">
             <button
