@@ -21,7 +21,7 @@ pnpm build && pnpm start
 
 ## App Icons
 
-All PNGs/ICO are generated from `android/icon.svg` via `android/gen-icons.sh`; edit the SVG and regenerate rather than editing them by hand. Do NOT put an SVG in `src/app/` — it crashes the Turbopack build.
+All PNGs/ICO are generated from `assets/icon.svg` via `assets/gen-icons.sh`; edit the SVG and regenerate rather than editing them by hand. Do NOT put an SVG in `src/app/` — it crashes the Turbopack build.
 
 ## Key Patterns
 

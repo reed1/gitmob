@@ -6,6 +6,8 @@ import { Project } from './types';
 import { addToast } from '../lib/api';
 import { useOutsideClick } from '../lib/use-outside-click';
 
+const RESUME_REFRESH_THRESHOLD_MS = 10000;
+
 async function fetchHealthWithTimeout(
   timeoutMs: number
 ): Promise<{ startedAt: number } | null> {
@@ -71,10 +73,26 @@ export default function Home() {
 
   useEffect(() => {
     refreshProjects();
-    // webview-apk: called when app resumes after being backgrounded
-    (window as any).__webviewRefresh = () => refreshProjects();
+
+    let hiddenAt = 0;
+    function onVisibilityChange() {
+      if (document.visibilityState === 'hidden') {
+        hiddenAt = Date.now();
+      } else if (document.visibilityState === 'visible') {
+        if (hiddenAt && Date.now() - hiddenAt > RESUME_REFRESH_THRESHOLD_MS) {
+          refreshProjects();
+        }
+        hiddenAt = 0;
+      } else {
+        throw new Error(
+          `Unexpected visibility state: ${document.visibilityState}`
+        );
+      }
+    }
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
     return () => {
-      delete (window as any).__webviewRefresh;
+      document.removeEventListener('visibilitychange', onVisibilityChange);
     };
   }, []);
 
