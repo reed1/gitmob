@@ -1,6 +1,6 @@
 'use client';
 
-import { useSyncExternalStore } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import { subscribe, getSnapshot, dismissToast } from '../lib/api';
 import type { ToastVariant } from '../lib/api';
 
@@ -27,6 +27,12 @@ export default function GlobalUI() {
     getSnapshotMemoized,
     getSnapshotMemoized
   );
+
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+  }, []);
 
   return (
     <>
