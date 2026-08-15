@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import ProjectCard from './ProjectCard';
 import { Project } from './types';
 import { addToast } from '../lib/api';
+import { useOutsideClick } from '../lib/use-outside-click';
 
 async function fetchHealthWithTimeout(
   timeoutMs: number
@@ -44,6 +45,9 @@ export default function Home() {
   const [restarting, setRestarting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useOutsideClick(menuOpen, menuRef, () => setMenuOpen(false));
 
   function refreshProjects() {
     setRefreshing(true);
@@ -131,7 +135,7 @@ export default function Home() {
                 />
               </svg>
             </button>
-            <div className="relative">
+            <div className="relative" ref={menuRef}>
               <button
                 onClick={() => setMenuOpen(!menuOpen)}
                 className="p-2 rounded-lg hover:bg-foreground/10 active:opacity-80"
@@ -157,41 +161,33 @@ export default function Home() {
                 </svg>
               </button>
               {menuOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-10"
-                    onClick={() => setMenuOpen(false)}
-                  />
-                  <div className="absolute right-0 top-full mt-1 z-20 bg-background border border-foreground/20 rounded-lg shadow-lg py-1 min-w-[180px]">
-                    <button
-                      onClick={async () => {
-                        setMenuOpen(false);
-                        const health = await fetchHealthWithTimeout(3000);
-                        if (!health) return;
-                        const previousStartedAt = health.startedAt;
-                        setRestarting(true);
-                        // Raw fetch to avoid error toasts — the server will die mid-request
-                        fetch('/api/restart', { method: 'POST' }).catch(
-                          () => {}
+                <div className="absolute right-0 top-full mt-1 z-20 bg-background border border-foreground/20 rounded-lg shadow-lg py-1 min-w-[180px]">
+                  <button
+                    onClick={async () => {
+                      setMenuOpen(false);
+                      const health = await fetchHealthWithTimeout(3000);
+                      if (!health) return;
+                      const previousStartedAt = health.startedAt;
+                      setRestarting(true);
+                      // Raw fetch to avoid error toasts — the server will die mid-request
+                      fetch('/api/restart', { method: 'POST' }).catch(() => {});
+                      const came_back =
+                        await waitForNewServer(previousStartedAt);
+                      if (came_back) {
+                        window.location.reload();
+                      } else {
+                        setRestarting(false);
+                        addToast(
+                          'Service did not come back up after 20 seconds'
                         );
-                        const came_back =
-                          await waitForNewServer(previousStartedAt);
-                        if (came_back) {
-                          window.location.reload();
-                        } else {
-                          setRestarting(false);
-                          addToast(
-                            'Service did not come back up after 20 seconds'
-                          );
-                        }
-                      }}
-                      className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 flex items-center gap-2"
-                    >
-                      <span className="w-4" />
-                      Restart GitMob
-                    </button>
-                  </div>
-                </>
+                      }
+                    }}
+                    className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 flex items-center gap-2"
+                  >
+                    <span className="w-4" />
+                    Restart GitMob
+                  </button>
+                </div>
               )}
             </div>
           </div>

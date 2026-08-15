@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { apiFetch } from '../lib/api';
+import { useOutsideClick } from '../lib/use-outside-click';
 
 const DOOIT_DOMAIN = process.env.NEXT_PUBLIC_DOOIT_DOMAIN;
 
@@ -23,6 +24,9 @@ export default function ProjectContextMenu({ project }: Props) {
   const [customModalOpen, setCustomModalOpen] = useState(false);
   const [customPermissionMode, setCustomPermissionMode] =
     useState<PermissionMode>('auto');
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useOutsideClick(menuOpen, menuRef, () => setMenuOpen(false));
 
   async function launchCustom() {
     setCustomModalOpen(false);
@@ -43,7 +47,7 @@ export default function ProjectContextMenu({ project }: Props) {
 
   return (
     <>
-      <div className="relative">
+      <div className="relative" ref={menuRef}>
         <button
           onClick={() => setMenuOpen(!menuOpen)}
           className="p-2 rounded-lg bg-foreground/10 active:bg-foreground/20 transition-colors"
@@ -63,75 +67,69 @@ export default function ProjectContextMenu({ project }: Props) {
           </svg>
         </button>
         {menuOpen && (
-          <>
-            <div
-              className="fixed inset-0 z-10"
-              onClick={() => setMenuOpen(false)}
-            />
-            <div className="absolute right-0 top-full mt-1 z-20 bg-background border border-foreground/20 rounded-lg shadow-lg py-1 min-w-[120px]">
-              <button
-                onClick={() => {
-                  setMenuOpen(false);
-                  if (hasUrls) {
-                    setUrlModalOpen(true);
-                  }
-                }}
-                disabled={!hasUrls}
-                className={`block w-full px-4 py-2 text-sm text-left ${
-                  hasUrls
-                    ? 'hover:bg-foreground/10'
-                    : 'text-foreground/30 cursor-not-allowed'
-                }`}
-              >
-                Open URL
-              </button>
-              <button
-                onClick={() => {
-                  setMenuOpen(false);
-                  if (project.githubUrl) {
-                    window.open(project.githubUrl, '_blank');
-                  }
-                }}
-                disabled={!project.githubUrl}
-                className={`block w-full px-4 py-2 text-sm text-left ${
-                  project.githubUrl
-                    ? 'hover:bg-foreground/10'
-                    : 'text-foreground/30 cursor-not-allowed'
-                }`}
-              >
-                {project.githubUrl ? 'Github' : 'Github (not available)'}
-              </button>
-              <button
-                onClick={() => {
-                  setMenuOpen(false);
-                  setCustomPermissionMode('auto');
-                  setCustomModalOpen(true);
-                }}
-                className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
-              >
-                Claude
-              </button>
-              <button
-                onClick={() => {
-                  setMenuOpen(false);
-                  if (DOOIT_DOMAIN) {
-                    window.open(
-                      `${DOOIT_DOMAIN}/frontend/dooit/${project.canonicalId}`,
-                      '_blank'
-                    );
-                  }
-                }}
-                disabled={!DOOIT_DOMAIN}
-                className={`block w-full px-4 py-2 text-sm text-left ${
-                  DOOIT_DOMAIN
-                    ? 'hover:bg-foreground/10'
-                    : 'text-foreground/30 cursor-not-allowed'
-                }`}
-              >
-                Dooit
-              </button>
-            </div>
-          </>
+          <div className="absolute right-0 top-full mt-1 z-20 bg-background border border-foreground/20 rounded-lg shadow-lg py-1 min-w-[120px]">
+            <button
+              onClick={() => {
+                setMenuOpen(false);
+                if (hasUrls) {
+                  setUrlModalOpen(true);
+                }
+              }}
+              disabled={!hasUrls}
+              className={`block w-full px-4 py-2 text-sm text-left ${
+                hasUrls
+                  ? 'hover:bg-foreground/10'
+                  : 'text-foreground/30 cursor-not-allowed'
+              }`}
+            >
+              Open URL
+            </button>
+            <button
+              onClick={() => {
+                setMenuOpen(false);
+                if (project.githubUrl) {
+                  window.open(project.githubUrl, '_blank');
+                }
+              }}
+              disabled={!project.githubUrl}
+              className={`block w-full px-4 py-2 text-sm text-left ${
+                project.githubUrl
+                  ? 'hover:bg-foreground/10'
+                  : 'text-foreground/30 cursor-not-allowed'
+              }`}
+            >
+              {project.githubUrl ? 'Github' : 'Github (not available)'}
+            </button>
+            <button
+              onClick={() => {
+                setMenuOpen(false);
+                setCustomPermissionMode('auto');
+                setCustomModalOpen(true);
+              }}
+              className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
+            >
+              Claude
+            </button>
+            <button
+              onClick={() => {
+                setMenuOpen(false);
+                if (DOOIT_DOMAIN) {
+                  window.open(
+                    `${DOOIT_DOMAIN}/frontend/dooit/${project.canonicalId}`,
+                    '_blank'
+                  );
+                }
+              }}
+              disabled={!DOOIT_DOMAIN}
+              className={`block w-full px-4 py-2 text-sm text-left ${
+                DOOIT_DOMAIN
+                  ? 'hover:bg-foreground/10'
+                  : 'text-foreground/30 cursor-not-allowed'
+              }`}
+            >
+              Dooit
+            </button>
+          </div>
         )}
       </div>
 
