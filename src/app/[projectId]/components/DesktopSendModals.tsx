@@ -117,19 +117,19 @@ export function SendKeysModal({
   onClose: () => void;
 }) {
   // The modal stays open on a key press: answering a dialog is usually Down, Down, Enter.
-  const pressKey = async (key: SpecialKey, label: string) => {
-    const res = await apiFetch(`/api/projects/${projectId}/desktop`, {
+  // Only failures are worth a toast; apiFetch raises those on its own.
+  const pressKey = async (key: SpecialKey) => {
+    await apiFetch(`/api/projects/${projectId}/desktop`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ windowId, action: 'key', key }),
     });
-    if (res.ok) addToast(`Pressed ${label}`, 'success');
   };
 
   const keyButton = (key: SpecialKey, label: string) => (
     <button
       key={key}
-      onClick={() => pressKey(key, label)}
+      onClick={() => pressKey(key)}
       className="px-2 py-2 text-xs font-mono rounded-lg bg-foreground/10 border border-foreground/15 active:bg-foreground/20"
     >
       {label}

@@ -4,7 +4,8 @@ import { useRouter } from 'next/navigation';
 import { Project } from './types';
 import ProjectContextMenu from './ProjectContextMenu';
 
-const DEFAULT_BRANCHES = new Set(['main', 'master']);
+// 'reed' is the trunk on forks of other people's repositories.
+const DEFAULT_BRANCHES = new Set(['main', 'master', 'reed']);
 
 function getDefaultTab(project: Project): string {
   if (project.downSites.length > 0) return 'run';
