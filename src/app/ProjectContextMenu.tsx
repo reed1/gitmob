@@ -2,12 +2,14 @@
 
 import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { apiFetch } from '../lib/api';
+import {
+  PERMISSION_MODE_OPTIONS,
+  PermissionMode,
+  launchRemoteSession,
+} from '../lib/remote-client';
 import { useOutsideClick } from '../lib/use-outside-click';
 
 const DOOIT_DOMAIN = process.env.NEXT_PUBLIC_DOOIT_DOMAIN;
-
-type PermissionMode = 'auto' | 'default' | 'bypassPermissions';
 
 interface Props {
   project: {
@@ -30,15 +32,7 @@ export default function ProjectContextMenu({ project }: Props) {
 
   async function launchCustom() {
     setCustomModalOpen(false);
-    const res = await apiFetch(`/api/projects/${project.id}/remote`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ permissionMode: customPermissionMode }),
-    });
-    const data = await res.json();
-    if (data.url) {
-      window.open(data.url, '_blank');
-    }
+    await launchRemoteSession(project.id, customPermissionMode);
   }
 
   const urls = project.urls ?? {};
@@ -159,11 +153,11 @@ export default function ProjectContextMenu({ project }: Props) {
                       }
                       className="w-full text-sm border border-foreground/20 rounded-lg px-3 py-2 bg-background"
                     >
-                      <option value="auto">Auto</option>
-                      <option value="default">Default</option>
-                      <option value="bypassPermissions">
-                        Skip permissions
-                      </option>
+                      {PERMISSION_MODE_OPTIONS.map((mode) => (
+                        <option key={mode.value} value={mode.value}>
+                          {mode.label}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>

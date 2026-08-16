@@ -2,23 +2,12 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { addToast, apiFetch } from '../../../lib/api';
-
-type PermissionMode = 'auto' | 'default' | 'bypassPermissions';
-
-const PERMISSION_MODES: { value: PermissionMode; label: string }[] = [
-  { value: 'auto', label: 'Auto' },
-  { value: 'default', label: 'Ask' },
-  { value: 'bypassPermissions', label: 'Bypass' },
-];
-
-interface RemoteSession {
-  unit: string;
-  projectId: string;
-  name: string;
-  url: string | null;
-  startedAt: number | null;
-  active: boolean;
-}
+import {
+  PERMISSION_MODE_OPTIONS,
+  PermissionMode,
+  RemoteSession,
+  launchRemoteSession,
+} from '../../../lib/remote-client';
 
 function since(startedAt: number | null): string {
   if (!startedAt) return 'just now';
@@ -59,14 +48,7 @@ export function RemoteSessions({ projectId }: { projectId: string }) {
   const start = async () => {
     setStarting(true);
     try {
-      const res = await apiFetch(`/api/projects/${projectId}/remote`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ permissionMode }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        addToast(`Started ${data.name}`, 'success');
+      if (await launchRemoteSession(projectId, permissionMode)) {
         fetchSessions();
       }
     } finally {
@@ -100,7 +82,7 @@ export function RemoteSessions({ projectId }: { projectId: string }) {
             }
             className="text-xs bg-foreground/5 border border-foreground/15 rounded-lg px-2 py-1.5"
           >
-            {PERMISSION_MODES.map((mode) => (
+            {PERMISSION_MODE_OPTIONS.map((mode) => (
               <option key={mode.value} value={mode.value}>
                 {mode.label}
               </option>
