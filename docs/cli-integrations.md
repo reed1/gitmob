@@ -113,3 +113,14 @@ reason.
 There is no session file on either side: every window on the list comes from claudex's own lookup,
 so a session this app never started is still listed, and one it started is still listed after it
 forgets.
+
+## Usage — `claudex usage`
+
+`src/lib/claude-usage.ts`, read by the dollar badge beside the GitMob title.
+
+- `claudex usage query` — today's Claude Code API spend, printed as `$12.34`.
+
+The statusline feeds that ledger and claudex keeps the per-session and per-day totals, so this app
+asks it for the number rather than reading its cost cache and redoing the date check. It rides
+along on `/api/projects` as `todayCost` — one more sweep in that route's `Promise.all`, null when
+claudex cannot answer, and the badge simply does not render then.

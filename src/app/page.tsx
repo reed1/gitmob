@@ -41,6 +41,7 @@ async function waitForNewServer(
 
 export default function Home() {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [todayCost, setTodayCost] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
@@ -59,7 +60,8 @@ export default function Home() {
         if (!res.ok) {
           throw new Error(data.error || `Request failed (${res.status})`);
         }
-        setProjects(data);
+        setProjects(data.projects);
+        setTodayCost(data.todayCost);
         setError(null);
       })
       .catch((err) =>
@@ -139,7 +141,17 @@ export default function Home() {
       )}
       <header className="sticky top-0 z-10 border-b border-foreground/10 bg-background/95 backdrop-blur px-4 py-3 space-y-3">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold">GitMob</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-semibold">GitMob</h1>
+            {todayCost !== null && (
+              <span
+                title="Claude Code API spend today"
+                className="px-2 py-0.5 rounded-full bg-amber-400/15 text-amber-400 text-xs font-medium tabular-nums"
+              >
+                ${todayCost.toFixed(2)}
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-1">
             <button
               onClick={() => refreshProjects()}
