@@ -2,6 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { apiFetch } from '../../../lib/api';
+
+interface FileContent {
+  content: string;
+  highlighted: string;
+  language: string;
+  lineCount: number;
+}
 
 function FileViewer({
   projectId,
@@ -14,14 +22,13 @@ function FileViewer({
   wordWrap: boolean;
   onClose: () => void;
 }) {
-  const [content, setContent] = useState<{
-    highlighted: string;
-    language: string;
-    lineCount: number;
-  } | null>(null);
+  const [content, setContent] = useState<FileContent | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [draft, setDraft] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
+  const editing = draft !== null;
   const fileName = filePath.split('/').pop() || filePath;
 
   useEffect(() => {
@@ -41,6 +48,26 @@ function FileViewer({
     }
     load();
   }, [projectId, filePath]);
+
+  const save = async () => {
+    if (draft === null) return;
+    setSaving(true);
+    try {
+      const res = await apiFetch(
+        `/api/projects/${projectId}/files/content?path=${encodeURIComponent(filePath)}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: draft }),
+        }
+      );
+      if (!res.ok) return;
+      setContent(await res.json());
+      setDraft(null);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -72,6 +99,32 @@ function FileViewer({
               </div>
             )}
           </div>
+          {content &&
+            (editing ? (
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => setDraft(null)}
+                  disabled={saving}
+                  className="px-3 py-1 text-xs bg-foreground/10 hover:bg-foreground/20 rounded disabled:opacity-30"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={save}
+                  disabled={saving}
+                  className="px-3 py-1 text-xs bg-foreground text-background rounded disabled:opacity-30"
+                >
+                  {saving ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setDraft(content.content)}
+                className="px-3 py-1 text-xs bg-foreground/10 hover:bg-foreground/20 rounded shrink-0"
+              >
+                Edit
+              </button>
+            ))}
         </div>
         <div className="mt-1 text-xs text-foreground/40 truncate">
           {filePath}
@@ -81,6 +134,16 @@ function FileViewer({
       <div className="flex-1 min-h-0 overflow-auto">
         {loading ? (
           <div className="p-4 text-center text-foreground/50">Loading...</div>
+        ) : editing ? (
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            wrap={wordWrap ? 'soft' : 'off'}
+            spellCheck={false}
+            autoCapitalize="off"
+            autoCorrect="off"
+            className="w-full h-full p-4 text-xs font-mono bg-transparent resize-none outline-none"
+          />
         ) : content ? (
           content.lineCount === 0 ? (
             <div className="p-4 text-center text-foreground/30">Empty file</div>

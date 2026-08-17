@@ -4,10 +4,26 @@ import { getLanguageFromPath } from '@/lib/files';
 import { join } from 'path';
 import { statSync } from 'fs';
 import { execFileSync } from 'child_process';
-import { readFile } from 'fs/promises';
+import { readFile, writeFile } from 'fs/promises';
 import { codeToHtml } from 'shiki';
 
 const MAX_FILE_SIZE = 1_000_000;
+
+async function fileResponse(fullPath: string) {
+  const content = await readFile(fullPath, 'utf-8');
+  const language = getLanguageFromPath(fullPath);
+  const highlighted = await codeToHtml(content, {
+    lang: language,
+    theme: 'github-dark',
+  });
+
+  return NextResponse.json({
+    content,
+    highlighted,
+    language,
+    lineCount: content.split('\n').length,
+  });
+}
 
 export async function GET(
   request: NextRequest,
@@ -49,21 +65,43 @@ export async function GET(
       );
     }
 
-    const content = await readFile(fullPath, 'utf-8');
-    const language = getLanguageFromPath(fullPath);
-    const highlighted = await codeToHtml(content, {
-      lang: language,
-      theme: 'github-dark',
-    });
-
-    return NextResponse.json({
-      content,
-      highlighted,
-      language,
-      lineCount: content.split('\n').length,
-    });
+    return await fileResponse(fullPath);
   } catch (err) {
     if (err instanceof Error && 'status' in err) throw err;
     return NextResponse.json({ error: 'File not found' }, { status: 404 });
   }
+}
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const project = await getProject(id);
+
+  if (!project) {
+    return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+  }
+
+  const filePath = request.nextUrl.searchParams.get('path');
+
+  if (!filePath) {
+    return NextResponse.json({ error: 'Path required' }, { status: 400 });
+  }
+
+  const { content } = await request.json();
+
+  if (typeof content !== 'string') {
+    return NextResponse.json({ error: 'Content required' }, { status: 400 });
+  }
+
+  const fullPath = join(project.path, filePath);
+
+  if (!statSync(fullPath).isFile()) {
+    return NextResponse.json({ error: 'Not a file' }, { status: 422 });
+  }
+
+  await writeFile(fullPath, content, 'utf-8');
+
+  return await fileResponse(fullPath);
 }
