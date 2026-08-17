@@ -25,11 +25,13 @@ export default function ProjectCard({
   return (
     <div
       className={`p-4 rounded-lg border flex items-center gap-3 ${
-        project.editing
-          ? 'border-green-500/50 bg-green-500/10'
-          : isActive
-            ? 'border-foreground/30 bg-foreground/5'
-            : 'border-foreground/10 bg-foreground/5'
+        project.hasPendingMessage
+          ? 'border-blue-500/50 bg-blue-500/10'
+          : project.editing
+            ? 'border-green-500/50 bg-green-500/10'
+            : isActive
+              ? 'border-foreground/30 bg-foreground/5'
+              : 'border-foreground/10 bg-foreground/5'
       }`}
     >
       <div

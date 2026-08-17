@@ -96,12 +96,19 @@ export default function Home() {
     };
   }, []);
 
-  const filtered = projects.filter(
-    (p) =>
-      search === '' ||
-      p.id.toLowerCase().includes(search.toLowerCase()) ||
-      p.path.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = projects
+    .filter(
+      (p) =>
+        search === '' ||
+        p.id.toLowerCase().includes(search.toLowerCase()) ||
+        p.path.toLowerCase().includes(search.toLowerCase())
+    )
+    .sort((a, b) => {
+      if (a.hasPendingMessage !== b.hasPendingMessage) {
+        return a.hasPendingMessage ? -1 : 1;
+      }
+      return a.id.localeCompare(b.id);
+    });
 
   const isActive = (p: Project) =>
     p.editing ||
