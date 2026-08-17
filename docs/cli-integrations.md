@@ -29,6 +29,17 @@ project it is.
 What is *not* per-worktree is sudo, env checks and monitored sites — those belong to the repo
 and its servers, so the project list reads them under `canonicalId`, as do the dooit todos.
 
+## Pinboard — a file, not a CLI
+
+`src/lib/pinboard.ts`, read by the Pinboard tab.
+
+`~/.dotfiles/rlocal/app/rofi-vscode/pinboard-data/{canonicalId}.yaml` is read directly, and that
+is not the cache-reading this document warns against: the `pinboard` CLI takes the path of the
+file to work on and owns no lookup to redo, so the file *is* the interface. It is version
+controlled in the dotfiles repo, and a project that has never been pinned simply has no file.
+
+Notes are keyed by the canonical id — they belong to the repo, as the dooit todos do.
+
 ## Sudo — `pt`
 
 `src/lib/sudo.ts`, read by the Sudo tab and the project list.

@@ -10,7 +10,7 @@ const DEFAULT_BRANCHES = new Set(['main', 'master', 'reed']);
 function getDefaultTab(project: Project): string {
   if (project.downSites.length > 0) return 'run';
   if (project.editing) return 'changes';
-  return 'dooit';
+  return 'pinboard';
 }
 
 export default function ProjectCard({

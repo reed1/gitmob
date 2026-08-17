@@ -15,6 +15,7 @@ export interface GitStatus {
 }
 
 export type Tab =
+  | 'pinboard'
   | 'files'
   | 'changes'
   | 'commit'

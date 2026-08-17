@@ -9,11 +9,13 @@ import { CommitView } from './components/CommitView';
 import { RunView } from './components/RunView';
 import { CLIView } from './components/CLIView';
 import { DooitView } from './components/DooitView';
+import { PinboardView } from './components/PinboardView';
 import { ClaudeView } from './components/ClaudeView';
 import { SudoView } from './components/SudoView';
 import ProjectContextMenu from '../ProjectContextMenu';
 
 const tabs = [
+  { id: 'pinboard', label: 'Pinboard' },
   { id: 'dooit', label: 'Dooit' },
   { id: 'files', label: 'Files' },
   { id: 'changes', label: 'Changes' },
@@ -29,7 +31,7 @@ const validTabs = new Set<string>(tabs.map((t) => t.id));
 function getInitialTab(searchParams: URLSearchParams): Tab {
   const param = searchParams.get('tab');
   if (param && validTabs.has(param)) return param as Tab;
-  return 'dooit';
+  return 'pinboard';
 }
 
 export default function ProjectPage() {
@@ -238,6 +240,11 @@ export default function ProjectPage() {
       </header>
 
       <main className="flex-1 min-h-0 overflow-auto">
+        {/* Notes are pinned to the repo, not to one checkout of it: pinboard keys its
+            files by the canonical id. */}
+        {tab === 'pinboard' && project && (
+          <PinboardView projectId={project.canonicalId} />
+        )}
         {tab === 'files' && (
           <FileBrowser projectId={projectId} wordWrap={wordWrap} />
         )}
