@@ -3,7 +3,11 @@
 import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { launchDesktopSession } from '../lib/desktop-client';
-import { CLAUDE_MODES, ClaudeMode } from '../lib/desktop-modes';
+import {
+  CLAUDE_MODES,
+  ClaudeMode,
+  DEFAULT_CLAUDE_MODE,
+} from '../lib/desktop-modes';
 import { useOutsideClick } from '../lib/use-outside-click';
 
 const DOOIT_DOMAIN = process.env.NEXT_PUBLIC_DOOIT_DOMAIN;
@@ -21,7 +25,7 @@ export default function ProjectContextMenu({ project }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [urlModalOpen, setUrlModalOpen] = useState(false);
   const [customModalOpen, setCustomModalOpen] = useState(false);
-  const [customMode, setCustomMode] = useState<ClaudeMode>('auto');
+  const [customMode, setCustomMode] = useState<ClaudeMode>(DEFAULT_CLAUDE_MODE);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useOutsideClick(menuOpen, menuRef, () => setMenuOpen(false));
@@ -93,7 +97,7 @@ export default function ProjectContextMenu({ project }: Props) {
             <button
               onClick={() => {
                 setMenuOpen(false);
-                setCustomMode('auto');
+                setCustomMode(DEFAULT_CLAUDE_MODE);
                 setCustomModalOpen(true);
               }}
               className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"

@@ -10,6 +10,8 @@ export const CLAUDE_MODES = [
 
 export type ClaudeMode = (typeof CLAUDE_MODES)[number]['mode'];
 
+export const DEFAULT_CLAUDE_MODE: ClaudeMode = 'yolo';
+
 export function isClaudeMode(value: unknown): value is ClaudeMode {
   return CLAUDE_MODES.some((entry) => entry.mode === value);
 }

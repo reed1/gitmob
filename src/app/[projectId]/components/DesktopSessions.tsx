@@ -4,7 +4,11 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { addToast, apiFetch } from '../../../lib/api';
 import { launchDesktopSession } from '../../../lib/desktop-client';
-import { CLAUDE_MODES, ClaudeMode } from '../../../lib/desktop-modes';
+import {
+  CLAUDE_MODES,
+  ClaudeMode,
+  DEFAULT_CLAUDE_MODE,
+} from '../../../lib/desktop-modes';
 import type { DesktopSession } from './ClaudeView';
 
 export function DesktopSessions({
@@ -27,7 +31,7 @@ export function DesktopSessions({
   const [menuWindowId, setMenuWindowId] = useState<string | null>(null);
   const [remoteTarget, setRemoteTarget] = useState<DesktopSession | null>(null);
   const [remoteName, setRemoteName] = useState('');
-  const [mode, setMode] = useState<ClaudeMode>('auto');
+  const [mode, setMode] = useState<ClaudeMode>(DEFAULT_CLAUDE_MODE);
   const [launching, setLaunching] = useState(false);
 
   const launch = async () => {
