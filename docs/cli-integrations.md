@@ -29,14 +29,24 @@ project it is.
 What is *not* per-worktree is sudo, env checks and monitored sites — those belong to the repo
 and its servers, so the project list reads them under `canonicalId`, as do the dooit todos.
 
-## Pinboard — a file, not a CLI
+## Pinboard — `rv pinboard`
 
-`src/lib/pinboard.ts`, read by the Pinboard tab.
+`src/lib/pinboard.ts`, read and written by the Pinboard tab.
 
-`~/.dotfiles/rlocal/app/rofi-vscode/pinboard-data/{canonicalId}.yaml` is read directly, and that
-is not the cache-reading this document warns against: the `pinboard` CLI takes the path of the
-file to work on and owns no lookup to redo, so the file *is* the interface. It is version
-controlled in the dotfiles repo, and a project that has never been pinned simply has no file.
+- `rv pinboard list <projectId> --json` — the notes on that project's board.
+- `rv pinboard add <projectId> <text>` — adds one.
+- `rv pinboard edit <projectId> <noteId> <text>` — replaces its text.
+- `rv pinboard delete <projectId> <noteId>` — removes it.
+
+Nothing here touches the YAML. The board files are a repo of their own —
+`reed1/pinboard-data`, rebased hourly by `pinboard-pull.timer` — and `rv pinboard` commits
+each write, so a note added from a phone survives that pull instead of riding on autostash.
+Underneath, rv hands every write to the `pinboard` CLI, which owns what a note is: the next
+id, where it lands on the canvas, its colour from the configured palette, and its timestamps.
+
+That makes an add cost a subprocess rather than a file write, which is the price of not
+being a second writer of a format the desktop app already owns. A board the desktop has open
+needs no telling: the app watches its file and reloads.
 
 Notes are keyed by the canonical id — they belong to the repo, as the dooit todos do.
 

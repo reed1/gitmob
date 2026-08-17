@@ -1,11 +1,4 @@
-import { existsSync, readFileSync } from 'fs';
-import { join } from 'path';
-import { homedir } from 'os';
-import { parse } from 'yaml';
-
-const PINBOARD_DIR =
-  process.env.PINBOARD_DIR ||
-  join(homedir(), '.dotfiles/rlocal/app/rofi-vscode/pinboard-data');
+import { execFile } from 'child_process';
 
 export interface PinboardNote {
   id: number;
@@ -14,27 +7,67 @@ export interface PinboardNote {
   editedAt?: string;
 }
 
-interface RawNote {
+interface RvNote {
   id: number;
-  text?: string;
+  text: string;
   created_at?: string;
   edited_at?: string;
 }
 
-export function getPinboardNotes(projectId: string): PinboardNote[] {
-  const file = join(PINBOARD_DIR, `${projectId}.yaml`);
-  // A project that has never been pinned has no file, which is an empty board rather
-  // than a failure.
-  if (!existsSync(file)) return [];
+/**
+ * `rv pinboard` owns the board files: it maps a project id to its board, hands every write to
+ * the pinboard CLI so ids, placement, palette and timestamps stay that app's business, and
+ * commits the pinboard-data repo afterwards.
+ */
+function runRvPinboard(args: string[]): Promise<string> {
+  return new Promise((resolve, reject) => {
+    execFile(
+      'rv',
+      ['pinboard', ...args],
+      { timeout: 30000 },
+      (error, stdout, stderr) => {
+        if (error) {
+          reject(new Error(stderr.trim() || stdout.trim() || error.message));
+          return;
+        }
+        resolve(stdout);
+      }
+    );
+  });
+}
 
-  const data: { notes?: RawNote[] } = parse(readFileSync(file, 'utf-8')) ?? {};
+export async function getPinboardNotes(
+  projectId: string
+): Promise<PinboardNote[]> {
+  const stdout = await runRvPinboard(['list', projectId, '--json']);
+  const notes: RvNote[] = JSON.parse(stdout);
 
-  return (data.notes ?? [])
-    .map((note) => ({
-      id: note.id,
-      text: note.text ?? '',
-      createdAt: note.created_at,
-      editedAt: note.edited_at,
-    }))
-    .sort((a, b) => a.id - b.id);
+  return notes.map((note) => ({
+    id: note.id,
+    text: note.text,
+    createdAt: note.created_at,
+    editedAt: note.edited_at,
+  }));
+}
+
+export async function addPinboardNote(
+  projectId: string,
+  text: string
+): Promise<void> {
+  await runRvPinboard(['add', projectId, text]);
+}
+
+export async function editPinboardNote(
+  projectId: string,
+  noteId: number,
+  text: string
+): Promise<void> {
+  await runRvPinboard(['edit', projectId, String(noteId), text]);
+}
+
+export async function deletePinboardNote(
+  projectId: string,
+  noteId: number
+): Promise<void> {
+  await runRvPinboard(['delete', projectId, String(noteId)]);
 }
