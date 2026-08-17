@@ -7,7 +7,7 @@ import { getEnvCheckFailures } from '@/lib/env-check';
 import { getSudoEnabledProjects } from '@/lib/sudo';
 import { getClaudeSessionCounts } from '@/lib/desktop';
 import { getGithubRepoUrl } from '@/lib/github';
-import { getTodayCost } from '@/lib/claude-usage';
+import { getClaudeUsage } from '@/lib/claude-usage';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
@@ -75,7 +75,7 @@ export async function GET() {
     envCheckFailures,
     sudoEnabled,
     desktopSessions,
-    todayCost,
+    claudeUsage,
     projectResults,
   ] = await Promise.all([
     getAllRunning(),
@@ -83,7 +83,7 @@ export async function GET() {
     getEnvCheckFailures(),
     getSudoEnabledProjects(),
     getClaudeSessionCounts(),
-    getTodayCost(),
+    getClaudeUsage(),
     processWithWorkers(projects, WORKERS, async (project) => {
       const githubUrl = await getGithubRepoUrl(project.path);
       try {
@@ -141,5 +141,5 @@ export async function GET() {
     githubUrl: resultMap[p.id]?.githubUrl ?? null,
   }));
 
-  return NextResponse.json({ projects: list, todayCost });
+  return NextResponse.json({ projects: list, claudeUsage });
 }

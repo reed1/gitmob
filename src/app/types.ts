@@ -1,3 +1,15 @@
+export interface UsageWindow {
+  usedPercentage: number | null;
+  resetsAt: number | null;
+}
+
+export interface ClaudeUsage {
+  todayCost: number;
+  capturedAt: number | null;
+  fiveHour: UsageWindow | null;
+  sevenDay: UsageWindow | null;
+}
+
 export interface Project {
   id: string;
   canonicalId: string;

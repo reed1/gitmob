@@ -118,9 +118,14 @@ forgets.
 
 `src/lib/claude-usage.ts`, read by the dollar badge beside the GitMob title.
 
-- `claudex usage query` — today's Claude Code API spend, printed as `$12.34`.
+- `claudex usage show --json` — today's Claude Code API spend plus the latest rate-limit windows
+  (`five_hour`, `seven_day`), each with its used percentage and reset time.
 
-The statusline feeds that ledger and claudex keeps the per-session and per-day totals, so this app
-asks it for the number rather than reading its cost cache and redoing the date check. It rides
-along on `/api/projects` as `todayCost` — one more sweep in that route's `Promise.all`, null when
+The statusline feeds that ledger and claudex keeps the day totals and the rate-limit snapshot, so
+this app asks it for them rather than reading its caches and redoing the date check. It rides along
+on `/api/projects` as `claudeUsage` — one more sweep in that route's `Promise.all`, null when
 claudex cannot answer, and the badge simply does not render then.
+
+Clicking the badge opens `src/app/UsagePanel.tsx` under the title: a bar per window with its
+percentage and how long until it resets. The windows come from one snapshot claudex captured when
+Claude Code last reported, so the panel says how old that reading is.
