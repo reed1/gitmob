@@ -3,12 +3,14 @@ import { getProject } from '@/lib/projects';
 import {
   exitSession,
   getSessionScreen,
+  launchDesktopSession,
   listDesktopSessions,
   pressSessionKey,
   startRemoteControl,
   typeIntoSession,
 } from '@/lib/desktop';
 import { isSpecialKey } from '@/lib/desktop-keys';
+import { isClaudeMode } from '@/lib/desktop-modes';
 
 export async function GET(
   request: NextRequest,
@@ -47,14 +49,26 @@ export async function POST(
     return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   }
 
-  const { windowId, name, action, text, key, pressEnter } =
+  const { windowId, name, action, text, key, pressEnter, mode } =
     await request.json();
 
-  if (typeof windowId !== 'string' || !windowId) {
-    return NextResponse.json({ error: 'Missing window' }, { status: 400 });
-  }
-
   try {
+    if (action === 'launch') {
+      if (!isClaudeMode(mode)) {
+        return NextResponse.json(
+          { error: `Unexpected mode: ${mode}` },
+          { status: 400 }
+        );
+      }
+      const sessionName = project.path.split('/').pop() || id;
+      await launchDesktopSession(id, project.path, mode, sessionName);
+      return NextResponse.json({ success: true, name: sessionName });
+    }
+
+    if (typeof windowId !== 'string' || !windowId) {
+      return NextResponse.json({ error: 'Missing window' }, { status: 400 });
+    }
+
     if (action === 'exit') {
       await exitSession(windowId);
       return NextResponse.json({ success: true });

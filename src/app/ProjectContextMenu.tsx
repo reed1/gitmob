@@ -2,11 +2,8 @@
 
 import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import {
-  PERMISSION_MODE_OPTIONS,
-  PermissionMode,
-  launchRemoteSession,
-} from '../lib/remote-client';
+import { launchDesktopSession } from '../lib/desktop-client';
+import { CLAUDE_MODES, ClaudeMode } from '../lib/desktop-modes';
 import { useOutsideClick } from '../lib/use-outside-click';
 
 const DOOIT_DOMAIN = process.env.NEXT_PUBLIC_DOOIT_DOMAIN;
@@ -24,15 +21,14 @@ export default function ProjectContextMenu({ project }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [urlModalOpen, setUrlModalOpen] = useState(false);
   const [customModalOpen, setCustomModalOpen] = useState(false);
-  const [customPermissionMode, setCustomPermissionMode] =
-    useState<PermissionMode>('auto');
+  const [customMode, setCustomMode] = useState<ClaudeMode>('auto');
   const menuRef = useRef<HTMLDivElement>(null);
 
   useOutsideClick(menuOpen, menuRef, () => setMenuOpen(false));
 
   async function launchCustom() {
     setCustomModalOpen(false);
-    await launchRemoteSession(project.id, customPermissionMode);
+    await launchDesktopSession(project.id, customMode);
   }
 
   const urls = project.urls ?? {};
@@ -97,7 +93,7 @@ export default function ProjectContextMenu({ project }: Props) {
             <button
               onClick={() => {
                 setMenuOpen(false);
-                setCustomPermissionMode('auto');
+                setCustomMode('auto');
                 setCustomModalOpen(true);
               }}
               className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
@@ -145,17 +141,15 @@ export default function ProjectContextMenu({ project }: Props) {
                       Permission mode
                     </div>
                     <select
-                      value={customPermissionMode}
+                      value={customMode}
                       onChange={(e) =>
-                        setCustomPermissionMode(
-                          e.target.value as PermissionMode
-                        )
+                        setCustomMode(e.target.value as ClaudeMode)
                       }
                       className="w-full text-sm border border-foreground/20 rounded-lg px-3 py-2 bg-background"
                     >
-                      {PERMISSION_MODE_OPTIONS.map((mode) => (
-                        <option key={mode.value} value={mode.value}>
-                          {mode.label}
+                      {CLAUDE_MODES.map((entry) => (
+                        <option key={entry.mode} value={entry.mode}>
+                          {entry.label}
                         </option>
                       ))}
                     </select>

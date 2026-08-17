@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { addToast, apiFetch } from '../../../lib/api';
+import { launchDesktopSession } from '../../../lib/desktop-client';
+import { CLAUDE_MODES, ClaudeMode } from '../../../lib/desktop-modes';
 import type { DesktopSession } from './ClaudeView';
 
 export function DesktopSessions({
@@ -25,6 +27,17 @@ export function DesktopSessions({
   const [menuWindowId, setMenuWindowId] = useState<string | null>(null);
   const [remoteTarget, setRemoteTarget] = useState<DesktopSession | null>(null);
   const [remoteName, setRemoteName] = useState('');
+  const [mode, setMode] = useState<ClaudeMode>('auto');
+  const [launching, setLaunching] = useState(false);
+
+  const launch = async () => {
+    setLaunching(true);
+    try {
+      if (await launchDesktopSession(projectId, mode)) onRetry();
+    } finally {
+      setLaunching(false);
+    }
+  };
 
   const openRemoteModal = (session: DesktopSession) => {
     setMenuWindowId(null);
@@ -64,9 +77,31 @@ export function DesktopSessions({
   return (
     <>
       <div className="p-4 space-y-3">
-        <h2 className="text-xs uppercase tracking-wide text-foreground/40">
-          Desktop
-        </h2>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-xs uppercase tracking-wide text-foreground/40">
+            Desktop
+          </h2>
+          <div className="flex items-center gap-1.5">
+            <select
+              value={mode}
+              onChange={(e) => setMode(e.target.value as ClaudeMode)}
+              className="text-xs bg-foreground/5 border border-foreground/15 rounded-lg px-2 py-1.5"
+            >
+              {CLAUDE_MODES.map((entry) => (
+                <option key={entry.mode} value={entry.mode}>
+                  {entry.label}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={launch}
+              disabled={launching}
+              className="px-3 py-1.5 text-xs rounded-lg bg-blue-500/15 text-blue-500 border border-blue-500/20 active:opacity-80 disabled:opacity-40"
+            >
+              {launching ? 'Starting...' : 'New'}
+            </button>
+          </div>
+        </div>
 
         {error && (
           <div className="space-y-2">

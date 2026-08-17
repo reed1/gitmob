@@ -1,5 +1,6 @@
 import { execFile } from 'child_process';
 import type { SpecialKey } from './desktop-keys';
+import type { ClaudeMode } from './desktop-modes';
 
 export interface DesktopSession {
   windowId: string;
@@ -27,16 +28,19 @@ interface ClaudexListResult {
   sessions: ClaudexSessionRow[];
 }
 
-/**
- * `claudex desktop` is the only way this app reaches the desktop — claudex owns the session
- * registry, the kitty remote sockets and the i3 lookup that says which windows are still there.
- */
-function claudexDesktop(args: string[]): Promise<string> {
+/** Opening a project can mean starting an editor and its terminals, so it gets its own budget. */
+const OPEN_TIMEOUT_MS = 120000;
+
+function run(
+  command: string,
+  args: string[],
+  timeout = 30000
+): Promise<string> {
   return new Promise((resolve, reject) => {
     execFile(
-      'claudex',
-      ['desktop', ...args],
-      { timeout: 30000, maxBuffer: 4 * 1024 * 1024 },
+      command,
+      args,
+      { timeout, maxBuffer: 4 * 1024 * 1024 },
       (error, stdout, stderr) => {
         if (error) {
           reject(new Error(stderr.trim() || error.message));
@@ -46,6 +50,39 @@ function claudexDesktop(args: string[]): Promise<string> {
       }
     );
   });
+}
+
+/**
+ * `claudex desktop` is the only way this app reaches the desktop — claudex owns the session
+ * registry, the kitty remote sockets and the i3 lookup that says which windows are still there.
+ */
+function claudexDesktop(args: string[]): Promise<string> {
+  return run('claudex', ['desktop', ...args]);
+}
+
+/**
+ * A new session is two commands. `rv open` puts the desktop on the project — switching to its
+ * workspaces and opening them when they were closed — and `claudex kitty` then lands the Claude
+ * window on whatever that left focused. `--detach` hands the window to i3 so it outlives this
+ * server, and `/remote-control` is submitted for the Claude app to pick the session up.
+ */
+export async function launchDesktopSession(
+  projectId: string,
+  projectPath: string,
+  mode: ClaudeMode,
+  name: string
+): Promise<void> {
+  await run('rv', ['open', projectId], OPEN_TIMEOUT_MS);
+  await run('claudex', [
+    'kitty',
+    '--detach',
+    '--press-enter',
+    '--mode',
+    mode,
+    '--directory',
+    projectPath,
+    `/remote-control ${name}`,
+  ]);
 }
 
 export async function listDesktopSessions(projectId: string): Promise<{

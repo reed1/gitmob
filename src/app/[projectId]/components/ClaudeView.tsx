@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { DesktopScreenView } from './DesktopScreenView';
 import { DesktopSessions } from './DesktopSessions';
-import { RemoteSessions } from './RemoteSessions';
 
 export interface DesktopSession {
   windowId: string;
@@ -69,17 +68,14 @@ export function ClaudeView({
   }
 
   return (
-    <div className="divide-y divide-foreground/10">
-      <DesktopSessions
-        projectId={projectId}
-        projectPath={projectPath}
-        sessions={sessions}
-        workspaces={workspaces}
-        error={error}
-        onRetry={fetchSessions}
-        onOpenScreen={openScreen}
-      />
-      <RemoteSessions projectId={projectId} />
-    </div>
+    <DesktopSessions
+      projectId={projectId}
+      projectPath={projectPath}
+      sessions={sessions}
+      workspaces={workspaces}
+      error={error}
+      onRetry={fetchSessions}
+      onOpenScreen={openScreen}
+    />
   );
 }

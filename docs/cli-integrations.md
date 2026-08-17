@@ -24,7 +24,8 @@ costs one ~80ms socket round trip. Failure there is not swallowed — the projec
 it rather than showing a desktop with nothing open on it.
 
 The other CLIs speak these ids directly: `pt` reports one from a worktree cwd, `rv run`
-resolves and reports one, and `claudex desktop|remote` treat a worktree as the project it is.
+resolves and reports one, `rv open` opens one, and `claudex desktop` treats a worktree as the
+project it is.
 What is *not* per-worktree is sudo, env checks and monitored sites — those belong to the repo
 and its servers, so the project list reads them under `canonicalId`, as do the dooit todos.
 
@@ -47,6 +48,10 @@ Transient systemd user units named `rvp-{projectId}-{cmd}.service`, with logs re
 Note the asymmetry: starting is `rv run --mode systemd --project X --cmd Y`, while `stop`,
 `restart` and `status` are subcommands of `rv run`.
 
+`rv open <projectId>` is the other call, made by the session launch below: it switches the desktop
+to the project and opens its workspaces when they were closed. Whether the project was already
+open is rv's question to answer, so this app calls it unconditionally.
+
 ## Desktop — `claudex`
 
 `src/lib/desktop.ts`, read by the Desktop section of the Claude tab and the project list.
@@ -60,36 +65,30 @@ Note the asymmetry: starting is `rv run --mode systemd --project X --cmd Y`, whi
 - `claudex desktop screen <windowId>` — that window's current terminal content.
 - `claudex desktop send <windowId> <text> --press-enter` — types into that window.
 - `claudex desktop keys <windowId> <key>` — presses one named key in it, whatever is on screen.
+- `claudex kitty --detach --press-enter --mode <mode> --directory <path> "/remote-control <name>"`
+  — opens a new session.
 
 claudex owns the session registry, the kitty remote sockets and the i3 lookup, so this app only
-ever handles window ids. The server has no DISPLAY, which is why nothing here talks to X itself.
+ever handles window ids and never talks to X itself.
+
+"New" is those last two commands in order: `rv open` first, so the desktop is on the project and
+the window i3 spawns lands on one of its workspaces, then `claudex kitty`. `--detach` hands that
+window to i3, so it outlives a gitmob restart the way a child process would not. The mode picker
+is `claudex`'s own — `auto`, `edit`, `yolo` — not a `claude --permission-mode` value. The session
+is named after the project folder and submits `/remote-control <name>` on startup; this app never
+sees the URL that publishes, because the Claude app lists the session by that name.
 
 The Desktop section's "Remote" types `/remote-control <name>` into a session that already has a
-window; "Exit" types `/exit` into one. `claudex remote` below is the other half: sessions that
-never had one.
+window; "Exit" types `/exit` into one.
 
 "Send Keys" is the keyboard for a session with nobody at its desktop. Its text box goes out as
 `send --force --paste`: `--force` because the empty-prompt check `send` normally applies would
 refuse the dialogs this exists to answer, and `--paste` so a multi-line box arrives as multiple
 lines instead of submitting at every newline. Its key buttons are `keys`, listed in
 `src/lib/desktop-keys.ts` — the client component cannot import `desktop.ts` for them, since that
-one reaches for child_process.
+one reaches for child_process. The launch modes live in `src/lib/desktop-modes.ts` for the same
+reason.
 
-## Remote — `claudex`
-
-`src/lib/remote.ts`, read by the Remote section of the Claude tab and the project list.
-
-- `claudex remote start <projectId> --permission-mode auto|default|bypassPermissions` — opens an
-  environment and prints it, URL included, once `claude remote-control` has published one.
-- `claudex remote list <projectId>` — the environments open on that project.
-- `claudex remote count` — counts per project, merged into the desktop counts behind the sparkle.
-- `claudex remote stop <unit>` — closes one.
-
-Each environment is a transient systemd unit of its own, which is what keeps it independent of
-this app: restarting gitmob no longer takes its Claude sessions down with it. Before that, the
-route spawned `claude` as a detached child, and `detached` only escapes the process group —
-never the cgroup, so every restart SIGTERMed the sessions along with the server.
-
-There is no session file on either side. claudex reads the units back out of systemd and the URL
-out of each unit's journal, so a session this app never hears about is still listed, and one it
-started is still listed after it forgets.
+There is no session file on either side: every window on the list comes from claudex's own lookup,
+so a session this app never started is still listed, and one it started is still listed after it
+forgets.
