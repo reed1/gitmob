@@ -93,7 +93,7 @@ export function CommitView({
   };
 
   const generateCommitMessage = async () => {
-    const res = await fetch(
+    const res = await apiFetch(
       `/api/projects/${projectId}/git?action=diff-summary`
     );
     const data = await res.json();
@@ -108,7 +108,7 @@ export function CommitView({
       setShowShortenModal(true);
       return;
     }
-    const res = await fetch(
+    const res = await apiFetch(
       `/api/projects/${projectId}/git?action=shorten-message&message=${encodeURIComponent(commitMessage)}`
     );
     const data = await res.json();

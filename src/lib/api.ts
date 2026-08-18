@@ -54,39 +54,36 @@ export async function apiFetch(
   options?: RequestInit
 ): Promise<Response> {
   const method = (options?.method || 'GET').toUpperCase();
-  const isMutation = method !== 'GET';
+  const key = method === 'GET' ? null : mutationKey(url, method);
 
-  if (isMutation) {
-    const key = mutationKey(url, method);
+  if (key !== null) {
     if (inFlightMutations.has(key)) {
       addToast('Request already in progress');
       throw new DuplicateRequestError();
     }
     inFlightMutations.add(key);
-    activeRequests++;
-    notify();
-
-    try {
-      const res = await fetch(url, options);
-      if (!res.ok) {
-        const cloned = res.clone();
-        try {
-          const data = await cloned.json();
-          addToast(data.error || `Request failed (${res.status})`);
-        } catch {
-          addToast(`Request failed (${res.status})`);
-        }
-      }
-      return res;
-    } catch (err) {
-      addToast(err instanceof Error ? err.message : 'Network error');
-      throw err;
-    } finally {
-      inFlightMutations.delete(key);
-      activeRequests--;
-      notify();
-    }
   }
+  activeRequests++;
+  notify();
 
-  return fetch(url, options);
+  try {
+    const res = await fetch(url, options);
+    if (!res.ok) {
+      const cloned = res.clone();
+      try {
+        const data = await cloned.json();
+        addToast(data.error || `Request failed (${res.status})`);
+      } catch {
+        addToast(`Request failed (${res.status})`);
+      }
+    }
+    return res;
+  } catch (err) {
+    addToast(err instanceof Error ? err.message : 'Network error');
+    throw err;
+  } finally {
+    if (key !== null) inFlightMutations.delete(key);
+    activeRequests--;
+    notify();
+  }
 }
