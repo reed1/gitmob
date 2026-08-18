@@ -111,6 +111,9 @@ export default function Home() {
       if (a.hasPendingMessage !== b.hasPendingMessage) {
         return a.hasPendingMessage ? -1 : 1;
       }
+      if (a.editing !== b.editing) {
+        return a.editing ? -1 : 1;
+      }
       return a.id.localeCompare(b.id);
     });
 
