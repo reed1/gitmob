@@ -27,7 +27,7 @@ export function CLIView({ projectPath }: { projectPath: string }) {
     const data = await res.json();
     setOutput(data.output);
 
-    if (data.status === 'completed') {
+    if (data.status !== 'running') {
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current);
         pollIntervalRef.current = null;

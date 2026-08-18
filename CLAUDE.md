@@ -10,7 +10,7 @@ React 19, Next.js 16, TypeScript, Tailwind CSS 4, simple-git
 
 - `/src/lib` - Core logic (git.ts, run.ts, projects.ts, files.ts)
 - `/src/app/api` - API routes (projects, cli jobs, dooit todos)
-- `/src/app/[projectId]/components` - Project views (FileBrowser, ChangesView, CommitView, RunView, CLIView, DooitView, ClaudeView, SudoView)
+- `/src/app/[projectId]/components` - Project views (FileBrowser, ChangesView, CommitView, RunView, CLIView, DooitView, ClaudeView, PushView, SudoView)
 
 ## Development
 
@@ -38,5 +38,7 @@ All PNGs/ICO are generated from `assets/icon.svg` via `assets/gen-icons.sh`; edi
   worktrees open on the desktop — see [docs/cli-integrations.md](docs/cli-integrations.md).
   A worktree project carries `canonicalId` and `worktreeName` as fields, published by
   rworkspaces: how an id encodes them is rworkspaces' business, and nothing here parses one.
-- CLI commands run as detached processes, output to `~/.local/share/gitmob/cli-jobs/{jobId}.log`
+- CLI commands and deploys run as detached processes through `src/lib/cli-jobs.ts`, output to
+  `~/.local/share/gitmob/cli-jobs/{jobId}.log` — they outlive the request and the tab that
+  started them
 - Per-project state (sudo, runs, desktop sessions) belongs to the CLI that owns it — `pt`, `rv`, `claudex`. Shell out to those commands and surface their failures; never read their caches or redo their lookups here. Contracts in [docs/cli-integrations.md](docs/cli-integrations.md).

@@ -50,6 +50,31 @@ needs no telling: the app watches its file and reloads.
 
 Notes are keyed by the canonical id — they belong to the repo, as the dooit todos do.
 
+## Push — `pt`
+
+`src/lib/push.ts` and `src/lib/push-command.ts`, read by the Push tab.
+
+- `pt push config`, with cwd set to the project — the pick-list: the servers with their ssh
+  hosts, the targets pt discovers from the `push-*` tags in the project's ansible playbooks, the
+  `push_scope` keys, and which servers a push with none named would go to. A word rather than a
+  `--json` flag, since it answers a different question than a push does.
+- `pt push [server...] [target...] [scope N]` — the deploy: `git push`, then
+  `ansible-playbook` limited to those servers with the matching tags.
+
+Nothing here reads the ansible tree or repeats pt's default-server rule. The argument line is the
+only thing this app builds, and it lives in `push-command.ts` — pure, so the tab can preview the
+exact command before running it and the route can check a selection against the same pick-list.
+
+A deploy outlives the request that started it, so it goes through the CLI job runner
+(`src/lib/cli-jobs.ts`) as a detached process logging to
+`~/.local/share/gitmob/cli-jobs/push-{projectId}.log`. The tab can be left and come back to a
+push still running. One job id per project means a new push replaces the last one's log, and a
+push already running is refused rather than raced.
+
+The tab shows nothing about sudo. Passwordless sudo is the Sudo tab's subject and a push does
+not depend on it — the playbooks carry their own `ansible_become_pass` — so putting it on the
+server chips only suggested a prerequisite that is not one.
+
 ## Sudo — `pt`
 
 `src/lib/sudo.ts`, read by the Sudo tab and the project list.

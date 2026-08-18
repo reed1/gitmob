@@ -11,6 +11,7 @@ import { CLIView } from './components/CLIView';
 import { DooitView } from './components/DooitView';
 import { PinboardView } from './components/PinboardView';
 import { ClaudeView } from './components/ClaudeView';
+import { PushView } from './components/PushView';
 import { SudoView } from './components/SudoView';
 import ProjectContextMenu from '../ProjectContextMenu';
 import { useAutoRefresh } from '../../lib/use-auto-refresh';
@@ -24,6 +25,7 @@ const tabs = [
   { id: 'cli', label: 'CLI' },
   { id: 'run', label: 'Run' },
   { id: 'claude', label: 'Claude' },
+  { id: 'push', label: 'Push' },
   { id: 'sudo', label: 'Sudo' },
 ] as const;
 
@@ -118,7 +120,8 @@ export default function ProjectPage() {
   }
 
   const hasPushTargets = Object.keys(project?.push ?? {}).length > 0;
-  const visibleTabs = tabs.filter((t) => t.id !== 'sudo' || hasPushTargets);
+  const pushTabs = new Set<string>(['push', 'sudo']);
+  const visibleTabs = tabs.filter((t) => !pushTabs.has(t.id) || hasPushTargets);
 
   return (
     <div className="h-dvh bg-background flex flex-col">
@@ -282,6 +285,7 @@ export default function ProjectPage() {
         {tab === 'dooit' && project && (
           <DooitView projectId={project.canonicalId} />
         )}
+        {tab === 'push' && <PushView projectId={projectId} />}
         {tab === 'sudo' && <SudoView projectId={projectId} />}
       </main>
     </div>
