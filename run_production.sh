@@ -1,7 +1,7 @@
 #!/bin/bash
 cd "$(dirname "$0")"
 
-export GITMOB_PROD=1
+export GITMOB_DIST_DIR=".next-prod"
 
 CACHE_DIR="$HOME/.cache/rlocal/gitmob"
 CACHE_FILE="$CACHE_DIR/build_sha"
@@ -10,7 +10,7 @@ mkdir -p "$CACHE_DIR"
 
 CURRENT_SHA=$(git rev-parse HEAD)
 CACHED_SHA=$(cat "$CACHE_FILE" 2>/dev/null || echo "")
-BUILD_DIR=".next-prod"
+BUILD_DIR="$GITMOB_DIST_DIR"
 
 if [ "$CURRENT_SHA" != "$CACHED_SHA" ] || [ ! -f "$BUILD_DIR/BUILD_ID" ]; then
     echo "Building (sha: $CURRENT_SHA)..."

@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:rv": "GITMOB_DIST_DIR=.next-dev next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
