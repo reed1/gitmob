@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useAutoRefresh } from '../../../lib/use-auto-refresh';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { GitStatus } from '../types';
 import { apiFetch } from '../../../lib/api';
@@ -21,8 +22,12 @@ export function ChangesView({
   const selectedFile = searchParams.get('file');
   const isStaged = searchParams.get('staged') === '1';
   const isUntracked = searchParams.get('untracked') === '1';
+  const diffKey = `${selectedFile}:${isStaged}:${isUntracked}`;
   const [diff, setDiff] = useState<string>('');
-  const [isFullDiff, setIsFullDiff] = useState(false);
+  // Keyed by the file it was turned on for, so opening another file drops back
+  // to the contextual diff.
+  const [fullDiffKey, setFullDiffKey] = useState<string | null>(null);
+  const isFullDiff = fullDiffKey === diffKey;
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -43,19 +48,20 @@ export function ChangesView({
 
   const closeFile = () => router.back();
 
-  useEffect(() => {
-    setIsFullDiff(false);
-  }, [selectedFile, isStaged, isUntracked]);
-
-  useEffect(() => {
-    if (selectedFile) {
-      if (isUntracked) {
-        loadUntrackedDiff(selectedFile);
-      } else {
-        loadDiff(selectedFile, isStaged, isFullDiff);
-      }
+  const loadDiff = useCallback(async () => {
+    if (!selectedFile) return;
+    const params = new URLSearchParams({ action: 'diff', file: selectedFile });
+    if (isUntracked) params.set('untracked', 'true');
+    else {
+      params.set('staged', String(isStaged));
+      params.set('full', String(isFullDiff));
     }
-  }, [selectedFile, isStaged, isUntracked, isFullDiff, projectId]);
+    const res = await fetch(`/api/projects/${projectId}/git?${params}`);
+    const data = await res.json();
+    setDiff(data.diff);
+  }, [projectId, selectedFile, isStaged, isUntracked, isFullDiff]);
+
+  useAutoRefresh(loadDiff);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -100,26 +106,6 @@ export function ChangesView({
     const file = allFiles[index];
     setMenuOpen(false);
     openFile(file.path, file.isStaged, file.isUntracked, true);
-  };
-
-  const loadDiff = async (
-    file: string,
-    staged: boolean,
-    full: boolean = false
-  ) => {
-    const res = await fetch(
-      `/api/projects/${projectId}/git?action=diff&file=${encodeURIComponent(file)}&staged=${staged}&full=${full}`
-    );
-    const data = await res.json();
-    setDiff(data.diff);
-  };
-
-  const loadUntrackedDiff = async (file: string) => {
-    const res = await fetch(
-      `/api/projects/${projectId}/git?action=diff&file=${encodeURIComponent(file)}&untracked=true`
-    );
-    const data = await res.json();
-    setDiff(data.diff);
   };
 
   const handleAction = async (action: string, file: string) => {
@@ -195,7 +181,7 @@ export function ChangesView({
                   {!isUntracked && (
                     <button
                       onClick={() => {
-                        setIsFullDiff(!isFullDiff);
+                        setFullDiffKey(isFullDiff ? null : diffKey);
                         setMenuOpen(false);
                       }}
                       className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 active:bg-foreground/15"

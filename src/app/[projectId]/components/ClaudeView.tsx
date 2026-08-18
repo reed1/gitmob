@@ -1,9 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { DesktopScreenView } from './DesktopScreenView';
 import { DesktopSessions } from './DesktopSessions';
+import { useAutoRefresh } from '../../../lib/use-auto-refresh';
 
 export interface DesktopSession {
   windowId: string;
@@ -42,12 +43,7 @@ export function ClaudeView({
     }
   }, [projectId]);
 
-  useEffect(() => {
-    fetchSessions();
-    if (windowParam) return;
-    const interval = setInterval(fetchSessions, 5000);
-    return () => clearInterval(interval);
-  }, [fetchSessions, windowParam]);
+  useAutoRefresh(fetchSessions, windowParam ? undefined : 5000);
 
   const openScreen = (windowId: string) => {
     router.push(

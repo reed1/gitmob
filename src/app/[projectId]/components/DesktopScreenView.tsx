@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { SendKeysModal, SendTextModal } from './DesktopSendModals';
+import { useAutoRefresh } from '../../../lib/use-auto-refresh';
 
 export function DesktopScreenView({
   projectId,
@@ -38,11 +39,7 @@ export function DesktopScreenView({
     setLoading(false);
   }, [projectId, windowId]);
 
-  useEffect(() => {
-    fetchScreen();
-    const interval = setInterval(fetchScreen, 3000);
-    return () => clearInterval(interval);
-  }, [fetchScreen]);
+  useAutoRefresh(fetchScreen, 3000);
 
   // Only on the way in: the prompt sits at the bottom, but a poll must not yank the view
   // back down while the screen is being read.

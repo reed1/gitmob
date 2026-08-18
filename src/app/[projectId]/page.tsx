@@ -13,6 +13,7 @@ import { PinboardView } from './components/PinboardView';
 import { ClaudeView } from './components/ClaudeView';
 import { SudoView } from './components/SudoView';
 import ProjectContextMenu from '../ProjectContextMenu';
+import { useAutoRefresh } from '../../lib/use-auto-refresh';
 
 const tabs = [
   { id: 'pinboard', label: 'Pinboard' },
@@ -100,12 +101,13 @@ export default function ProjectPage() {
     setStatus(await res.json());
   }, [projectId]);
 
-  useEffect(() => {
-    if (tab === 'changes') {
-      setStatus(null);
-      refreshStatus();
-    }
+  const reloadChanges = useCallback(async () => {
+    if (tab !== 'changes') return;
+    setStatus(null);
+    await refreshStatus();
   }, [tab, refreshStatus]);
+
+  useAutoRefresh(reloadChanges);
 
   if (loading) {
     return (

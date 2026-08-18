@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { apiFetch } from '../../../lib/api';
 import { RunLogView } from './RunLogView';
+import { useAutoRefresh } from '../../../lib/use-auto-refresh';
 
 interface RunInfo {
   name: string;
@@ -43,11 +44,7 @@ export function RunView({
     setLoading(false);
   }, [projectId]);
 
-  useEffect(() => {
-    fetchStatus();
-    const interval = setInterval(fetchStatus, 5000);
-    return () => clearInterval(interval);
-  }, [fetchStatus]);
+  useAutoRefresh(fetchStatus, 5000);
 
   useEffect(() => {
     fetch(`/api/projects/${projectId}/upmon`)

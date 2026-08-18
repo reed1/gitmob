@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { apiFetch } from '../../../lib/api';
+import { useAutoRefresh } from '../../../lib/use-auto-refresh';
 
 interface Note {
   id: number;
@@ -33,9 +34,7 @@ export function PinboardView({ projectId }: { projectId: string }) {
     setLoading(false);
   }, [projectId]);
 
-  useEffect(() => {
-    fetchNotes();
-  }, [fetchNotes]);
+  useAutoRefresh(fetchNotes);
 
   const openAddModal = () => {
     setModalMode('add');

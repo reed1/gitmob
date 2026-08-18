@@ -10,7 +10,6 @@ export function CLIView({ projectPath }: { projectPath: string }) {
   const [duration, setDuration] = useState<number | null>(null);
   const [notify, setNotify] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [jobId, setJobId] = useState<string | null>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -36,7 +35,6 @@ export function CLIView({ projectPath }: { projectPath: string }) {
       setExitCode(data.exitCode);
       setDuration(data.duration);
       setLoading(false);
-      setJobId(null);
     }
   };
 
@@ -53,7 +51,6 @@ export function CLIView({ projectPath }: { projectPath: string }) {
       body: JSON.stringify({ command, cwd: projectPath, notify }),
     });
     const data = await res.json();
-    setJobId(data.jobId);
 
     pollJob(data.jobId);
     pollIntervalRef.current = setInterval(() => pollJob(data.jobId), 500);

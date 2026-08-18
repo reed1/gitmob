@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import ProjectCard from './ProjectCard';
 import UsagePanel from './UsagePanel';
 import { ClaudeUsage, Project } from './types';
 import { addToast } from '../lib/api';
 import { useOutsideClick } from '../lib/use-outside-click';
+import { useAutoRefresh } from '../lib/use-auto-refresh';
 
 const RESUME_REFRESH_THRESHOLD_MS = 10000;
 
@@ -54,7 +55,7 @@ export default function Home() {
 
   useOutsideClick(menuOpen, menuRef, () => setMenuOpen(false));
 
-  function refreshProjects() {
+  const refreshProjects = useCallback(() => {
     setRefreshing(true);
     fetch('/api/projects')
       .then(async (res) => {
@@ -73,11 +74,11 @@ export default function Home() {
         setLoading(false);
         setRefreshing(false);
       });
-  }
+  }, []);
+
+  useAutoRefresh(refreshProjects);
 
   useEffect(() => {
-    refreshProjects();
-
     let hiddenAt = 0;
     function onVisibilityChange() {
       if (document.visibilityState === 'hidden') {
@@ -98,7 +99,7 @@ export default function Home() {
     return () => {
       document.removeEventListener('visibilitychange', onVisibilityChange);
     };
-  }, []);
+  }, [refreshProjects]);
 
   const filtered = projects
     .filter(

@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { apiFetch } from '../../../lib/api';
+import { useAutoRefresh } from '../../../lib/use-auto-refresh';
 
 interface Todo {
   id: number;
@@ -59,15 +60,8 @@ export function DooitView({ projectId }: { projectId: string }) {
     setTodosLoading(false);
   }, [projectId, selectedWorkspace]);
 
-  useEffect(() => {
-    fetchWorkspaces();
-  }, [fetchWorkspaces]);
-
-  useEffect(() => {
-    if (selectedWorkspace !== null) {
-      fetchTodos();
-    }
-  }, [selectedWorkspace, fetchTodos]);
+  useAutoRefresh(fetchWorkspaces);
+  useAutoRefresh(fetchTodos);
 
   const addWorkspace = async () => {
     if (!workspaceText.trim()) return;

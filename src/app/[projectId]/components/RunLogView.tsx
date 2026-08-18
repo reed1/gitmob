@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useAutoRefresh } from '../../../lib/use-auto-refresh';
 
 export function RunLogView({
   projectId,
@@ -27,9 +28,7 @@ export function RunLogView({
     setLoading(false);
   }, [projectId, runName]);
 
-  useEffect(() => {
-    fetchLog();
-  }, [fetchLog]);
+  useAutoRefresh(fetchLog);
 
   useEffect(() => {
     const el = preRef.current;
