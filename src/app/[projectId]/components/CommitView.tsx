@@ -182,17 +182,26 @@ export function CommitView({
           placeholder="Body (optional)..."
           className="mt-2 w-full p-3 bg-foreground/5 border border-foreground/10 rounded-lg text-sm resize-none h-32"
         />
-        <button
-          onClick={() =>
-            handleAction('commit', {
-              message: joinMessage(commitTitle, commitBody),
-            })
-          }
-          disabled={!commitTitle.trim()}
-          className="mt-2 w-full py-2.5 text-sm bg-foreground text-background font-medium rounded-lg active:opacity-80 disabled:bg-foreground/10 disabled:text-foreground/40"
-        >
-          Commit
-        </button>
+        <div className="mt-2 grid grid-cols-10 gap-2">
+          <button
+            onClick={() => setCommitBody('')}
+            disabled={!commitBody.trim()}
+            className="col-span-3 py-2.5 text-sm font-medium bg-foreground/10 rounded-lg active:opacity-80 disabled:opacity-30"
+          >
+            Clear Body
+          </button>
+          <button
+            onClick={() =>
+              handleAction('commit', {
+                message: joinMessage(commitTitle, commitBody),
+              })
+            }
+            disabled={!commitTitle.trim()}
+            className="col-span-7 py-2.5 text-sm bg-foreground text-background font-medium rounded-lg active:opacity-80 disabled:bg-foreground/10 disabled:text-foreground/40"
+          >
+            Commit
+          </button>
+        </div>
       </section>
 
       <RecentCommits key={historyKey} projectId={projectId} />
