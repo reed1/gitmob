@@ -9,6 +9,7 @@ import {
   DEFAULT_CLAUDE_MODE,
 } from '../lib/desktop-modes';
 import { useOutsideClick } from '../lib/use-outside-click';
+import { openExternal } from '../lib/open-external';
 
 const DOOIT_DOMAIN = process.env.NEXT_PUBLIC_DOOIT_DOMAIN;
 
@@ -82,7 +83,7 @@ export default function ProjectContextMenu({ project }: Props) {
               onClick={() => {
                 setMenuOpen(false);
                 if (project.githubUrl) {
-                  window.open(project.githubUrl, '_blank');
+                  openExternal(project.githubUrl);
                 }
               }}
               disabled={!project.githubUrl}
@@ -108,9 +109,8 @@ export default function ProjectContextMenu({ project }: Props) {
               onClick={() => {
                 setMenuOpen(false);
                 if (DOOIT_DOMAIN) {
-                  window.open(
-                    `${DOOIT_DOMAIN}/frontend/dooit/${project.canonicalId}`,
-                    '_blank'
+                  openExternal(
+                    `${DOOIT_DOMAIN}/frontend/dooit/${project.canonicalId}`
                   );
                 }
               }}
@@ -196,7 +196,7 @@ export default function ProjectContextMenu({ project }: Props) {
                     <button
                       key={key}
                       onClick={() => {
-                        window.open(url, '_blank');
+                        openExternal(url);
                         setUrlModalOpen(false);
                       }}
                       className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { apiFetch } from '../../../lib/api';
 import { RunLogView } from './RunLogView';
 import { useAutoRefresh } from '../../../lib/use-auto-refresh';
+import { openExternal } from '../../../lib/open-external';
 
 interface RunInfo {
   name: string;
@@ -190,7 +191,7 @@ export function RunView({
               return (
                 <button
                   key={key}
-                  onClick={() => window.open(url, '_blank')}
+                  onClick={() => openExternal(url)}
                   className="flex items-center gap-3 w-full px-3 py-2 text-sm text-left bg-foreground/5 border border-foreground/10 rounded-lg active:opacity-80"
                 >
                   <div
