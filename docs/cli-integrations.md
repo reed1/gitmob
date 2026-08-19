@@ -33,10 +33,13 @@ and its servers, so the project list reads them under `canonicalId`, as do the d
 
 `src/lib/pinboard.ts`, read and written by the Pinboard tab.
 
-- `rv pinboard list <projectId> --json` — the notes on that project's board.
-- `rv pinboard add <projectId> <text>` — adds one.
-- `rv pinboard edit <projectId> <noteId> <text>` — replaces its text.
-- `rv pinboard delete <projectId> <noteId>` — removes it.
+- `rv pinboard list --project-id <projectId> --json` — the notes on that project's board.
+- `rv pinboard add --project-id <projectId> <text>` — adds one.
+- `rv pinboard edit --project-id <projectId> <noteId> <text>` — replaces its text.
+- `rv pinboard delete --project-id <projectId> <noteId>` — removes it.
+
+The project is always a flag: rv defaults it to whatever project the working directory sits
+in, which for a server running out of gitmob's own checkout is never the one we mean.
 
 Nothing here touches the YAML. The board files are a repo of their own —
 `reed1/pinboard-data`, rebased hourly by `pinboard-pull.timer` — and `rv pinboard` commits

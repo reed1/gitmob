@@ -39,7 +39,7 @@ function runRvPinboard(args: string[]): Promise<string> {
 export async function getPinboardNotes(
   projectId: string
 ): Promise<PinboardNote[]> {
-  const stdout = await runRvPinboard(['list', projectId, '--json']);
+  const stdout = await runRvPinboard(['list', '--project-id', projectId, '--json']);
   const notes: RvNote[] = JSON.parse(stdout);
 
   return notes.map((note) => ({
@@ -54,7 +54,7 @@ export async function addPinboardNote(
   projectId: string,
   text: string
 ): Promise<void> {
-  await runRvPinboard(['add', projectId, text]);
+  await runRvPinboard(['add', '--project-id', projectId, text]);
 }
 
 export async function editPinboardNote(
@@ -62,12 +62,12 @@ export async function editPinboardNote(
   noteId: number,
   text: string
 ): Promise<void> {
-  await runRvPinboard(['edit', projectId, String(noteId), text]);
+  await runRvPinboard(['edit', '--project-id', projectId, String(noteId), text]);
 }
 
 export async function deletePinboardNote(
   projectId: string,
   noteId: number
 ): Promise<void> {
-  await runRvPinboard(['delete', projectId, String(noteId)]);
+  await runRvPinboard(['delete', '--project-id', projectId, String(noteId)]);
 }
