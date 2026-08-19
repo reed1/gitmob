@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { apiFetch } from '../../../lib/api';
+import { RecentCommits } from './RecentCommits';
 
 function ArrowIcon({ direction }: { direction: 'up' | 'down' }) {
   return (
@@ -53,6 +54,8 @@ export function CommitView({
 }) {
   const [shortenVariants, setShortenVariants] = useState<string[]>([]);
   const [showShortenModal, setShowShortenModal] = useState(false);
+  // Bumped after commit/pull/push, to remount the commit list with fresh data.
+  const [historyKey, setHistoryKey] = useState(0);
 
   useEffect(() => {
     if (pendingLoaded) return;
@@ -93,6 +96,7 @@ export function CommitView({
       body: JSON.stringify({ action, ...body }),
     });
     if (!res.ok) return;
+    setHistoryKey((key) => key + 1);
     if (action === 'commit') {
       setCommitTitle('');
       setCommitBody('');
@@ -190,6 +194,8 @@ export function CommitView({
           Commit
         </button>
       </section>
+
+      <RecentCommits key={historyKey} projectId={projectId} />
 
       <section>
         <h3 className="text-sm font-medium text-foreground/60 mb-3">Sync</h3>

@@ -204,6 +204,67 @@ export async function getLog(cwd: string, count: number = 10): Promise<string> {
     .join('\n');
 }
 
+export interface CommitFileStat {
+  path: string;
+  insertions: number;
+  deletions: number;
+}
+
+export interface CommitEntry {
+  hash: string;
+  date: string;
+  author: string;
+  title: string;
+  body: string;
+  files: CommitFileStat[];
+}
+
+/**
+ * Recent commits with their per-file line counts. Fields are separated by \x1f
+ * and commits by \x1e so a multi-line body stays in one field.
+ */
+export async function getRecentCommits(
+  cwd: string,
+  count: number = 5
+): Promise<CommitEntry[]> {
+  const git = getGit(cwd);
+  const output = await git.raw([
+    'log',
+    `-n${count}`,
+    '--numstat',
+    '--no-renames',
+    '--format=\x1e%H\x1f%aI\x1f%an\x1f%B\x1f',
+  ]);
+
+  return output
+    .split('\x1e')
+    .filter((chunk) => chunk.trim())
+    .map((chunk) => {
+      const [hash, date, author, message, numstat] = chunk.split('\x1f');
+      const [title, ...rest] = message.trim().split('\n');
+      const files = (numstat || '')
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line) => {
+          const [insertions, deletions, path] = line.split('\t');
+          return {
+            path,
+            insertions: insertions === '-' ? 0 : parseInt(insertions, 10),
+            deletions: deletions === '-' ? 0 : parseInt(deletions, 10),
+          };
+        });
+      return {
+        hash,
+        date,
+        author,
+        title: title.trim(),
+        body: rest.join('\n').trim(),
+        files,
+      };
+    });
+}
+
 export interface RepoSummary {
   branch: string;
   hasChanges: boolean;

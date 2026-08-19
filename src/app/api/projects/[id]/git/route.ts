@@ -7,6 +7,7 @@ import {
   getUntrackedFileDiff,
   getBranch,
   getLog,
+  getRecentCommits,
   getDiffSummary,
   shortenCommitMessage,
   stageFile,
@@ -55,6 +56,12 @@ export async function GET(
     case 'log': {
       const count = parseInt(searchParams.get('count') || '10', 10);
       return NextResponse.json({ log: await getLog(project.path, count) });
+    }
+    case 'commits': {
+      const count = parseInt(searchParams.get('count') || '5', 10);
+      return NextResponse.json({
+        commits: await getRecentCommits(project.path, count),
+      });
     }
     case 'diff-summary':
       return NextResponse.json({ summary: getDiffSummary(project.path) });
