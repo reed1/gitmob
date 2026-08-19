@@ -50,7 +50,8 @@ export default function ProjectPage() {
   const [status, setStatus] = useState<GitStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [wordWrap, setWordWrap] = useState(true);
-  const [commitMessage, setCommitMessage] = useState('');
+  const [commitTitle, setCommitTitle] = useState('');
+  const [commitBody, setCommitBody] = useState('');
   const [pendingSource, setPendingSource] = useState<string | null>(null);
   const [pendingLoaded, setPendingLoaded] = useState(false);
 
@@ -265,8 +266,10 @@ export default function ProjectPage() {
           <CommitView
             projectId={projectId}
             onRefresh={refreshStatus}
-            commitMessage={commitMessage}
-            setCommitMessage={setCommitMessage}
+            commitTitle={commitTitle}
+            setCommitTitle={setCommitTitle}
+            commitBody={commitBody}
+            setCommitBody={setCommitBody}
             pendingSource={pendingSource}
             setPendingSource={setPendingSource}
             pendingLoaded={pendingLoaded}

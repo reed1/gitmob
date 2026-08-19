@@ -19,11 +19,22 @@ function ArrowIcon({ direction }: { direction: 'up' | 'down' }) {
   );
 }
 
+function splitMessage(message: string): { title: string; body: string } {
+  const [subject, ...rest] = message.split('\n');
+  return { title: subject.trim(), body: rest.join('\n').trim() };
+}
+
+function joinMessage(title: string, body: string): string {
+  return body.trim() ? `${title.trim()}\n\n${body.trim()}` : title.trim();
+}
+
 export function CommitView({
   projectId,
   onRefresh,
-  commitMessage,
-  setCommitMessage,
+  commitTitle,
+  setCommitTitle,
+  commitBody,
+  setCommitBody,
   pendingSource,
   setPendingSource,
   pendingLoaded,
@@ -31,8 +42,10 @@ export function CommitView({
 }: {
   projectId: string;
   onRefresh: () => void;
-  commitMessage: string;
-  setCommitMessage: (msg: string) => void;
+  commitTitle: string;
+  setCommitTitle: (title: string) => void;
+  commitBody: string;
+  setCommitBody: (body: string) => void;
   pendingSource: string | null;
   setPendingSource: (source: string | null) => void;
   pendingLoaded: boolean;
@@ -40,7 +53,6 @@ export function CommitView({
 }) {
   const [shortenVariants, setShortenVariants] = useState<string[]>([]);
   const [showShortenModal, setShowShortenModal] = useState(false);
-  const [pendingShortOptions, setPendingShortOptions] = useState<string[]>([]);
 
   useEffect(() => {
     if (pendingLoaded) return;
@@ -48,9 +60,10 @@ export function CommitView({
       const res = await fetch(`/api/projects/${projectId}/pending-message`);
       const data = await res.json();
       if (data.pending) {
-        setCommitMessage(data.pending.message);
+        const { title, body } = splitMessage(data.pending.message);
+        setCommitTitle(title);
+        setCommitBody(body);
         setPendingSource(data.pending.source);
-        setPendingShortOptions(data.pending.short_options ?? []);
       }
       setPendingLoaded(true);
     }
@@ -58,7 +71,8 @@ export function CommitView({
   }, [
     projectId,
     pendingLoaded,
-    setCommitMessage,
+    setCommitTitle,
+    setCommitBody,
     setPendingSource,
     setPendingLoaded,
   ]);
@@ -67,9 +81,9 @@ export function CommitView({
     await apiFetch(`/api/projects/${projectId}/pending-message`, {
       method: 'DELETE',
     });
-    setCommitMessage('');
+    setCommitTitle('');
+    setCommitBody('');
     setPendingSource(null);
-    setPendingShortOptions([]);
   };
 
   const handleAction = async (action: string, body?: object) => {
@@ -80,13 +94,13 @@ export function CommitView({
     });
     if (!res.ok) return;
     if (action === 'commit') {
-      setCommitMessage('');
+      setCommitTitle('');
+      setCommitBody('');
       if (pendingSource) {
         await apiFetch(`/api/projects/${projectId}/pending-message`, {
           method: 'DELETE',
         });
         setPendingSource(null);
-        setPendingShortOptions([]);
       }
     }
     onRefresh();
@@ -98,18 +112,15 @@ export function CommitView({
     );
     const data = await res.json();
     if (data.summary) {
-      setCommitMessage(data.summary);
+      const { title, body } = splitMessage(data.summary);
+      setCommitTitle(title);
+      setCommitBody(body);
     }
   };
 
-  const shortenCommitMessage = async () => {
-    if (pendingSource && pendingShortOptions.length > 0) {
-      setShortenVariants(pendingShortOptions);
-      setShowShortenModal(true);
-      return;
-    }
+  const shortenCommitTitle = async () => {
     const res = await apiFetch(
-      `/api/projects/${projectId}/git?action=shorten-message&message=${encodeURIComponent(commitMessage)}`
+      `/api/projects/${projectId}/git?action=shorten-message&message=${encodeURIComponent(commitTitle)}`
     );
     const data = await res.json();
     if (data.variants) {
@@ -140,15 +151,15 @@ export function CommitView({
               </button>
             )}
             <button
-              onClick={shortenCommitMessage}
-              disabled={commitMessage.trim() === ''}
+              onClick={shortenCommitTitle}
+              disabled={commitTitle.trim() === ''}
               className="px-2 py-1 text-xs bg-foreground/10 rounded active:opacity-80 disabled:opacity-30"
             >
               Shorten
             </button>
             <button
               onClick={generateCommitMessage}
-              disabled={commitMessage.trim() !== ''}
+              disabled={commitTitle.trim() !== '' || commitBody.trim() !== ''}
               className="px-2 py-1 text-xs bg-foreground/10 rounded active:opacity-80 disabled:opacity-30"
             >
               Generate
@@ -156,14 +167,24 @@ export function CommitView({
           </div>
         </div>
         <textarea
-          value={commitMessage}
-          onChange={(e) => setCommitMessage(e.target.value)}
-          placeholder="Commit message..."
-          className="w-full p-3 bg-foreground/5 border border-foreground/10 rounded-lg text-sm resize-none h-24"
+          value={commitTitle}
+          onChange={(e) => setCommitTitle(e.target.value.replace(/\n/g, ' '))}
+          placeholder="Title..."
+          className="w-full p-3 bg-foreground/5 border border-foreground/10 rounded-lg text-sm resize-none h-16"
+        />
+        <textarea
+          value={commitBody}
+          onChange={(e) => setCommitBody(e.target.value)}
+          placeholder="Body (optional)..."
+          className="mt-2 w-full p-3 bg-foreground/5 border border-foreground/10 rounded-lg text-sm resize-none h-32"
         />
         <button
-          onClick={() => handleAction('commit', { message: commitMessage })}
-          disabled={!commitMessage.trim()}
+          onClick={() =>
+            handleAction('commit', {
+              message: joinMessage(commitTitle, commitBody),
+            })
+          }
+          disabled={!commitTitle.trim()}
           className="mt-2 w-full py-2.5 text-sm bg-foreground text-background font-medium rounded-lg active:opacity-80 disabled:bg-foreground/10 disabled:text-foreground/40"
         >
           Commit
@@ -199,14 +220,14 @@ export function CommitView({
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="bg-background border border-foreground/20 rounded-lg shadow-xl max-w-lg w-full">
               <div className="px-4 py-3 border-b border-foreground/10">
-                <h3 className="font-medium">Select shortened message</h3>
+                <h3 className="font-medium">Select shortened title</h3>
               </div>
               <div className="py-2 space-y-1">
                 {shortenVariants.map((variant, idx) => (
                   <button
                     key={idx}
                     onClick={() => {
-                      setCommitMessage(variant);
+                      setCommitTitle(variant);
                       setShowShortenModal(false);
                     }}
                     className="block w-full px-4 py-3 text-sm text-left hover:bg-foreground/10 whitespace-pre-wrap"
