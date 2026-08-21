@@ -24,7 +24,10 @@ export default function ProjectCard({
 
   return (
     <div
-      className={`p-4 rounded-lg border flex items-center gap-3 ${
+      onClick={() =>
+        router.push(`/${project.id}?tab=${getDefaultTab(project)}`)
+      }
+      className={`p-4 rounded-lg border flex items-center gap-3 cursor-pointer ${
         project.warnings.length > 0
           ? 'border-red-500/60 bg-red-500/15'
           : project.hasPendingMessage
@@ -36,12 +39,7 @@ export default function ProjectCard({
                 : 'border-foreground/10 bg-foreground/5'
       }`}
     >
-      <div
-        onClick={() =>
-          router.push(`/${project.id}?tab=${getDefaultTab(project)}`)
-        }
-        className="flex-1 min-w-0 cursor-pointer"
-      >
+      <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="font-medium">{project.id}</span>
           {project.claudeSessions > 0 && (

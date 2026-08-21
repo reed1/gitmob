@@ -41,7 +41,12 @@ export default function ProjectContextMenu({ project }: Props) {
 
   return (
     <>
-      <div className="relative" ref={menuRef}>
+      {/* The whole card navigates, so the menu keeps its own clicks to itself. */}
+      <div
+        className="relative"
+        ref={menuRef}
+        onClick={(e) => e.stopPropagation()}
+      >
         <button
           onClick={() => setMenuOpen(!menuOpen)}
           className="p-2 rounded-lg bg-foreground/10 active:bg-foreground/20 transition-colors"
