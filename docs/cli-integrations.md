@@ -97,9 +97,10 @@ Transient systemd user units named `rvp-{projectId}-{cmd}.service`, with logs re
 Note the asymmetry: starting is `rv run --mode systemd --project X --cmd Y`, while `stop`,
 `restart` and `status` are subcommands of `rv run`.
 
-`rv open <projectId>` is the other call, made by the session launch below: it switches the desktop
-to the project and opens its workspaces when they were closed. Whether the project was already
-open is rv's question to answer, so this app calls it unconditionally.
+`rv open <projectId> --focus-ide` is the other call, made by the session launch below: it switches
+the desktop to the project and opens its workspaces when they were closed. Whether the project was
+already open is rv's question to answer, so this app calls it unconditionally. `--focus-ide` leaves
+the IDE focused, which is what decides where the window `claudex kitty` spawns next lands.
 
 ## Desktop — `claudex`
 

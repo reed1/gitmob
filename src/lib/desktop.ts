@@ -63,8 +63,9 @@ function claudexDesktop(args: string[]): Promise<string> {
 /**
  * A new session is two commands. `rv open` puts the desktop on the project — switching to its
  * workspaces and opening them when they were closed — and `claudex kitty` then lands the Claude
- * window on whatever that left focused. `--detach` hands the window to i3 so it outlives this
- * server, and `/remote-control` is submitted for the Claude app to pick the session up.
+ * window on whatever that left focused, which `--focus-ide` makes the IDE, so the session opens
+ * beside it at full size. `--detach` hands the window to i3 so it outlives this server, and
+ * `/remote-control` is submitted for the Claude app to pick the session up.
  */
 export async function launchDesktopSession(
   projectId: string,
@@ -72,7 +73,7 @@ export async function launchDesktopSession(
   mode: ClaudeMode,
   name: string
 ): Promise<void> {
-  await run('rv', ['open', projectId], OPEN_TIMEOUT_MS);
+  await run('rv', ['open', projectId, '--focus-ide'], OPEN_TIMEOUT_MS);
   await run('claudex', [
     'kitty',
     '--detach',
