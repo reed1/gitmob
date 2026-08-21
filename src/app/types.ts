@@ -25,5 +25,7 @@ export interface Project {
   envCheckFailed: boolean;
   sudoEnabled: boolean;
   claudeSessions: number;
+  /** Warning messages rworkspaces is holding against this project. */
+  warnings: string[];
   githubUrl: string | null;
 }

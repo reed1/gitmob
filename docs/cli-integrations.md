@@ -13,6 +13,12 @@ lookups here puts two sources of truth on the same state.
   and path, so this app never takes an id apart to find out what it is looking at. This is
   also the only place a worktree project is announced: opening one on the desktop is what
   brings it into existence.
+- The same reply carries `warnings` — project id, warning id, message — which the project list
+  paints as a red card, as polybar paints them a red project name and a 🚨. What raises one
+  and when it clears is rworkspaces' business; this app only shows what it is holding. They
+  ride on this call rather than a second one, and the map sits beside `projects` rather than
+  inside each: a warning outlives its workspaces being closed, and this app lists projects that
+  are not open at all. Keyed by the id it was raised against, so a worktree has its own.
 
 A worktree project has no config of its own. It runs on the config of the project it is a
 checkout of, pointed at the path rworkspaces reports, with the `loc` url rewritten to carry

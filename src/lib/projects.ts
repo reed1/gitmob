@@ -2,7 +2,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 import { modifyUrlWithWorktree } from './worktree';
-import { OpenWorktree, getOpenWorktrees } from './workspaces';
+import { OpenWorktree, ProjectWarnings, getDesktopState } from './workspaces';
 
 const PROJECTS_FILE =
   process.env.PROJECTS_FILE ||
@@ -95,21 +95,29 @@ export async function getProject(id: string): Promise<Project | undefined> {
   const configured = getProjects().find((p) => p.id === id);
   if (configured) return configured;
 
-  const worktree = (await getOpenWorktrees()).find((w) => w.id === id);
+  const { worktrees } = await getDesktopState();
+  const worktree = worktrees.find((w) => w.id === id);
   return worktree && asWorktreeProject(worktree);
+}
+
+export interface ProjectList {
+  projects: Project[];
+  warnings: ProjectWarnings;
 }
 
 /**
  * The project list: everything configured, plus the worktrees open on the desktop. An open
  * worktree with no configured project behind it drops out here — there is nothing this app
- * could show for one.
+ * could show for one. The warnings come back on the same socket round trip the worktrees do,
+ * and cover every project rworkspaces holds one for, open on the desktop or not.
  */
-export async function getProjectsWithWorktrees(): Promise<Project[]> {
-  const worktrees = (await getOpenWorktrees())
+export async function getProjectsWithWorktrees(): Promise<ProjectList> {
+  const { worktrees, warnings } = await getDesktopState();
+  const worktreeProjects = worktrees
     .map(asWorktreeProject)
     .filter((project) => project !== undefined);
 
-  return [...getProjects(), ...worktrees];
+  return { projects: [...getProjects(), ...worktreeProjects], warnings };
 }
 
 export function expandPath(path: string): string {

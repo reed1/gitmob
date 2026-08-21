@@ -25,13 +25,15 @@ export default function ProjectCard({
   return (
     <div
       className={`p-4 rounded-lg border flex items-center gap-3 ${
-        project.hasPendingMessage
-          ? 'border-blue-500/50 bg-blue-500/10'
-          : project.editing
-            ? 'border-green-500/50 bg-green-500/10'
-            : isActive
-              ? 'border-foreground/30 bg-foreground/5'
-              : 'border-foreground/10 bg-foreground/5'
+        project.warnings.length > 0
+          ? 'border-red-500/60 bg-red-500/15'
+          : project.hasPendingMessage
+            ? 'border-blue-500/50 bg-blue-500/10'
+            : project.editing
+              ? 'border-green-500/50 bg-green-500/10'
+              : isActive
+                ? 'border-foreground/30 bg-foreground/5'
+                : 'border-foreground/10 bg-foreground/5'
       }`}
     >
       <div
@@ -138,6 +140,15 @@ export default function ProjectCard({
             </svg>
           )}
         </div>
+        {project.warnings.map((warning) => (
+          <div
+            key={warning}
+            className="mt-2 flex items-start gap-1.5 text-xs text-red-500"
+          >
+            <span aria-hidden>🚨</span>
+            <span>{warning}</span>
+          </div>
+        ))}
         {project.branch && (
           <div className="mt-2 flex flex-wrap gap-1">
             <span

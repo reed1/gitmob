@@ -59,15 +59,16 @@ async function processWithWorkers<T, R>(
 export async function GET() {
   // The sweeps below each survive their CLI being down, but the list itself cannot: a project
   // missing from it is indistinguishable from one that does not exist, so say so instead.
-  let projects;
+  let projectList;
   try {
-    projects = await getProjectsWithWorktrees();
+    projectList = await getProjectsWithWorktrees();
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Could not list projects' },
       { status: 500 }
     );
   }
+  const { projects, warnings } = projectList;
 
   const [
     allRunningProcesses,
@@ -138,6 +139,8 @@ export async function GET() {
     envCheckFailed: envCheckFailures[p.canonicalId] ?? false,
     sudoEnabled: sudoEnabled[p.canonicalId] ?? false,
     claudeSessions: desktopSessions[p.id] ?? 0,
+    // A warning is raised against the checkout it came from, so a worktree has its own.
+    warnings: Object.values(warnings[p.id] ?? {}),
     githubUrl: resultMap[p.id]?.githubUrl ?? null,
   }));
 

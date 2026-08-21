@@ -17,6 +17,15 @@ interface WorkspaceProject {
 
 interface WorkspaceState {
   projects: Record<string, WorkspaceProject>;
+  warnings: ProjectWarnings;
+}
+
+/** Project id -> warning id -> message. rworkspaces owns what raises one. */
+export type ProjectWarnings = Record<string, Record<string, string>>;
+
+export interface DesktopState {
+  worktrees: OpenWorktree[];
+  warnings: ProjectWarnings;
 }
 
 /**
@@ -43,14 +52,15 @@ function rwMsg(args: string[]): Promise<string> {
 
 /**
  * The worktree projects open on the desktop right now, each already telling us which project
- * it is a checkout of and where that checkout lives. This throws when rworkspaces is
- * unreachable rather than reporting an empty desktop, since the two are indistinguishable
- * from here and only one of them is worth knowing about.
+ * it is a checkout of and where that checkout lives, plus the warnings rworkspaces holds
+ * against any project. This throws when rworkspaces is unreachable rather than reporting an
+ * empty desktop, since the two are indistinguishable from here and only one of them is worth
+ * knowing about.
  */
-export async function getOpenWorktrees(): Promise<OpenWorktree[]> {
+export async function getDesktopState(): Promise<DesktopState> {
   const state: WorkspaceState = JSON.parse(await rwMsg(['get_state']));
 
-  return Object.values(state.projects)
+  const worktrees = Object.values(state.projects)
     .filter(
       (project) => project.active && project.worktree_name && project.path
     )
@@ -60,4 +70,6 @@ export async function getOpenWorktrees(): Promise<OpenWorktree[]> {
       worktreeName: project.worktree_name as string,
       path: project.path as string,
     }));
+
+  return { worktrees, warnings: state.warnings };
 }
