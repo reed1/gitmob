@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import Link from 'next/link';
 import ProjectCard from './ProjectCard';
 import UsagePanel from './UsagePanel';
 import { ClaudeUsage, Project } from './types';
@@ -221,6 +222,26 @@ export default function Home() {
               </button>
               {menuOpen && (
                 <div className="absolute right-0 top-full mt-1 z-20 bg-background border border-foreground/20 rounded-lg shadow-lg py-1 min-w-[180px]">
+                  <Link
+                    href="/files"
+                    onClick={() => setMenuOpen(false)}
+                    className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 flex items-center gap-2"
+                  >
+                    <svg
+                      className="w-4 h-4 text-foreground/60"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                      />
+                    </svg>
+                    Files
+                  </Link>
                   <button
                     onClick={async () => {
                       setMenuOpen(false);
