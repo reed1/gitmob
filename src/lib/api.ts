@@ -1,6 +1,6 @@
 type Listener = () => void;
 
-export type ToastVariant = 'error' | 'success';
+export type ToastVariant = 'error' | 'warning' | 'success';
 
 export interface Toast {
   id: number;
@@ -72,7 +72,11 @@ export async function apiFetch(
       const cloned = res.clone();
       try {
         const data = await cloned.json();
-        addToast(data.error || `Request failed (${res.status})`);
+        if (data.warning) {
+          addToast(data.warning, 'warning');
+        } else {
+          addToast(data.error || `Request failed (${res.status})`);
+        }
       } catch {
         addToast(`Request failed (${res.status})`);
       }

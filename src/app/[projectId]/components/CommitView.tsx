@@ -114,6 +114,7 @@ export function CommitView({
     const res = await apiFetch(
       `/api/projects/${projectId}/git?action=diff-summary`
     );
+    if (!res.ok) return;
     const data = await res.json();
     if (data.summary) {
       const { title, body } = splitMessage(data.summary);

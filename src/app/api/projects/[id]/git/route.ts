@@ -63,8 +63,16 @@ export async function GET(
         commits: await getRecentCommits(project.path, count),
       });
     }
-    case 'diff-summary':
+    case 'diff-summary': {
+      const stagedDiff = await getDiff(project.path, true);
+      if (!stagedDiff.trim()) {
+        return NextResponse.json(
+          { warning: 'Nothing staged to generate a commit message from' },
+          { status: 400 }
+        );
+      }
       return NextResponse.json({ summary: getDiffSummary(project.path) });
+    }
     case 'shorten-message': {
       const message = searchParams.get('message');
       if (!message) {

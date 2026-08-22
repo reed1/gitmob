@@ -6,6 +6,7 @@ import type { ToastVariant } from '../lib/api';
 
 const TOAST_STYLES: Record<ToastVariant, string> = {
   error: 'bg-red-600',
+  warning: 'bg-amber-600',
   success: 'bg-emerald-600',
 };
 
