@@ -147,7 +147,10 @@ reason.
 
 There is no session file on either side: every window on the list comes from claudex's own lookup,
 so a session this app never started is still listed, and one it started is still listed after it
-forgets.
+forgets. The window id is the whole handle — claudex reaches a window through the kitty socket the
+window itself carries, not through its session registry — so a session resumed into a window drives
+the same as a fresh one. `session_id` and `cwd` come from that registry and are the two fields that
+can be null on a live session; nothing here may treat a null as a session it cannot reach.
 
 ## Usage — `claudex usage`
 
