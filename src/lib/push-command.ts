@@ -26,6 +26,22 @@ export interface PushSelection {
   scope: string | null;
 }
 
+export interface PushScope {
+  files: string[];
+  /** The targets the changed files picked, each with the files that picked it. */
+  selected: Record<string, string[]>;
+}
+
+/** What pt says a selection would deploy: the servers and targets it resolves to. */
+export interface PushResolution {
+  servers: string[];
+  targets: string[];
+  limit: string;
+  tags: string;
+  /** null when not scoping. */
+  scope: PushScope | null;
+}
+
 export const SCOPE_PATTERN = /^\d+[hmd]?$/;
 
 export function buildPushArgv(selection: PushSelection): string[] {
@@ -34,6 +50,14 @@ export function buildPushArgv(selection: PushSelection): string[] {
   if (selection.scope === null) argv.push(...[...selection.targets].sort());
   else argv.push('scope', selection.scope);
   return argv;
+}
+
+/**
+ * The same push, asked rather than run: pt resolves the names into the deploy it would do.
+ * Under a scope the targets are pt's answer alone, so this is the only way to show them.
+ */
+export function buildResolveArgv(selection: PushSelection): string[] {
+  return [...buildPushArgv(selection), '-n', '--json'];
 }
 
 /** The reason this selection cannot be pushed, or null when it can. */

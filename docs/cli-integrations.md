@@ -32,7 +32,7 @@ it rather than showing a desktop with nothing open on it.
 The other CLIs speak these ids directly: `pt` reports one from a worktree cwd, `rv run`
 resolves and reports one, `rv open` opens one, and `claudex desktop` treats a worktree as the
 project it is.
-What is *not* per-worktree is sudo, env checks and monitored sites — those belong to the repo
+What is _not_ per-worktree is sudo, env checks and monitored sites — those belong to the repo
 and its servers, so the project list reads them under `canonicalId`, as do the dooit todos.
 
 ## Pinboard — `rv pinboard`
@@ -67,6 +67,9 @@ Notes are keyed by the canonical id — they belong to the repo, as the dooit to
   hosts, the targets pt discovers from the `push-*` tags in the project's ansible playbooks, the
   `push_scope` keys, and which servers a push with none named would go to. A word rather than a
   `--json` flag, since it answers a different question than a push does.
+- `pt push [server...] [target...] [scope N] -n --json`, when Push is tapped — the same push,
+  asked rather than run: the servers and targets it resolves to, and under a scope the changed
+  files and which target each one picked. The confirmation is built from that answer.
 - `pt push [server...] [target...] [scope N]` — the deploy: `git push`, then
   `ansible-playbook` limited to those servers with the matching tags.
 

@@ -6,6 +6,8 @@ import { useAutoRefresh } from '../../../lib/use-auto-refresh';
 import {
   buildPushArgv,
   PushConfig,
+  PushResolution,
+  PushScope,
   PushSelection,
   SCOPE_PATTERN,
 } from '../../../lib/push-command';
@@ -24,6 +26,16 @@ function toggle(list: string[], value: string): string[] {
   return list.includes(value)
     ? list.filter((v) => v !== value)
     : [...list, value];
+}
+
+function fileCount(n: number): string {
+  return `${n} changed file${n === 1 ? '' : 's'}`;
+}
+
+/** Why a resolved deploy has no target: only a scope can select none. */
+function nothingToPushReason(scope: PushScope): string {
+  if (scope.files.length === 0) return 'nothing changed in that scope.';
+  return `no target matched the ${fileCount(scope.files.length)}.`;
 }
 
 function formatSeconds(ms: number): string {
@@ -66,9 +78,15 @@ export function PushView({ projectId }: { projectId: string }) {
   const [scopeOn, setScopeOn] = useState(false);
   const [scopeValue, setScopeValue] = useState('1');
   const [notify, setNotify] = useState(true);
-  const [confirming, setConfirming] = useState(false);
+  /** The command line the open confirmation is about; a changed selection makes it stale. */
+  const [confirmingCommand, setConfirmingCommand] = useState<string | null>(
+    null
+  );
+  const [resolution, setResolution] = useState<PushResolution | null>(null);
+  const [resolveError, setResolveError] = useState<string | null>(null);
 
   const logRef = useRef<HTMLPreElement>(null);
+  const resolveRequest = useRef(0);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/projects/${projectId}/push`);
@@ -107,9 +125,35 @@ export function PushView({ projectId }: { projectId: string }) {
     targets,
     scope: scopeOn ? scopeValue : null,
   };
+  const commandLine = buildPushArgv(selection).join(' ');
+  // A confirmation stands on one resolved deploy, so editing the selection dismisses it
+  // rather than leaving pt's answer to a question nobody is asking any more on screen.
+  const confirming = confirmingCommand === commandLine;
+
+  /** Ask pt what this selection deploys — under a scope, only it knows the targets. */
+  const openConfirmation = async () => {
+    const request = ++resolveRequest.current;
+    setConfirmingCommand(commandLine);
+    setResolution(null);
+    setResolveError(null);
+
+    const query = new URLSearchParams({ action: 'resolve' });
+    if (servers.length > 0) query.set('servers', servers.join(','));
+    if (targets.length > 0) query.set('targets', targets.join(','));
+    if (selection.scope !== null) query.set('scope', selection.scope);
+
+    const res = await fetch(`/api/projects/${projectId}/push?${query}`);
+    const data = await res.json();
+    if (request !== resolveRequest.current) return;
+    if (!res.ok) {
+      setResolveError(data.error || 'Could not resolve this push');
+      return;
+    }
+    setResolution(data.resolution);
+  };
 
   const run = async () => {
-    setConfirming(false);
+    setConfirmingCommand(null);
     const res = await apiFetch(`/api/projects/${projectId}/push`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -161,7 +205,6 @@ export function PushView({ projectId }: { projectId: string }) {
   }
 
   const canRun = servers.length > 0 && scopeValid && !running;
-  const commandLine = buildPushArgv(selection).join(' ');
 
   return (
     <div className="p-4 space-y-5">
@@ -299,22 +342,80 @@ export function PushView({ projectId }: { projectId: string }) {
 
         {confirming ? (
           <div className="p-3 space-y-3 border border-foreground/15 bg-foreground/5 rounded-lg">
-            <div className="text-sm">
-              Deploy to{' '}
-              <span className="font-semibold">
-                {[...servers].sort().join(', ')}
-              </span>
-              ? This pushes the current branch and runs the playbooks there.
-            </div>
+            {resolveError !== null ? (
+              <div className="space-y-2">
+                <div className="text-sm text-red-400">
+                  pt could not resolve this push.
+                </div>
+                <pre className="p-2 text-xs bg-foreground/5 border border-foreground/10 rounded overflow-x-auto whitespace-pre-wrap">
+                  {resolveError}
+                </pre>
+              </div>
+            ) : resolution === null ? (
+              <div className="text-sm text-foreground/50">
+                Asking pt what this deploys...
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="text-sm">
+                  Deploy to{' '}
+                  <span className="font-semibold">
+                    {resolution.servers.join(', ')}
+                  </span>
+                  ? This pushes the current branch and runs the playbooks there.
+                </div>
+                {resolution.scope !== null &&
+                resolution.targets.length === 0 ? (
+                  <div className="text-sm text-amber-400">
+                    Nothing to push: {nothingToPushReason(resolution.scope)}
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <h3 className="text-xs font-medium uppercase tracking-wide text-foreground/40">
+                      Targets
+                    </h3>
+                    <div className="flex flex-wrap gap-1.5">
+                      {resolution.targets.map((target) => (
+                        <span
+                          key={target}
+                          className="px-2 py-0.5 text-sm border border-yellow-500/60 bg-yellow-500/10 rounded-full"
+                        >
+                          {target}
+                        </span>
+                      ))}
+                    </div>
+                    {resolution.scope !== null && (
+                      <div className="pt-1 text-xs text-foreground/50 space-y-0.5">
+                        <div>
+                          {fileCount(resolution.scope.files.length)} picked
+                          them:
+                        </div>
+                        {Object.entries(resolution.scope.selected).map(
+                          ([target, files]) => (
+                            <div key={target} className="font-mono break-all">
+                              {target} &larr; {files[0]}
+                              {files.length > 1 && ` (+${files.length - 1})`}
+                            </div>
+                          )
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
             <div className="flex gap-2">
               <button
                 onClick={run}
-                className="px-5 py-2 bg-foreground text-background font-medium rounded-lg active:opacity-80"
+                disabled={
+                  resolution === null || resolution.targets.length === 0
+                }
+                className="px-5 py-2 bg-foreground text-background font-medium rounded-lg active:opacity-80 disabled:opacity-40"
               >
                 Deploy
               </button>
               <button
-                onClick={() => setConfirming(false)}
+                onClick={() => setConfirmingCommand(null)}
                 className="px-4 py-2 bg-foreground/10 border border-foreground/15 rounded-lg active:opacity-80"
               >
                 Cancel
@@ -323,7 +424,7 @@ export function PushView({ projectId }: { projectId: string }) {
           </div>
         ) : (
           <button
-            onClick={() => setConfirming(true)}
+            onClick={openConfirmation}
             disabled={!canRun}
             className="px-6 py-2 bg-foreground text-background font-medium rounded-lg active:opacity-80 disabled:opacity-40"
           >

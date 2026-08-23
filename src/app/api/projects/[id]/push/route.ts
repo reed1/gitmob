@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getProject } from '@/lib/projects';
-import { getPushConfig, readPushJob, startPush } from '@/lib/push';
+import { getPushConfig, readPushJob, resolvePush, startPush } from '@/lib/push';
 import { checkSelection, PushSelection } from '@/lib/push-command';
+
+function selectionFromQuery(params: URLSearchParams): PushSelection {
+  const list = (name: string) =>
+    (params.get(name) ?? '').split(',').filter(Boolean);
+  return {
+    servers: list('servers'),
+    targets: list('targets'),
+    scope: params.get('scope'),
+  };
+}
 
 export async function GET(
   request: NextRequest,
@@ -17,6 +27,22 @@ export async function GET(
   // The poll while a push runs: just the log, without re-asking pt what could be pushed.
   if (request.nextUrl.searchParams.get('action') === 'job') {
     return NextResponse.json({ job: readPushJob(id) });
+  }
+
+  // What the tab confirms against, asked when Push is tapped: pt's dry run of this selection.
+  if (request.nextUrl.searchParams.get('action') === 'resolve') {
+    try {
+      const resolution = await resolvePush(
+        project,
+        selectionFromQuery(request.nextUrl.searchParams)
+      );
+      return NextResponse.json({ resolution });
+    } catch (err) {
+      return NextResponse.json(
+        { error: err instanceof Error ? err.message : 'pt push -n failed' },
+        { status: 500 }
+      );
+    }
   }
 
   try {
