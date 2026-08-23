@@ -93,5 +93,6 @@ export function startPush(
     cwd: project.path,
     jobId: pushJobId(project.id),
     notify,
+    notifyLabel: `Push ${project.id}`,
   });
 }

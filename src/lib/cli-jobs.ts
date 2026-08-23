@@ -39,6 +39,7 @@ export interface JobSpec {
   argv?: string[];
   cwd?: string;
   notify?: boolean;
+  notifyLabel?: string;
   /** Reuse an id to keep one live job per subject; the previous run's log is replaced. */
   jobId?: string;
 }
@@ -124,10 +125,15 @@ export function startJob(spec: JobSpec): CliJob {
     writeFileSync(jobPath(id), JSON.stringify(finished, null, 2));
 
     if (spec.notify) {
-      const outcome = signal ? `on ${signal}` : `with exit code ${code}`;
+      const label = spec.notifyLabel ?? 'Command';
+      const succeeded = code === 0 && !signal;
+      const outcome = signal ? `Killed on ${signal}` : `Exit code ${code}`;
+      const message = succeeded
+        ? command.slice(0, 300)
+        : `${outcome}\n${command.slice(0, 300)}`;
       spawn(
         'pushover-send',
-        [`Command finished ${outcome}: ${command.slice(0, 100)}`],
+        [`${label} ${succeeded ? 'succeeded' : 'failed'}`, message],
         { detached: true, stdio: 'ignore' }
       ).unref();
     }
