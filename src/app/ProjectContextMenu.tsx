@@ -26,13 +26,14 @@ export default function ProjectContextMenu({ project }: Props) {
   const [urlModalOpen, setUrlModalOpen] = useState(false);
   const [customModalOpen, setCustomModalOpen] = useState(false);
   const [customMode, setCustomMode] = useState<ClaudeMode>(DEFAULT_CLAUDE_MODE);
+  const [customPrompt, setCustomPrompt] = useState('');
   const menuRef = useRef<HTMLDivElement>(null);
 
   useOutsideClick(menuOpen, menuRef, () => setMenuOpen(false));
 
   async function launchCustom() {
     setCustomModalOpen(false);
-    await launchDesktopSession(project.id, customMode);
+    await launchDesktopSession(project.id, customMode, customPrompt.trim());
   }
 
   const urls = project.urls ?? {};
@@ -103,6 +104,7 @@ export default function ProjectContextMenu({ project }: Props) {
               onClick={() => {
                 setMenuOpen(false);
                 setCustomMode(DEFAULT_CLAUDE_MODE);
+                setCustomPrompt('');
                 setCustomModalOpen(true);
               }}
               className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
@@ -162,6 +164,17 @@ export default function ProjectContextMenu({ project }: Props) {
                         </option>
                       ))}
                     </select>
+                  </div>
+                  <div>
+                    <div className="text-xs text-foreground/60 mb-1.5">
+                      Initial prompt (optional)
+                    </div>
+                    <input
+                      value={customPrompt}
+                      onChange={(e) => setCustomPrompt(e.target.value)}
+                      placeholder="Leave empty to just open the session"
+                      className="w-full text-sm border border-foreground/20 rounded-lg px-3 py-2 bg-background"
+                    />
                   </div>
                 </div>
                 <div className="px-4 py-3 border-t border-foreground/10 flex justify-end gap-2">

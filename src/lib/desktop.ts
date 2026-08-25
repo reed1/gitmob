@@ -65,24 +65,29 @@ function claudexDesktop(args: string[]): Promise<string> {
  * workspaces and opening them when they were closed — and `claudex kitty` then lands the Claude
  * window on whatever that left focused, which `--focus-ide` makes the IDE, so the session opens
  * beside it at full size. `--detach` hands the window to i3 so it outlives this server, and
- * `/remote-control` is submitted for the Claude app to pick the session up.
+ * `--remote-control` is run first for the Claude app to pick the session up.
+ *
+ * An initial prompt is typed in after that and submitted, so the agent is already working when
+ * the session is looked at; without one there is nothing to submit and the session waits.
  */
 export async function launchDesktopSession(
   projectId: string,
   projectPath: string,
   mode: ClaudeMode,
-  name: string
+  name: string,
+  prompt: string
 ): Promise<void> {
   await run('rv', ['open', projectId, '--focus-ide'], OPEN_TIMEOUT_MS);
   await run('claudex', [
     'kitty',
     '--detach',
-    '--press-enter',
     '--mode',
     mode,
     '--directory',
     projectPath,
-    `/remote-control ${name}`,
+    '--remote-control',
+    name,
+    ...(prompt ? ['--press-enter', prompt] : []),
   ]);
 }
 

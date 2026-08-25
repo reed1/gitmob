@@ -49,7 +49,7 @@ export async function POST(
     return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   }
 
-  const { windowId, name, action, text, key, pressEnter, mode } =
+  const { windowId, name, action, text, key, pressEnter, mode, prompt } =
     await request.json();
 
   try {
@@ -60,8 +60,15 @@ export async function POST(
           { status: 400 }
         );
       }
+      const initialPrompt = typeof prompt === 'string' ? prompt.trim() : '';
       const sessionName = project.path.split('/').pop() || id;
-      await launchDesktopSession(id, project.path, mode, sessionName);
+      await launchDesktopSession(
+        id,
+        project.path,
+        mode,
+        sessionName,
+        initialPrompt
+      );
       return NextResponse.json({ success: true, name: sessionName });
     }
 
