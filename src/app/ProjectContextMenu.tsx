@@ -169,11 +169,12 @@ export default function ProjectContextMenu({ project }: Props) {
                     <div className="text-xs text-foreground/60 mb-1.5">
                       Initial prompt (optional)
                     </div>
-                    <input
+                    <textarea
                       value={customPrompt}
                       onChange={(e) => setCustomPrompt(e.target.value)}
                       placeholder="Leave empty to just open the session"
-                      className="w-full text-sm border border-foreground/20 rounded-lg px-3 py-2 bg-background"
+                      rows={4}
+                      className="w-full text-sm border border-foreground/20 rounded-lg px-3 py-2 bg-background resize-y"
                     />
                   </div>
                 </div>
