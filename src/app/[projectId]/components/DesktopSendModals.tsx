@@ -21,20 +21,24 @@ function Modal({
   children: ReactNode;
 }) {
   return createPortal(
-    <>
-      <div className="fixed inset-0 z-40 bg-black/50" onClick={onClose} />
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="bg-background border border-foreground/20 rounded-lg shadow-xl max-w-sm w-full max-h-full overflow-y-auto">
-          <div className="px-4 py-3 border-b border-foreground/10">
-            <h3 className="font-medium">{heading}</h3>
-            <div className="text-xs text-foreground/50 truncate">
-              {subtitle}
-            </div>
-          </div>
-          {children}
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClose();
+      }}
+    >
+      <div
+        className="bg-background border border-foreground/20 rounded-lg shadow-xl max-w-sm w-full max-h-full overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-4 py-3 border-b border-foreground/10">
+          <h3 className="font-medium">{heading}</h3>
+          <div className="text-xs text-foreground/50 truncate">{subtitle}</div>
         </div>
+        {children}
       </div>
-    </>,
+    </div>,
     document.body
   );
 }

@@ -228,41 +228,44 @@ export function CommitView({
       </section>
 
       {showShortenModal && (
-        <>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowShortenModal(false);
+          }}
+        >
           <div
-            className="fixed inset-0 z-40 bg-black/50"
-            onClick={() => setShowShortenModal(false)}
-          />
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="bg-background border border-foreground/20 rounded-lg shadow-xl max-w-lg w-full">
-              <div className="px-4 py-3 border-b border-foreground/10">
-                <h3 className="font-medium">Select shortened title</h3>
-              </div>
-              <div className="py-2 space-y-1">
-                {shortenVariants.map((variant, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => {
-                      setCommitTitle(variant);
-                      setShowShortenModal(false);
-                    }}
-                    className="block w-full px-4 py-3 text-sm text-left hover:bg-foreground/10 whitespace-pre-wrap"
-                  >
-                    {variant}
-                  </button>
-                ))}
-              </div>
-              <div className="px-4 py-3 border-t border-foreground/10 flex justify-end">
+            className="bg-background border border-foreground/20 rounded-lg shadow-xl max-w-lg w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-4 py-3 border-b border-foreground/10">
+              <h3 className="font-medium">Select shortened title</h3>
+            </div>
+            <div className="py-2 space-y-1">
+              {shortenVariants.map((variant, idx) => (
                 <button
-                  onClick={() => setShowShortenModal(false)}
-                  className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
+                  key={idx}
+                  onClick={() => {
+                    setCommitTitle(variant);
+                    setShowShortenModal(false);
+                  }}
+                  className="block w-full px-4 py-3 text-sm text-left hover:bg-foreground/10 whitespace-pre-wrap"
                 >
-                  Cancel
+                  {variant}
                 </button>
-              </div>
+              ))}
+            </div>
+            <div className="px-4 py-3 border-t border-foreground/10 flex justify-end">
+              <button
+                onClick={() => setShowShortenModal(false)}
+                className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
+              >
+                Cancel
+              </button>
             </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );

@@ -326,45 +326,48 @@ export default function FilesPage() {
       </main>
 
       {deleteTarget && (
-        <>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+          onClick={(e) => {
+            e.stopPropagation();
+            setDeleteTarget(null);
+          }}
+        >
           <div
-            className="fixed inset-0 z-40 bg-black/50"
-            onClick={() => setDeleteTarget(null)}
-          />
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="bg-background border border-foreground/20 rounded-lg shadow-xl max-w-sm w-full">
-              <div className="px-4 py-3 border-b border-foreground/10">
-                <h3 className="font-medium">
-                  {deleteTarget.isDirectory ? 'Delete folder?' : 'Delete file?'}
-                </h3>
-              </div>
-              <div className="px-4 py-3 text-sm text-foreground/80">
-                Delete{' '}
-                <span className="font-mono break-all">{deleteTarget.name}</span>
-                {deleteTarget.isDirectory && ' and everything inside it'}? This
-                cannot be undone.
-              </div>
-              <div className="px-4 py-3 border-t border-foreground/10 flex justify-end gap-2">
-                <button
-                  onClick={() => setDeleteTarget(null)}
-                  className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => {
-                    const entry = deleteTarget;
-                    setDeleteTarget(null);
-                    remove(entry);
-                  }}
-                  className="px-3 py-1.5 text-sm rounded-lg bg-red-600 text-white hover:opacity-90"
-                >
-                  Delete
-                </button>
-              </div>
+            className="bg-background border border-foreground/20 rounded-lg shadow-xl max-w-sm w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-4 py-3 border-b border-foreground/10">
+              <h3 className="font-medium">
+                {deleteTarget.isDirectory ? 'Delete folder?' : 'Delete file?'}
+              </h3>
+            </div>
+            <div className="px-4 py-3 text-sm text-foreground/80">
+              Delete{' '}
+              <span className="font-mono break-all">{deleteTarget.name}</span>
+              {deleteTarget.isDirectory && ' and everything inside it'}? This
+              cannot be undone.
+            </div>
+            <div className="px-4 py-3 border-t border-foreground/10 flex justify-end gap-2">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const entry = deleteTarget;
+                  setDeleteTarget(null);
+                  remove(entry);
+                }}
+                className="px-3 py-1.5 text-sm rounded-lg bg-red-600 text-white hover:opacity-90"
+              >
+                Delete
+              </button>
             </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { ReactNode, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { launchDesktopSession } from '../lib/desktop-client';
 import {
@@ -19,6 +19,34 @@ interface Props {
     urls?: Record<string, string>;
     githubUrl: string | null;
   };
+}
+
+// Portalled content still bubbles clicks up the React tree into the card, which
+// navigates, so every click inside the modal stops there.
+function Modal({
+  onClose,
+  children,
+}: {
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClose();
+      }}
+    >
+      <div
+        className="bg-background border border-foreground/20 rounded-lg shadow-xl max-w-sm w-full"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {children}
+      </div>
+    </div>,
+    document.body
+  );
 }
 
 export default function ProjectContextMenu({ project }: Props) {
@@ -134,111 +162,89 @@ export default function ProjectContextMenu({ project }: Props) {
         )}
       </div>
 
-      {customModalOpen &&
-        createPortal(
-          <>
-            <div
-              className="fixed inset-0 z-40 bg-black/50"
+      {customModalOpen && (
+        <Modal onClose={() => setCustomModalOpen(false)}>
+          <div className="px-4 py-3 border-b border-foreground/10">
+            <h3 className="font-medium">Launch Claude Code</h3>
+          </div>
+          <div className="px-4 py-3 space-y-3">
+            <div>
+              <div className="text-xs text-foreground/60 mb-1.5">
+                Permission mode
+              </div>
+              <select
+                value={customMode}
+                onChange={(e) => setCustomMode(e.target.value as ClaudeMode)}
+                className="w-full text-sm border border-foreground/20 rounded-lg px-3 py-2 bg-background"
+              >
+                {CLAUDE_MODES.map((entry) => (
+                  <option key={entry.mode} value={entry.mode}>
+                    {entry.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <div className="text-xs text-foreground/60 mb-1.5">
+                Initial prompt (optional)
+              </div>
+              <textarea
+                value={customPrompt}
+                onChange={(e) => setCustomPrompt(e.target.value)}
+                placeholder="Leave empty to just open the session"
+                rows={4}
+                className="w-full text-sm border border-foreground/20 rounded-lg px-3 py-2 bg-background resize-y"
+              />
+            </div>
+          </div>
+          <div className="px-4 py-3 border-t border-foreground/10 flex justify-end gap-2">
+            <button
               onClick={() => setCustomModalOpen(false)}
-            />
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-              <div className="bg-background border border-foreground/20 rounded-lg shadow-xl max-w-sm w-full">
-                <div className="px-4 py-3 border-b border-foreground/10">
-                  <h3 className="font-medium">Launch Claude Code</h3>
-                </div>
-                <div className="px-4 py-3 space-y-3">
-                  <div>
-                    <div className="text-xs text-foreground/60 mb-1.5">
-                      Permission mode
-                    </div>
-                    <select
-                      value={customMode}
-                      onChange={(e) =>
-                        setCustomMode(e.target.value as ClaudeMode)
-                      }
-                      className="w-full text-sm border border-foreground/20 rounded-lg px-3 py-2 bg-background"
-                    >
-                      {CLAUDE_MODES.map((entry) => (
-                        <option key={entry.mode} value={entry.mode}>
-                          {entry.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <div className="text-xs text-foreground/60 mb-1.5">
-                      Initial prompt (optional)
-                    </div>
-                    <textarea
-                      value={customPrompt}
-                      onChange={(e) => setCustomPrompt(e.target.value)}
-                      placeholder="Leave empty to just open the session"
-                      rows={4}
-                      className="w-full text-sm border border-foreground/20 rounded-lg px-3 py-2 bg-background resize-y"
-                    />
-                  </div>
-                </div>
-                <div className="px-4 py-3 border-t border-foreground/10 flex justify-end gap-2">
-                  <button
-                    onClick={() => setCustomModalOpen(false)}
-                    className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={launchCustom}
-                    className="px-3 py-1.5 text-sm rounded-lg bg-foreground text-background hover:opacity-90"
-                  >
-                    Launch
-                  </button>
-                </div>
-              </div>
-            </div>
-          </>,
-          document.body
-        )}
+              className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={launchCustom}
+              className="px-3 py-1.5 text-sm rounded-lg bg-foreground text-background hover:opacity-90"
+            >
+              Launch
+            </button>
+          </div>
+        </Modal>
+      )}
 
-      {urlModalOpen &&
-        createPortal(
-          <>
-            <div
-              className="fixed inset-0 z-40 bg-black/50"
+      {urlModalOpen && (
+        <Modal onClose={() => setUrlModalOpen(false)}>
+          <div className="px-4 py-3 border-b border-foreground/10">
+            <h3 className="font-medium">Select URL</h3>
+          </div>
+          <div className="py-2">
+            {urlEntries.map(([key, url]) => (
+              <button
+                key={key}
+                onClick={() => {
+                  window.open(url, '_blank');
+                  setUrlModalOpen(false);
+                }}
+                className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
+              >
+                <span>{key}</span>
+                <span className="text-foreground/40"> :: </span>
+                <span className="text-blue-500">{url}</span>
+              </button>
+            ))}
+          </div>
+          <div className="px-4 py-3 border-t border-foreground/10 flex justify-end">
+            <button
               onClick={() => setUrlModalOpen(false)}
-            />
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-              <div className="bg-background border border-foreground/20 rounded-lg shadow-xl max-w-sm w-full">
-                <div className="px-4 py-3 border-b border-foreground/10">
-                  <h3 className="font-medium">Select URL</h3>
-                </div>
-                <div className="py-2">
-                  {urlEntries.map(([key, url]) => (
-                    <button
-                      key={key}
-                      onClick={() => {
-                        window.open(url, '_blank');
-                        setUrlModalOpen(false);
-                      }}
-                      className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
-                    >
-                      <span>{key}</span>
-                      <span className="text-foreground/40"> :: </span>
-                      <span className="text-blue-500">{url}</span>
-                    </button>
-                  ))}
-                </div>
-                <div className="px-4 py-3 border-t border-foreground/10 flex justify-end">
-                  <button
-                    onClick={() => setUrlModalOpen(false)}
-                    className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </div>
-          </>,
-          document.body
-        )}
+              className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
+            >
+              Cancel
+            </button>
+          </div>
+        </Modal>
+      )}
     </>
   );
 }

@@ -220,48 +220,51 @@ export function DesktopSessions({
 
       {remoteTarget &&
         createPortal(
-          <>
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+            onClick={(e) => {
+              e.stopPropagation();
+              setRemoteTarget(null);
+            }}
+          >
             <div
-              className="fixed inset-0 z-40 bg-black/50"
-              onClick={() => setRemoteTarget(null)}
-            />
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-              <div className="bg-background border border-foreground/20 rounded-lg shadow-xl max-w-sm w-full">
-                <div className="px-4 py-3 border-b border-foreground/10">
-                  <h3 className="font-medium">Remote control</h3>
-                  <div className="text-xs text-foreground/50 truncate">
-                    {remoteTarget.title}
-                  </div>
-                </div>
-                <div className="px-4 py-3">
-                  <div className="text-xs text-foreground/60 mb-1.5">
-                    Session name
-                  </div>
-                  <input
-                    value={remoteName}
-                    onChange={(e) => setRemoteName(e.target.value)}
-                    autoFocus
-                    className="w-full text-sm border border-foreground/20 rounded-lg px-3 py-2 bg-background"
-                  />
-                </div>
-                <div className="px-4 py-3 border-t border-foreground/10 flex justify-end gap-2">
-                  <button
-                    onClick={() => setRemoteTarget(null)}
-                    className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={startRemote}
-                    disabled={!remoteName.trim()}
-                    className="px-3 py-1.5 text-sm rounded-lg bg-foreground text-background hover:opacity-90 disabled:opacity-40"
-                  >
-                    OK
-                  </button>
+              className="bg-background border border-foreground/20 rounded-lg shadow-xl max-w-sm w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="px-4 py-3 border-b border-foreground/10">
+                <h3 className="font-medium">Remote control</h3>
+                <div className="text-xs text-foreground/50 truncate">
+                  {remoteTarget.title}
                 </div>
               </div>
+              <div className="px-4 py-3">
+                <div className="text-xs text-foreground/60 mb-1.5">
+                  Session name
+                </div>
+                <input
+                  value={remoteName}
+                  onChange={(e) => setRemoteName(e.target.value)}
+                  autoFocus
+                  className="w-full text-sm border border-foreground/20 rounded-lg px-3 py-2 bg-background"
+                />
+              </div>
+              <div className="px-4 py-3 border-t border-foreground/10 flex justify-end gap-2">
+                <button
+                  onClick={() => setRemoteTarget(null)}
+                  className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={startRemote}
+                  disabled={!remoteName.trim()}
+                  className="px-3 py-1.5 text-sm rounded-lg bg-foreground text-background hover:opacity-90 disabled:opacity-40"
+                >
+                  OK
+                </button>
+              </div>
             </div>
-          </>,
+          </div>,
           document.body
         )}
     </>
