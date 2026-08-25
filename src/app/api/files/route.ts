@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { mkdirSync } from 'fs';
-import { writeFile } from 'fs/promises';
+import { rm, writeFile } from 'fs/promises';
 import { basename, join } from 'path';
 import {
   SHARED_FILES_DIR,
@@ -54,4 +54,17 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({ uploaded: names });
+}
+
+export async function DELETE(request: NextRequest) {
+  const path = request.nextUrl.searchParams.get('path') || '';
+  const target = resolveSharedPath(path);
+
+  if (target === null || target === SHARED_FILES_DIR) {
+    return NextResponse.json({ error: 'Invalid path' }, { status: 400 });
+  }
+
+  await rm(target, { recursive: true });
+
+  return NextResponse.json({ deleted: basename(target) });
 }

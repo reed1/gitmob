@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, addToast } from '../../lib/api';
+import { useOutsideClick } from '../../lib/use-outside-click';
 
 interface SharedFile {
   name: string;
@@ -32,6 +33,69 @@ function formatModified(ms: number): string {
   });
 }
 
+function EntryMenu({
+  entry,
+  onDelete,
+}: {
+  entry: SharedFile;
+  onDelete: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useOutsideClick(open, menuRef, () => setOpen(false));
+
+  const itemClass =
+    'block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10';
+
+  return (
+    <div className="relative shrink-0" ref={menuRef}>
+      <button
+        onClick={() => setOpen(!open)}
+        className="p-2 rounded-lg text-foreground/50 hover:bg-foreground/10 active:opacity-80"
+        aria-label={`Actions for ${entry.name}`}
+      >
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 5v.01M12 12v.01M12 19v.01"
+          />
+        </svg>
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 z-20 bg-background border border-foreground/20 rounded-lg shadow-lg py-1 min-w-[140px]">
+          {!entry.isDirectory && (
+            <a
+              href={`/api/files/download?path=${encodeURIComponent(entry.path)}`}
+              download={entry.name}
+              onClick={() => setOpen(false)}
+              className={itemClass}
+            >
+              Download
+            </a>
+          )}
+          <button
+            onClick={() => {
+              setOpen(false);
+              onDelete();
+            }}
+            className={`${itemClass} text-red-500`}
+          >
+            Delete
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function FilesPage() {
   const router = useRouter();
   const [path, setPath] = useState('');
@@ -39,6 +103,7 @@ export default function FilesPage() {
   const [entries, setEntries] = useState<SharedFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<SharedFile | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
@@ -81,6 +146,16 @@ export default function FilesPage() {
     } finally {
       setUploading(false);
     }
+  };
+
+  const remove = async (entry: SharedFile) => {
+    const res = await apiFetch(
+      `/api/files?path=${encodeURIComponent(entry.path)}`,
+      { method: 'DELETE' }
+    );
+    if (!res.ok) return;
+    addToast(`Deleted ${entry.name}`, 'success');
+    await load();
   };
 
   const goUp = () => {
@@ -188,79 +263,109 @@ export default function FilesPage() {
             Nothing here yet — upload a file to get started
           </div>
         ) : (
-          entries.map((entry) =>
-            entry.isDirectory ? (
-              <button
-                key={entry.path}
-                onClick={() => setPath(entry.path)}
-                className="w-full px-4 py-3 text-left flex items-center gap-3 active:bg-foreground/5"
-              >
-                <svg
-                  className="w-5 h-5 shrink-0 text-blue-400"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
+          entries.map((entry) => (
+            <div key={entry.path} className="flex items-center pr-2">
+              {entry.isDirectory ? (
+                <button
+                  onClick={() => setPath(entry.path)}
+                  className="flex-1 min-w-0 px-4 py-3 text-left flex items-center gap-3 active:bg-foreground/5"
                 >
-                  <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
-                </svg>
-                <span className="flex-1 min-w-0 truncate">{entry.name}</span>
-                <svg
-                  className="w-4 h-4 shrink-0 text-foreground/30"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
-              </button>
-            ) : (
-              <a
-                key={entry.path}
-                href={`/api/files/download?path=${encodeURIComponent(entry.path)}`}
-                download={entry.name}
-                className="w-full px-4 py-3 text-left flex items-center gap-3 active:bg-foreground/5"
-              >
-                <svg
-                  className="w-5 h-5 shrink-0 text-foreground/40"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                <div className="flex-1 min-w-0">
-                  <div className="truncate">{entry.name}</div>
-                  <div className="text-xs text-foreground/50">
-                    {formatSize(entry.size)} · {formatModified(entry.modified)}
+                  <svg
+                    className="w-5 h-5 shrink-0 text-blue-400"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+                  </svg>
+                  <span className="flex-1 min-w-0 truncate">{entry.name}</span>
+                  <svg
+                    className="w-4 h-4 shrink-0 text-foreground/30"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </button>
+              ) : (
+                <div className="flex-1 min-w-0 px-4 py-3 flex items-center gap-3">
+                  <svg
+                    className="w-5 h-5 shrink-0 text-foreground/40"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                  <div className="flex-1 min-w-0">
+                    <div className="truncate">{entry.name}</div>
+                    <div className="text-xs text-foreground/50">
+                      {formatSize(entry.size)} ·{' '}
+                      {formatModified(entry.modified)}
+                    </div>
                   </div>
                 </div>
-                <svg
-                  className="w-5 h-5 shrink-0 text-foreground/50"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-5l-4 4m0 0l-4-4m4 4V4"
-                  />
-                </svg>
-              </a>
-            )
-          )
+              )}
+              <EntryMenu
+                entry={entry}
+                onDelete={() => setDeleteTarget(entry)}
+              />
+            </div>
+          ))
         )}
       </main>
+
+      {deleteTarget && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/50"
+            onClick={() => setDeleteTarget(null)}
+          />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="bg-background border border-foreground/20 rounded-lg shadow-xl max-w-sm w-full">
+              <div className="px-4 py-3 border-b border-foreground/10">
+                <h3 className="font-medium">
+                  {deleteTarget.isDirectory ? 'Delete folder?' : 'Delete file?'}
+                </h3>
+              </div>
+              <div className="px-4 py-3 text-sm text-foreground/80">
+                Delete{' '}
+                <span className="font-mono break-all">{deleteTarget.name}</span>
+                {deleteTarget.isDirectory && ' and everything inside it'}? This
+                cannot be undone.
+              </div>
+              <div className="px-4 py-3 border-t border-foreground/10 flex justify-end gap-2">
+                <button
+                  onClick={() => setDeleteTarget(null)}
+                  className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    const entry = deleteTarget;
+                    setDeleteTarget(null);
+                    remove(entry);
+                  }}
+                  className="px-3 py-1.5 text-sm rounded-lg bg-red-600 text-white hover:opacity-90"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
