@@ -55,6 +55,17 @@ export async function currentEndpoint(): Promise<string | null> {
 }
 
 /**
+ * Whether this browser is set up to receive notifications. Local only — a permission read and
+ * the browser's own subscription record, no network — so it is cheap enough to run on mount.
+ * A browser that cannot do push at all does not "need setup": there is nothing to offer it.
+ */
+export async function needsNotificationSetup(): Promise<boolean> {
+  if (!pushSupported()) return false;
+  if (Notification.permission !== 'granted') return true;
+  return (await currentEndpoint()) === null;
+}
+
+/**
  * Asks for permission and registers this browser with the server. Returns the reason it
  * could not, so the caller can say which of the several no's this was.
  */

@@ -8,6 +8,7 @@ import { ClaudeUsage, Project } from './types';
 import { addToast } from '../lib/api';
 import { useOutsideClick } from '../lib/use-outside-click';
 import { useAutoRefresh } from '../lib/use-auto-refresh';
+import { needsNotificationSetup } from '../lib/notifications-client';
 
 const RESUME_REFRESH_THRESHOLD_MS = 10000;
 
@@ -78,6 +79,13 @@ export default function Home() {
   }, []);
 
   useAutoRefresh(refreshProjects);
+
+  // Starts hidden so a phone that is already subscribed never flashes the prompt.
+  const [notificationsOff, setNotificationsOff] = useState(false);
+  const checkNotifications = useCallback(async () => {
+    setNotificationsOff(await needsNotificationSetup());
+  }, []);
+  useAutoRefresh(checkNotifications);
 
   useEffect(() => {
     let hiddenAt = 0;
@@ -353,6 +361,48 @@ export default function Home() {
       </header>
 
       <main className="p-4 space-y-6">
+        {notificationsOff && (
+          <Link
+            href="/notifications"
+            className="flex items-center gap-3 p-3 rounded-lg border border-amber-500/40 bg-amber-500/10 active:opacity-80"
+          >
+            <svg
+              className="w-5 h-5 shrink-0 text-amber-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1h6z"
+              />
+            </svg>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-amber-300">
+                Set up notifications
+              </div>
+              <div className="text-xs text-foreground/60">
+                Job results will not reach this device until you do
+              </div>
+            </div>
+            <svg
+              className="w-4 h-4 shrink-0 text-amber-400/60"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5l7 7-7 7"
+              />
+            </svg>
+          </Link>
+        )}
+
         {error && (
           <div className="p-4 rounded-lg border border-red-500/50 bg-red-500/10">
             <div className="text-sm font-medium text-red-500 mb-1">
