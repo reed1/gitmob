@@ -10,6 +10,7 @@ import {
 } from 'fs';
 import { tmpdir, homedir } from 'os';
 import { join } from 'path';
+import { sendNotification } from './notifications';
 
 const JOBS_DIR = join(homedir(), '.local/share/gitmob/cli-jobs');
 
@@ -40,6 +41,8 @@ export interface JobSpec {
   cwd?: string;
   notify?: boolean;
   notifyLabel?: string;
+  /** Where a tap on the notification lands. Defaults to the project list. */
+  notifyUrl?: string;
   /** Reuse an id to keep one live job per subject; the previous run's log is replaced. */
   jobId?: string;
 }
@@ -131,11 +134,12 @@ export function startJob(spec: JobSpec): CliJob {
       const message = succeeded
         ? command.slice(0, 300)
         : `${outcome}\n${command.slice(0, 300)}`;
-      spawn(
-        'pushover-send',
-        [`${label} ${succeeded ? 'succeeded' : 'failed'}`, message],
-        { detached: true, stdio: 'ignore' }
-      ).unref();
+      sendNotification({
+        title: `${label} ${succeeded ? 'succeeded' : 'failed'}`,
+        body: message,
+        url: spec.notifyUrl,
+        tag: id,
+      });
     }
   });
 

@@ -41,4 +41,9 @@ All PNGs/ICO are generated from `assets/icon.svg` via `assets/gen-icons.sh`; edi
 - CLI commands and deploys run as detached processes through `src/lib/cli-jobs.ts`, output to
   `~/.local/share/gitmob/cli-jobs/{jobId}.log` — they outlive the request and the tab that
   started them
+- A job with `notify` set pushes its result to every browser subscribed under
+  `~/.local/share/gitmob/notification-devices.json` — Web Push from `src/lib/notifications.ts`,
+  received by the service worker in `public/sw.js`, so the notification comes from the installed
+  PWA itself. The VAPID keypair generates itself on first send; the Notifications page in the
+  gear menu is where a device subscribes.
 - Per-project state (sudo, runs, desktop sessions) belongs to the CLI that owns it — `pt`, `rv`, `claudex`. Shell out to those commands and surface their failures; never read their caches or redo their lookups here. Contracts in [docs/cli-integrations.md](docs/cli-integrations.md).
