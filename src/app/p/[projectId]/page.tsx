@@ -13,8 +13,8 @@ import { PinboardView } from './components/PinboardView';
 import { ClaudeView } from './components/ClaudeView';
 import { PushView } from './components/PushView';
 import { SudoView } from './components/SudoView';
-import ProjectContextMenu from '../ProjectContextMenu';
-import { useAutoRefresh } from '../../lib/use-auto-refresh';
+import ProjectContextMenu from '../../ProjectContextMenu';
+import { useAutoRefresh } from '../../../lib/use-auto-refresh';
 
 const tabs = [
   { id: 'pinboard', label: 'Pinboard' },
@@ -56,7 +56,7 @@ export default function ProjectPage() {
   const [pendingLoaded, setPendingLoaded] = useState(false);
 
   const goToTab = (id: Tab) => {
-    router.replace(`/${projectId}?tab=${id}`);
+    router.replace(`/p/${projectId}?tab=${id}`);
   };
 
   const navRef = useRef<HTMLElement>(null);

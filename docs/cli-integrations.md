@@ -37,7 +37,8 @@ and its servers, so the project list reads them under `canonicalId`, as do the d
 
 ## Pinboard — `rv pinboard`
 
-`src/lib/pinboard.ts`, read and written by the Pinboard tab.
+`src/lib/pinboard.ts`, read and written by the Pinboard tab and read by the `/pinboard`
+overview.
 
 - `rv pinboard list --project-id <projectId> --json` — the notes on that project's board.
 - `rv pinboard add --project-id <projectId> <text>` — adds one.
@@ -58,6 +59,10 @@ being a second writer of a format the desktop app already owns. A board the desk
 needs no telling: the app watches its file and reloads.
 
 Notes are keyed by the canonical id — they belong to the repo, as the dooit todos do.
+
+There is no all-projects call: the `/pinboard` overview gets its 50 newest notes by running
+`list` once per configured project, eight at a time, and sorting what comes back. `rv pinboard
+recents` looks close but answers with one line of prose per board, not notes.
 
 ## Push — `pt`
 
@@ -92,11 +97,12 @@ server chips only suggested a prerequisite that is not one.
 `src/lib/sudo.ts`, read by the Sudo tab and the project list.
 
 - `pt sudo list --json`, with cwd set to the project — the targets of one project.
-- `pt sudo list --all-projects --json` — the project-list sweep, ~120ms.
+- `pt sudo list --all-projects --json` — the project-list sweep, one call to abubot for all of them.
 - `pt sudo <target> on|off|status` — does the SSH work.
 
-`pt` owns the flag cache and the target-to-server mapping. When it fails, the Sudo tab shows the
-error: reporting every target as disabled would be a lie about a security setting.
+`pt` owns the target-to-server mapping; the flags themselves are abubot's, which pt reads over
+HTTP. When it fails, the Sudo tab shows the error: reporting every target as disabled would be
+a lie about a security setting.
 
 ## Run — `rv`
 

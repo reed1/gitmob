@@ -231,6 +231,26 @@ export default function Home() {
               {menuOpen && (
                 <div className="absolute right-0 top-full mt-1 z-20 bg-background border border-foreground/20 rounded-lg shadow-lg py-1 min-w-[180px]">
                   <Link
+                    href="/pinboard"
+                    onClick={() => setMenuOpen(false)}
+                    className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 flex items-center gap-2"
+                  >
+                    <svg
+                      className="w-4 h-4 text-foreground/60"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+                      />
+                    </svg>
+                    Pinboard
+                  </Link>
+                  <Link
                     href="/files"
                     onClick={() => setMenuOpen(false)}
                     className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 flex items-center gap-2"

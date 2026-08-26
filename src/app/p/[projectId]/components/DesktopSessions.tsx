@@ -2,13 +2,13 @@
 
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { addToast, apiFetch } from '../../../lib/api';
-import { launchDesktopSession } from '../../../lib/desktop-client';
+import { addToast, apiFetch } from '../../../../lib/api';
+import { launchDesktopSession } from '../../../../lib/desktop-client';
 import {
   CLAUDE_MODES,
   ClaudeMode,
   DEFAULT_CLAUDE_MODE,
-} from '../../../lib/desktop-modes';
+} from '../../../../lib/desktop-modes';
 import type { DesktopSession } from './ClaudeView';
 
 export function DesktopSessions({

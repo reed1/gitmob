@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { apiFetch } from '../../../lib/api';
+import { apiFetch } from '../../../../lib/api';
 
 interface FileContent {
   content: string;
@@ -202,7 +202,7 @@ export function FileBrowser({
       setPath(entry.path);
     } else {
       router.push(
-        `/${projectId}?tab=files&file=${encodeURIComponent(entry.path)}`
+        `/p/${projectId}?tab=files&file=${encodeURIComponent(entry.path)}`
       );
     }
   };

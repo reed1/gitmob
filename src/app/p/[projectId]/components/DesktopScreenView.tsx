@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { SendKeysModal, SendTextModal } from './DesktopSendModals';
-import { useAutoRefresh } from '../../../lib/use-auto-refresh';
+import { useAutoRefresh } from '../../../../lib/use-auto-refresh';
 
 export function DesktopScreenView({
   projectId,

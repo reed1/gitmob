@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useAutoRefresh } from '../../../lib/use-auto-refresh';
+import { useAutoRefresh } from '../../../../lib/use-auto-refresh';
 
 export function RunLogView({
   projectId,

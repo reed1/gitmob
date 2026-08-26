@@ -10,7 +10,7 @@ React 19, Next.js 16, TypeScript, Tailwind CSS 4, simple-git
 
 - `/src/lib` - Core logic (git.ts, run.ts, projects.ts, files.ts)
 - `/src/app/api` - API routes (projects, cli jobs, dooit todos)
-- `/src/app/[projectId]/components` - Project views (FileBrowser, ChangesView, CommitView, RunView, CLIView, DooitView, ClaudeView, PushView, SudoView)
+- `/src/app/p/[projectId]/components` - Project views (FileBrowser, ChangesView, CommitView, RunView, CLIView, DooitView, ClaudeView, PushView, SudoView)
 
 ## Development
 
@@ -30,7 +30,14 @@ Deployed on my PC as the `gitmob` systemd user service, which runs `run_producti
 
 ## App Icons
 
-All PNGs/ICO are generated from `assets/icon.svg` via `assets/gen-icons.sh`; edit the SVG and regenerate rather than editing them by hand. Do NOT put an SVG in `src/app/` — it crashes the Turbopack build.
+All PNGs/ICO in `public/` are generated from `assets/icon.svg` (GitMob) and
+`assets/pinboard-icon.svg` (the pinboard PWA) via `assets/gen-icons.sh`; edit the SVGs and
+regenerate rather than editing them by hand. Do NOT put an SVG in `src/app/` — it crashes the
+Turbopack build.
+
+Icons and manifests are named in each layout's `metadata`, not dropped into `src/app/` as Next's
+file conventions: a convention file applies to every nested route too, so the root icon and
+manifest would follow `/pinboard` around.
 
 ## Key Patterns
 
@@ -46,4 +53,11 @@ All PNGs/ICO are generated from `assets/icon.svg` via `assets/gen-icons.sh`; edi
   received by the service worker in `public/sw.js`, so the notification comes from the installed
   PWA itself. The VAPID keypair generates itself on first send; the Notifications page in the
   gear menu is where a device subscribes.
+- Two installable PWAs off one app: `/` is GitMob, `/pinboard` is the read-and-remove overview
+  of every project's notes, each with its own manifest, scope and icon. The overview reads all
+  boards through `/api/pinboard`; adding and editing stay on a project's Pinboard tab.
+- A project page is `/p/<projectId>`, never `/<projectId>`. Project ids come from rworkspaces
+  and are not this app's to choose — one named `pinboard` or `files` would otherwise be
+  shadowed by a page of the same name, silently and only for that project. The prefix keeps
+  the root namespace free for pages.
 - Per-project state (sudo, runs, desktop sessions) belongs to the CLI that owns it — `pt`, `rv`, `claudex`. Shell out to those commands and surface their failures; never read their caches or redo their lookups here. Contracts in [docs/cli-integrations.md](docs/cli-integrations.md).
