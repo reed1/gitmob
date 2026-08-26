@@ -20,9 +20,9 @@ interface PtSudoRow {
 }
 
 /**
- * `pt sudo list` is the only way this app learns sudo state — pt owns the flag cache and the
- * target-to-server mapping. It reads local state only, so sweeping every project stays cheap
- * enough for the project list.
+ * `pt sudo list` is the only way this app learns sudo state — pt owns the
+ * target-to-server mapping, and reads the flags themselves from abubot. It contacts no
+ * server, and one call covers every project, so the project-list sweep stays cheap.
  */
 function listSudo(args: string[], cwd?: string): Promise<PtSudoRow[]> {
   return new Promise((resolve, reject) => {
