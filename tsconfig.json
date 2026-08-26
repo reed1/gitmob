@@ -36,5 +36,8 @@
     ".next-dev/types/**/*.ts",
     ".next-dev/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules"]
+  // Next only skips its own dist dir's stale generated types, so a build into one dir
+  // typechecks whatever the other two servers last generated — one route rename and it fails on
+  // a page that no longer exists. The globs stay in `include` so Next stops re-adding them.
+  "exclude": ["node_modules", ".next", ".next-dev", ".next-prod"]
 }
