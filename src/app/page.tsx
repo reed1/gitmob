@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 
-// GitMob itself lives under /app so its PWA scope stays clear of /pinboard's; the root is kept
-// free of both, and only forwards.
+// Only reached on a host src/proxy.ts cannot name — a dev host or localhost, which serve both
+// apps. On gitmob.<front> and pinboard.<front> the proxy has already sent `/` to the right app.
 export default function RootRedirect() {
   redirect('/app');
 }

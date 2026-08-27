@@ -58,9 +58,11 @@ manifest would follow `/pinboard` around. Each PWA's manifest is named by its ow
   subscription rather than reusing the one the browser offers, and why `sw.js` re-registers on
   `pushsubscriptionchange`. Delivery counts come back from `sendNotification`: a send that
   reached nobody must not report success.
-- Chrome discards a subscription on its own and nothing on either side is told, so the open
-  question is which of several things happened. `~/.local/share/gitmob/notification-events.jsonl`
-  is the trail that answers it: every enrol, rotation, removal and delivery outcome from
+- A push subscription dies with its origin's notification permission, and on Android that
+  permission is delegated to the installed app's own app-level permission — which is why the two
+  PWAs had to be split onto two hostnames above. Anything else that discards one is Chrome's to
+  decide and nothing on either side is told, so `~/.local/share/gitmob/notification-events.jsonl`
+  is the trail that says which: every enrol, rotation, removal and delivery outcome from
   `src/lib/notifications.ts`, plus what the browser saw — a `boot-state` line per page load from
   `GlobalUI`, and `push-received` / `subscription-change` from `sw.js`, posted through
   `/api/notifications/events`. A device row carries an `installId` from the browser's
@@ -69,14 +71,21 @@ manifest would follow `/pinboard` around. Each PWA's manifest is named by its ow
   was wiped in between. Reads must not repair what they measure — `currentEndpoint` and
   `deviceState` use `getRegistration`, never `register`, and only `GlobalUI` and enrolling
   register a worker.
-- Two installable PWAs off one app, on scopes that do not contain each other: `/app` is GitMob,
-  `/pinboard` is the read-and-remove overview of every project's notes, each with its own
-  manifest, scope and icon. Neither owns the root — `/` only redirects to `/app` — so the two
-  install in either order. Keep every GitMob page under `/app`: a page left at the root would
-  fall outside the scope and open in Chrome's in-app browser instead of the installed PWA.
-  The overview reads all boards through `/api/pinboard`; adding and editing stay on a project's
-  Pinboard tab. `/api` is shared by both and stays at the root — `scope` constrains navigations,
-  not `fetch`.
+- Two installable PWAs off one server, on **two hostnames**: `gitmob.<front>` serves `/app`,
+  `pinboard.<front>` serves `/pinboard`, the read-and-remove overview of every project's notes.
+  Both are one portman registration each pointing at the same port (`static.yaml`), so all five
+  fronts follow. They must not share an origin: Android gives every installed PWA its own
+  app-level notification permission while Chrome keeps one permission per origin, so opening the
+  app that was never granted it revoked the other's — and the revocation takes the origin's push
+  subscription with it. That was the whole bug behind "GitMob says it is not subscribed".
+  `src/proxy.ts` keeps them apart — each host serves only its own app and redirects the other's
+  paths to the sibling host, `/` lands on whichever app the host is for, and a host the name does
+  not identify (`dev.gitmob.loc`, localhost) serves both untouched, since nothing is installed
+  from those. `/api` is never redirected: both apps call it on their own origin, and the two see
+  the same server state. Keep every GitMob page under `/app`: a page left at the root would fall
+  outside the manifest scope and open in Chrome's in-app browser instead of the installed PWA.
+  Adding and editing notes stay on a project's Pinboard tab; the overview reads all boards
+  through `/api/pinboard`.
 - A project page is `/app/p/<projectId>`, never `/app/<projectId>`. Project ids come from
   rworkspaces and are not this app's to choose — one named `files` or `notifications` would
   otherwise be shadowed by a page of the same name, silently and only for that project. The
