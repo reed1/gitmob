@@ -56,6 +56,9 @@ manifest would follow `/pinboard` around.
 - Two installable PWAs off one app: `/` is GitMob, `/pinboard` is the read-and-remove overview
   of every project's notes, each with its own manifest, scope and icon. The overview reads all
   boards through `/api/pinboard`; adding and editing stay on a project's Pinboard tab.
+  Install Pinboard FIRST: GitMob's scope is `/`, which contains `/pinboard`, so once GitMob is
+  installed Chrome answers the inner app's install with "already installed" and opens GitMob.
+  Uninstall both and take the inner one first if that happens.
 - A project page is `/p/<projectId>`, never `/<projectId>`. Project ids come from rworkspaces
   and are not this app's to choose — one named `pinboard` or `files` would otherwise be
   shadowed by a page of the same name, silently and only for that project. The prefix keeps
