@@ -70,6 +70,9 @@ export interface DeviceState {
   /** False means Chrome is free to evict this origin's storage, and the subscription with it. */
   storagePersisted: boolean | null;
   displayMode: 'standalone' | 'browser';
+  /** Which origin this is. The two apps have separate storage, so a Pinboard line showing no
+   * subscription and no install id is that origin being itself, not a subscription lost. */
+  host: string;
   path: string;
 }
 
@@ -97,6 +100,7 @@ export async function deviceState(): Promise<DeviceState> {
     displayMode: window.matchMedia('(display-mode: standalone)').matches
       ? 'standalone'
       : 'browser',
+    host: window.location.host,
     path: window.location.pathname,
   };
 }

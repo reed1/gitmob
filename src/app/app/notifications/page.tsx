@@ -69,7 +69,10 @@ function describeState(state: DeviceState): { label: string; value: string }[] {
             })}`,
     },
     { label: 'Storage', value: describeStorage(state.storagePersisted) },
-    { label: 'Opened as', value: `${state.displayMode} · ${state.path}` },
+    {
+      label: 'Opened as',
+      value: `${state.displayMode} · ${state.host}${state.path}`,
+    },
   ];
 }
 
