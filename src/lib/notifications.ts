@@ -66,6 +66,31 @@ export function addDevice(subscription: PushSubscription, label: string) {
   writeDevices([...others, { subscription, label, createdAt: Date.now() }]);
 }
 
+/**
+ * Swaps in the endpoint a browser rotated to, keeping the row's label and age: this is the same
+ * device carrying on, not a new one enrolling.
+ */
+export function replaceDevice(
+  oldEndpoint: string,
+  subscription: PushSubscription
+) {
+  const devices = readDevices();
+  const previous = devices.find((d) => d.subscription.endpoint === oldEndpoint);
+  const others = devices.filter(
+    (d) =>
+      d.subscription.endpoint !== oldEndpoint &&
+      d.subscription.endpoint !== subscription.endpoint
+  );
+  writeDevices([
+    ...others,
+    {
+      subscription,
+      label: previous?.label ?? 'Unnamed device',
+      createdAt: previous?.createdAt ?? Date.now(),
+    },
+  ]);
+}
+
 export function removeDevice(endpoint: string) {
   writeDevices(
     readDevices().filter((d) => d.subscription.endpoint !== endpoint)
@@ -81,30 +106,39 @@ export interface Notification {
   tag?: string;
 }
 
+/** What became of one device in a fan-out. `gone` means the push service disowned it. */
+export interface Delivery {
+  label: string;
+  status: 'delivered' | 'gone' | 'failed';
+}
+
 /**
  * Fans a notification out to every subscribed device. Never rejects: this is called from a
- * detached job's exit handler, where a rejection would take the server down with it.
+ * detached job's exit handler, where a rejection would take the server down with it. Callers
+ * that have someone to report to read the outcome off the return value instead.
  */
-export async function sendNotification(notification: Notification) {
+export async function sendNotification(
+  notification: Notification
+): Promise<Delivery[]> {
   const devices = readDevices();
   if (devices.length === 0) {
     console.warn('[notifications] nothing sent: no device is subscribed');
-    return;
+    return [];
   }
 
   const { publicKey, privateKey } = vapidKeys();
   webpush.setVapidDetails(VAPID_SUBJECT, publicKey, privateKey);
 
   const payload = JSON.stringify(notification);
-  const gone: string[] = [];
 
-  await Promise.all(
-    devices.map(async (device) => {
+  const deliveries = await Promise.all(
+    devices.map(async (device): Promise<Delivery> => {
       try {
         await webpush.sendNotification(device.subscription, payload, {
           TTL: 6 * 60 * 60,
           urgency: 'high',
         });
+        return { label: device.label, status: 'delivered' };
       } catch (err) {
         // 404/410 is the push service saying this subscription is dead — the browser was
         // uninstalled or reset it. Anything else is transient and the message is simply lost.
@@ -112,17 +146,28 @@ export async function sendNotification(notification: Notification) {
           err instanceof WebPushError &&
           (err.statusCode === 404 || err.statusCode === 410)
         ) {
-          gone.push(device.subscription.endpoint);
-        } else {
-          console.error(`[notifications] ${device.label}:`, err);
+          return { label: device.label, status: 'gone' };
         }
+        console.error(`[notifications] ${device.label}:`, err);
+        return { label: device.label, status: 'failed' };
       }
     })
   );
 
+  const gone = devices.filter((_, i) => deliveries[i].status === 'gone');
   if (gone.length > 0) {
+    // Said out loud, because a device disappearing off the list on its own is otherwise
+    // indistinguishable from one that was never enrolled.
+    console.warn(
+      `[notifications] dropped ${gone.length} dead subscription(s): ${gone
+        .map((d) => d.label)
+        .join(', ')}`
+    );
+    const dead = new Set(gone.map((d) => d.subscription.endpoint));
     writeDevices(
-      readDevices().filter((d) => !gone.includes(d.subscription.endpoint))
+      readDevices().filter((d) => !dead.has(d.subscription.endpoint))
     );
   }
+
+  return deliveries;
 }

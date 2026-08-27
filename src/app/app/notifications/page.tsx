@@ -17,6 +17,10 @@ interface DeviceRow {
   createdAt: number;
 }
 
+function deviceCount(n: number): string {
+  return `${n} device${n === 1 ? '' : 's'}`;
+}
+
 export default function NotificationsPage() {
   const router = useRouter();
   const [devices, setDevices] = useState<DeviceRow[]>([]);
@@ -62,7 +66,20 @@ export default function NotificationsPage() {
   async function sendTest() {
     setBusy(true);
     const res = await apiFetch('/api/notifications/test', { method: 'POST' });
-    if (res.ok) addToast('Test notification sent', 'success');
+    // On a failure apiFetch has already raised the server's warning. On a success, say what was
+    // reached — "sent" only ever meant the request left the page.
+    if (res.ok) {
+      const { delivered, gone, failed } = await res.json();
+      const missed = gone + failed;
+      addToast(
+        missed === 0
+          ? `Delivered to ${deviceCount(delivered)}`
+          : `Delivered to ${deviceCount(delivered)}, ${missed} unreachable`,
+        'success'
+      );
+    }
+    // A send prunes the subscriptions the push service disowned, so the list below has moved.
+    await load();
     setBusy(false);
   }
 

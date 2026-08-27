@@ -53,7 +53,11 @@ manifest would follow `/pinboard` around. Each PWA's manifest is named by its ow
   `~/.local/share/gitmob/notification-devices.json` — Web Push from `src/lib/notifications.ts`,
   received by the service worker in `public/sw.js`, so the notification comes from the installed
   PWA itself. The VAPID keypair generates itself on first send; the Notifications page in the
-  gear menu is where a device subscribes.
+  gear menu is where a device subscribes. A push service answering 404/410 means that
+  subscription is dead, so the send drops it — which is why enabling always mints a fresh
+  subscription rather than reusing the one the browser offers, and why `sw.js` re-registers on
+  `pushsubscriptionchange`. Delivery counts come back from `sendNotification`: a send that
+  reached nobody must not report success.
 - Two installable PWAs off one app, on scopes that do not contain each other: `/app` is GitMob,
   `/pinboard` is the read-and-remove overview of every project's notes, each with its own
   manifest, scope and icon. Neither owns the root — `/` only redirects to `/app` — so the two

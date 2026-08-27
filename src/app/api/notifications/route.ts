@@ -4,6 +4,7 @@ import {
   publicKey,
   readDevices,
   removeDevice,
+  replaceDevice,
 } from '@/lib/notifications';
 
 export async function GET() {
@@ -18,7 +19,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const { subscription, label } = await request.json();
+  const { subscription, label, replaces } = await request.json();
 
   if (!subscription?.endpoint) {
     return NextResponse.json(
@@ -27,7 +28,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  addDevice(subscription, label || 'Unnamed device');
+  // `replaces` comes from the service worker's pushsubscriptionchange handler: it knows the
+  // endpoint it is standing in for, but not the label that device was enrolled under.
+  if (typeof replaces === 'string') replaceDevice(replaces, subscription);
+  else addDevice(subscription, label || 'Unnamed device');
 
   return NextResponse.json({ success: true });
 }

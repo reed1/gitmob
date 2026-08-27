@@ -27,6 +27,46 @@ self.addEventListener('push', (event) => {
   );
 });
 
+// Chrome fires this when it invalidates or rotates a subscription — after the PWA is
+// uninstalled, or when the push service expires one. Without re-subscribing here the device
+// falls off the server's list and only a manual Enable ever brings it back.
+//
+// decodeKey duplicates the one in src/lib/notifications-client.ts: this file is served straight
+// out of public/, so there is nothing here to import it with.
+function decodeKey(base64Url) {
+  const padded = (base64Url + '='.repeat((4 - (base64Url.length % 4)) % 4))
+    .replace(/-/g, '+')
+    .replace(/_/g, '/');
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil(
+    (async () => {
+      const res = await fetch('/api/notifications');
+      if (!res.ok) return;
+      const { publicKey } = await res.json();
+
+      const sub = await self.registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: decodeKey(publicKey),
+      });
+
+      await fetch('/api/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subscription: sub.toJSON(),
+          replaces: event.oldSubscription?.endpoint ?? null,
+        }),
+      });
+    })()
+  );
+});
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const url = event.notification.data?.url ?? '/app';

@@ -98,6 +98,12 @@ export async function subscribeThisDevice(): Promise<
   if (!res.ok) return { ok: false, reason: 'Could not read the server key' };
   const { publicKey } = await res.json();
 
+  // A subscription minted before the browser's push registration was torn down — by a PWA
+  // uninstall, or by the push service expiring it — is handed straight back by subscribe(),
+  // dead endpoint and all, so re-enabling would re-register the same corpse forever. Clear
+  // whatever is on record first and take a fresh one.
+  await unsubscribeThisDevice();
+
   const sub = await (
     await registration()
   ).pushManager.subscribe({
