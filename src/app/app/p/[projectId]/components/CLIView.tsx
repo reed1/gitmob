@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { apiFetch } from '../../../../lib/api';
+import { apiFetch } from '../../../../../lib/api';
 
 export function CLIView({ projectPath }: { projectPath: string }) {
   const [command, setCommand] = useState('');

@@ -5,10 +5,10 @@ import Link from 'next/link';
 import ProjectCard from './ProjectCard';
 import UsagePanel from './UsagePanel';
 import { ClaudeUsage, Project } from './types';
-import { addToast } from '../lib/api';
-import { useOutsideClick } from '../lib/use-outside-click';
-import { useAutoRefresh } from '../lib/use-auto-refresh';
-import { needsNotificationSetup } from '../lib/notifications-client';
+import { addToast } from '../../lib/api';
+import { useOutsideClick } from '../../lib/use-outside-click';
+import { useAutoRefresh } from '../../lib/use-auto-refresh';
+import { needsNotificationSetup } from '../../lib/notifications-client';
 
 const RESUME_REFRESH_THRESHOLD_MS = 10000;
 
@@ -251,7 +251,7 @@ export default function Home() {
                     Pinboard
                   </Link>
                   <Link
-                    href="/files"
+                    href="/app/files"
                     onClick={() => setMenuOpen(false)}
                     className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 flex items-center gap-2"
                   >
@@ -271,7 +271,7 @@ export default function Home() {
                     Files
                   </Link>
                   <Link
-                    href="/notifications"
+                    href="/app/notifications"
                     onClick={() => setMenuOpen(false)}
                     className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 flex items-center gap-2"
                   >
@@ -383,7 +383,7 @@ export default function Home() {
       <main className="p-4 space-y-6">
         {notificationsOff && (
           <Link
-            href="/notifications"
+            href="/app/notifications"
             className="flex items-center gap-3 p-3 rounded-lg border border-amber-500/40 bg-amber-500/10 active:opacity-80"
           >
             <svg

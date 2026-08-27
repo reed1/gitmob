@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { apiFetch } from '../../../../lib/api';
+import { apiFetch } from '../../../../../lib/api';
 
 interface SudoTarget {
   name: string;

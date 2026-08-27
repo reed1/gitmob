@@ -204,7 +204,7 @@ export default function PinboardOverviewPage() {
             >
               <div className="flex items-center gap-2 px-3 pt-2 text-xs">
                 <Link
-                  href={`/p/${note.projectId}?tab=pinboard`}
+                  href={`/app/p/${note.projectId}?tab=pinboard`}
                   className="font-mono text-blue-400/80 active:text-blue-300 truncate"
                 >
                   {note.projectId}

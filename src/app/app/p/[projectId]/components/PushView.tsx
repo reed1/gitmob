@@ -1,8 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { apiFetch } from '../../../../lib/api';
-import { useAutoRefresh } from '../../../../lib/use-auto-refresh';
+import { apiFetch } from '../../../../../lib/api';
+import { useAutoRefresh } from '../../../../../lib/use-auto-refresh';
 import {
   buildPushArgv,
   PushConfig,
@@ -10,7 +10,7 @@ import {
   PushScope,
   PushSelection,
   SCOPE_PATTERN,
-} from '../../../../lib/push-command';
+} from '../../../../../lib/push-command';
 
 interface PushJob {
   command: string;

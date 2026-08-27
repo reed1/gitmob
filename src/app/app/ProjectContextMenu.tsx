@@ -2,13 +2,13 @@
 
 import { ReactNode, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { launchDesktopSession } from '../lib/desktop-client';
+import { launchDesktopSession } from '../../lib/desktop-client';
 import {
   CLAUDE_MODES,
   ClaudeMode,
   DEFAULT_CLAUDE_MODE,
-} from '../lib/desktop-modes';
-import { useOutsideClick } from '../lib/use-outside-click';
+} from '../../lib/desktop-modes';
+import { useOutsideClick } from '../../lib/use-outside-click';
 
 const DOOIT_DOMAIN = process.env.NEXT_PUBLIC_DOOIT_DOMAIN;
 

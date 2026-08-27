@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { apiFetch } from '../../../../lib/api';
+import { apiFetch } from '../../../../../lib/api';
 import { RecentCommits } from './RecentCommits';
 
 function ArrowIcon({ direction }: { direction: 'up' | 'down' }) {

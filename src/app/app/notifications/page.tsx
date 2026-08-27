@@ -2,14 +2,14 @@
 
 import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { addToast, apiFetch } from '../../lib/api';
-import { useAutoRefresh } from '../../lib/use-auto-refresh';
+import { addToast, apiFetch } from '../../../lib/api';
+import { useAutoRefresh } from '../../../lib/use-auto-refresh';
 import {
   currentEndpoint,
   pushSupported,
   subscribeThisDevice,
   unsubscribeThisDevice,
-} from '../../lib/notifications-client';
+} from '../../../lib/notifications-client';
 
 interface DeviceRow {
   endpoint: string;
@@ -79,7 +79,7 @@ export default function NotificationsPage() {
       <header className="sticky top-0 z-10 border-b border-foreground/10 bg-background/95 backdrop-blur px-4 py-3">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => router.push('/')}
+            onClick={() => router.push('/app')}
             className="text-foreground/50 hover:text-foreground transition-colors"
           >
             <svg

@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { apiFetch } from '../../../../lib/api';
-import { useAutoRefresh } from '../../../../lib/use-auto-refresh';
+import { apiFetch } from '../../../../../lib/api';
+import { useAutoRefresh } from '../../../../../lib/use-auto-refresh';
 
 interface Todo {
   id: number;

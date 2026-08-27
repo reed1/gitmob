@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useAutoRefresh } from '../../../../lib/use-auto-refresh';
+import { useAutoRefresh } from '../../../../../lib/use-auto-refresh';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { GitStatus } from '../types';
-import { apiFetch } from '../../../../lib/api';
+import { apiFetch } from '../../../../../lib/api';
 
 export function ChangesView({
   projectId,
@@ -41,7 +41,7 @@ export function ChangesView({
     const params = new URLSearchParams({ tab: 'changes', file });
     if (staged) params.set('staged', '1');
     if (untracked) params.set('untracked', '1');
-    const url = `/p/${projectId}?${params}`;
+    const url = `/app/p/${projectId}?${params}`;
     if (replace) router.replace(url);
     else router.push(url);
   };
@@ -115,7 +115,7 @@ export function ChangesView({
       body: JSON.stringify({ action, file }),
     });
     setDiff('');
-    router.replace(`/p/${projectId}?tab=changes`);
+    router.replace(`/app/p/${projectId}?tab=changes`);
     onRefresh();
   };
 
@@ -171,7 +171,7 @@ export function ChangesView({
                     onClick={() => {
                       setMenuOpen(false);
                       router.push(
-                        `/p/${projectId}?tab=files&file=${encodeURIComponent(selectedFile)}`
+                        `/app/p/${projectId}?tab=files&file=${encodeURIComponent(selectedFile)}`
                       );
                     }}
                     className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 active:bg-foreground/15"

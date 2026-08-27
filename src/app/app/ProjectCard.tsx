@@ -25,7 +25,7 @@ export default function ProjectCard({
   return (
     <div
       onClick={() =>
-        router.push(`/p/${project.id}?tab=${getDefaultTab(project)}`)
+        router.push(`/app/p/${project.id}?tab=${getDefaultTab(project)}`)
       }
       className={`p-4 rounded-lg border flex items-center gap-3 cursor-pointer ${
         project.warnings.length > 0

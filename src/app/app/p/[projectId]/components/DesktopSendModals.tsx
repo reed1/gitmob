@@ -2,12 +2,12 @@
 
 import { useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { addToast, apiFetch } from '../../../../lib/api';
+import { addToast, apiFetch } from '../../../../../lib/api';
 import {
   ARROW_KEY_ROWS,
   COMMAND_KEYS,
   type SpecialKey,
-} from '../../../../lib/desktop-keys';
+} from '../../../../../lib/desktop-keys';
 
 function Modal({
   heading,

@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { DesktopScreenView } from './DesktopScreenView';
 import { DesktopSessions } from './DesktopSessions';
-import { useAutoRefresh } from '../../../../lib/use-auto-refresh';
+import { useAutoRefresh } from '../../../../../lib/use-auto-refresh';
 
 export interface DesktopSession {
   windowId: string;
@@ -47,7 +47,7 @@ export function ClaudeView({
 
   const openScreen = (windowId: string) => {
     router.push(
-      `/p/${projectId}?tab=claude&window=${encodeURIComponent(windowId)}`
+      `/app/p/${projectId}?tab=claude&window=${encodeURIComponent(windowId)}`
     );
   };
 

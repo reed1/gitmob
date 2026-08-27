@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { useAutoRefresh } from '../../../../lib/use-auto-refresh';
+import { useAutoRefresh } from '../../../../../lib/use-auto-refresh';
 
 interface CommitFileStat {
   path: string;

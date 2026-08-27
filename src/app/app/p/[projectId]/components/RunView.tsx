@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { apiFetch } from '../../../../lib/api';
+import { apiFetch } from '../../../../../lib/api';
 import { RunLogView } from './RunLogView';
-import { useAutoRefresh } from '../../../../lib/use-auto-refresh';
+import { useAutoRefresh } from '../../../../../lib/use-auto-refresh';
 
 interface RunInfo {
   name: string;
@@ -54,7 +54,9 @@ export function RunView({
   }, [projectId]);
 
   const openLogs = (runName: string) => {
-    router.push(`/p/${projectId}?tab=run&logs=${encodeURIComponent(runName)}`);
+    router.push(
+      `/app/p/${projectId}?tab=run&logs=${encodeURIComponent(runName)}`
+    );
   };
 
   const handleAction = async (
