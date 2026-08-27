@@ -13,13 +13,13 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
-// The manifest and the icons are named here rather than dropped into `src/app/` as Next's file
-// conventions: a convention file applies to every nested route as well, and /pinboard installs
-// as its own PWA with its own manifest and its own icon.
+// The icons are named here rather than dropped into `src/app/` as Next's file conventions: a
+// convention file applies to every nested route as well, and /pinboard installs as its own PWA
+// with its own icon. Each PWA's manifest is named by its own layout, so the root — which only
+// redirects to /app — belongs to neither scope.
 export const metadata: Metadata = {
   title: 'GitMob',
   description: 'Mobile-first git repository viewer',
-  manifest: '/manifest.json',
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: '32x32' },

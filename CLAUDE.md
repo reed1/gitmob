@@ -10,7 +10,7 @@ React 19, Next.js 16, TypeScript, Tailwind CSS 4, simple-git
 
 - `/src/lib` - Core logic (git.ts, run.ts, projects.ts, files.ts)
 - `/src/app/api` - API routes (projects, cli jobs, dooit todos)
-- `/src/app/p/[projectId]/components` - Project views (FileBrowser, ChangesView, CommitView, RunView, CLIView, DooitView, ClaudeView, PushView, SudoView)
+- `/src/app/app/p/[projectId]/components` - Project views (FileBrowser, ChangesView, CommitView, RunView, CLIView, DooitView, ClaudeView, PushView, SudoView)
 
 ## Development
 
@@ -37,7 +37,8 @@ Turbopack build.
 
 Icons and manifests are named in each layout's `metadata`, not dropped into `src/app/` as Next's
 file conventions: a convention file applies to every nested route too, so the root icon and
-manifest would follow `/pinboard` around.
+manifest would follow `/pinboard` around. Each PWA's manifest is named by its own layout —
+`src/app/app/layout.tsx` and `src/app/pinboard/layout.tsx` — and the root layout names neither.
 
 ## Key Patterns
 
@@ -53,14 +54,16 @@ manifest would follow `/pinboard` around.
   received by the service worker in `public/sw.js`, so the notification comes from the installed
   PWA itself. The VAPID keypair generates itself on first send; the Notifications page in the
   gear menu is where a device subscribes.
-- Two installable PWAs off one app: `/` is GitMob, `/pinboard` is the read-and-remove overview
-  of every project's notes, each with its own manifest, scope and icon. The overview reads all
-  boards through `/api/pinboard`; adding and editing stay on a project's Pinboard tab.
-  Install Pinboard FIRST: GitMob's scope is `/`, which contains `/pinboard`, so once GitMob is
-  installed Chrome answers the inner app's install with "already installed" and opens GitMob.
-  Uninstall both and take the inner one first if that happens.
-- A project page is `/p/<projectId>`, never `/<projectId>`. Project ids come from rworkspaces
-  and are not this app's to choose — one named `pinboard` or `files` would otherwise be
-  shadowed by a page of the same name, silently and only for that project. The prefix keeps
-  the root namespace free for pages.
+- Two installable PWAs off one app, on scopes that do not contain each other: `/app` is GitMob,
+  `/pinboard` is the read-and-remove overview of every project's notes, each with its own
+  manifest, scope and icon. Neither owns the root — `/` only redirects to `/app` — so the two
+  install in either order. Keep every GitMob page under `/app`: a page left at the root would
+  fall outside the scope and open in Chrome's in-app browser instead of the installed PWA.
+  The overview reads all boards through `/api/pinboard`; adding and editing stay on a project's
+  Pinboard tab. `/api` is shared by both and stays at the root — `scope` constrains navigations,
+  not `fetch`.
+- A project page is `/app/p/<projectId>`, never `/app/<projectId>`. Project ids come from
+  rworkspaces and are not this app's to choose — one named `files` or `notifications` would
+  otherwise be shadowed by a page of the same name, silently and only for that project. The
+  prefix keeps GitMob's namespace free for pages.
 - Per-project state (sudo, runs, desktop sessions) belongs to the CLI that owns it — `pt`, `rv`, `claudex`. Shell out to those commands and surface their failures; never read their caches or redo their lookups here. Contracts in [docs/cli-integrations.md](docs/cli-integrations.md).
