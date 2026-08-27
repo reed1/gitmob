@@ -58,19 +58,10 @@ manifest would follow `/pinboard` around. Each PWA's manifest is named by its ow
   subscription rather than reusing the one the browser offers, and why `sw.js` re-registers on
   `pushsubscriptionchange`. Delivery counts come back from `sendNotification`: a send that
   reached nobody must not report success.
-- A push subscription dies with its origin's notification permission, and on Android that
-  permission is delegated to the installed app's own app-level permission — which is why the two
-  PWAs had to be split onto two hostnames above. Anything else that discards one is Chrome's to
-  decide and nothing on either side is told, so `~/.local/share/gitmob/notification-events.jsonl`
-  is the trail that says which: every enrol, rotation, removal and delivery outcome from
-  `src/lib/notifications.ts`, plus what the browser saw — a `boot-state` line per page load from
-  `GlobalUI`, and `push-received` / `subscription-change` from `sw.js`, posted through
-  `/api/notifications/events`. A device row carries an `installId` from the browser's
-  localStorage: it survives a subscription being replaced and dies with the origin's storage, so
-  two rows sharing one were enrolled by the same install and two different ones mean the storage
-  was wiped in between. Reads must not repair what they measure — `currentEndpoint` and
-  `deviceState` use `getRegistration`, never `register`, and only `GlobalUI` and enrolling
-  register a worker.
+- A push subscription dies with its origin's notification permission, which on Android is
+  delegated to the installed app's own app-level permission — the reason the two PWAs are on two
+  hostnames above. Eviction of the origin's storage takes it too, so enabling asks for persistent
+  storage on the way through.
 - Two installable PWAs off one server, on **two hostnames**: `gitmob.<front>` serves `/app`,
   `pinboard.<front>` serves `/pinboard`, the read-and-remove overview of every project's notes.
   Both are one portman registration each pointing at the same port (`static.yaml`), so all five

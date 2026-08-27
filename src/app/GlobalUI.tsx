@@ -3,7 +3,6 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import { subscribe, getSnapshot, dismissToast } from '../lib/api';
 import type { ToastVariant } from '../lib/api';
-import { bootStateOnce } from '../lib/notifications-client';
 
 const TOAST_STYLES: Record<ToastVariant, string> = {
   error: 'bg-red-600',
@@ -31,10 +30,9 @@ export default function GlobalUI() {
   );
 
   useEffect(() => {
-    if (!('serviceWorker' in navigator)) return;
-    // Read the state before registering, and register whatever it said: register() would create
-    // the very registration whose absence is the thing worth knowing.
-    bootStateOnce().finally(() => navigator.serviceWorker.register('/sw.js'));
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
   }, []);
 
   return (
