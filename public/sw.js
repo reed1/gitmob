@@ -11,19 +11,39 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', () => {});
 
+// The trail in ~/.local/share/gitmob/notification-events.jsonl is the only place a worker can
+// say anything: there is no console anyone will be watching when a subscription dies. Failures
+// to report are swallowed — a push event that rejects counts against this origin's standing with
+// Chrome, and there is nothing useful to do about a log line that did not land.
+function report(event, detail) {
+  return fetch('/api/notifications/events', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ event, detail }),
+  }).catch(() => {});
+}
+
+function tail(endpoint) {
+  return endpoint ? endpoint.slice(-12) : null;
+}
+
 self.addEventListener('push', (event) => {
   // Chrome revokes push permission from a worker that receives a message and shows nothing,
   // so an unreadable payload still has to surface something.
   const data = event.data ? event.data.json() : {};
 
   event.waitUntil(
-    self.registration.showNotification(data.title ?? 'GitMob', {
-      body: data.body ?? '',
-      icon: '/icon-192.png',
-      badge: '/icon-192.png',
-      tag: data.tag,
-      data: { url: data.url ?? '/app' },
-    })
+    Promise.all([
+      self.registration.showNotification(data.title ?? 'GitMob', {
+        body: data.body ?? '',
+        icon: '/icon-192.png',
+        badge: '/icon-192.png',
+        tag: data.tag,
+        data: { url: data.url ?? '/app' },
+      }),
+      // Proof the subscription was alive at this moment, from the receiving end.
+      report('push-received', { title: data.title ?? null, tag: data.tag ?? null }),
+    ])
   );
 });
 
@@ -46,21 +66,44 @@ function decodeKey(base64Url) {
 self.addEventListener('pushsubscriptionchange', (event) => {
   event.waitUntil(
     (async () => {
+      const oldEndpoint = event.oldSubscription?.endpoint ?? null;
+      // Reported before anything is attempted, because whether Chrome fires this event at all is
+      // the open question: a subscription that dies without one leaves this line missing.
+      await report('subscription-change', {
+        old: tail(oldEndpoint),
+        new: tail(event.newSubscription?.endpoint ?? null),
+      });
+
       const res = await fetch('/api/notifications');
-      if (!res.ok) return;
+      if (!res.ok) {
+        await report('subscription-change-failed', {
+          stage: 'read-key',
+          status: res.status,
+        });
+        return;
+      }
       const { publicKey } = await res.json();
 
-      const sub = await self.registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: decodeKey(publicKey),
-      });
+      let sub;
+      try {
+        sub = await self.registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: decodeKey(publicKey),
+        });
+      } catch (err) {
+        await report('subscription-change-failed', {
+          stage: 'subscribe',
+          error: String(err),
+        });
+        throw err;
+      }
 
       await fetch('/api/notifications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           subscription: sub.toJSON(),
-          replaces: event.oldSubscription?.endpoint ?? null,
+          replaces: oldEndpoint,
         }),
       });
     })()

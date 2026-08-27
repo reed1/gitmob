@@ -58,6 +58,17 @@ manifest would follow `/pinboard` around. Each PWA's manifest is named by its ow
   subscription rather than reusing the one the browser offers, and why `sw.js` re-registers on
   `pushsubscriptionchange`. Delivery counts come back from `sendNotification`: a send that
   reached nobody must not report success.
+- Chrome discards a subscription on its own and nothing on either side is told, so the open
+  question is which of several things happened. `~/.local/share/gitmob/notification-events.jsonl`
+  is the trail that answers it: every enrol, rotation, removal and delivery outcome from
+  `src/lib/notifications.ts`, plus what the browser saw — a `boot-state` line per page load from
+  `GlobalUI`, and `push-received` / `subscription-change` from `sw.js`, posted through
+  `/api/notifications/events`. A device row carries an `installId` from the browser's
+  localStorage: it survives a subscription being replaced and dies with the origin's storage, so
+  two rows sharing one were enrolled by the same install and two different ones mean the storage
+  was wiped in between. Reads must not repair what they measure — `currentEndpoint` and
+  `deviceState` use `getRegistration`, never `register`, and only `GlobalUI` and enrolling
+  register a worker.
 - Two installable PWAs off one app, on scopes that do not contain each other: `/app` is GitMob,
   `/pinboard` is the read-and-remove overview of every project's notes, each with its own
   manifest, scope and icon. Neither owns the root — `/` only redirects to `/app` — so the two

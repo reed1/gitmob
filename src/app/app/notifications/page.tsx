@@ -5,7 +5,11 @@ import { useRouter } from 'next/navigation';
 import { addToast, apiFetch } from '../../../lib/api';
 import { useAutoRefresh } from '../../../lib/use-auto-refresh';
 import {
+  bootStateOnce,
   currentEndpoint,
+  deviceState,
+  DeviceState,
+  endpointTail,
   pushSupported,
   subscribeThisDevice,
   unsubscribeThisDevice,
@@ -15,27 +19,81 @@ interface DeviceRow {
   endpoint: string;
   label: string;
   createdAt: number;
+  installId: string | null;
 }
 
 function deviceCount(n: number): string {
   return `${n} device${n === 1 ? '' : 's'}`;
 }
 
+function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3 py-1">
+      <span className="text-xs text-foreground/50 shrink-0">{label}</span>
+      <span className="text-xs font-mono text-right break-all">{value}</span>
+    </div>
+  );
+}
+
+function describeStorage(persisted: boolean | null): string {
+  if (persisted === null) return 'not reported by this browser';
+  return persisted ? 'persistent' : 'evictable';
+}
+
+function describeState(state: DeviceState): { label: string; value: string }[] {
+  return [
+    { label: 'Permission', value: state.permission },
+    {
+      label: 'Service worker',
+      value: state.hasRegistration
+        ? `registered · ${state.registrationScope}`
+        : 'none',
+    },
+    {
+      label: 'Push subscription',
+      value: state.hasSubscription
+        ? (endpointTail(state.endpoint) ?? '?')
+        : 'none',
+    },
+    { label: 'Install id', value: state.installId ?? 'none on this storage' },
+    {
+      label: 'Last enrolled',
+      value:
+        state.lastEnrolled === null
+          ? 'never, on this storage'
+          : `${endpointTail(state.lastEnrolled.endpoint)} · ${new Date(
+              state.lastEnrolled.at
+            ).toLocaleString(undefined, {
+              dateStyle: 'medium',
+              timeStyle: 'short',
+            })}`,
+    },
+    { label: 'Storage', value: describeStorage(state.storagePersisted) },
+    { label: 'Opened as', value: `${state.displayMode} · ${state.path}` },
+  ];
+}
+
 export default function NotificationsPage() {
   const router = useRouter();
   const [devices, setDevices] = useState<DeviceRow[]>([]);
   const [thisEndpoint, setThisEndpoint] = useState<string | null>(null);
+  const [boot, setBoot] = useState<DeviceState | null>(null);
+  const [now, setNow] = useState<DeviceState | null>(null);
   const [supported, setSupported] = useState(true);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
+    // First, and before anything that could register a worker: what this page load found.
+    setBoot(await bootStateOnce());
+
     const res = await fetch('/api/notifications');
     const data = res.ok ? await res.json() : null;
     const endpoint = await currentEndpoint();
     if (data) setDevices(data.devices);
     setSupported(pushSupported());
     setThisEndpoint(endpoint);
+    setNow(pushSupported() ? await deviceState() : null);
     setLoading(false);
   }, []);
 
@@ -43,6 +101,25 @@ export default function NotificationsPage() {
 
   const subscribed =
     thisEndpoint !== null && devices.some((d) => d.endpoint === thisEndpoint);
+
+  // Looking at this page registers a worker and can mint a subscription, so anything that moved
+  // between opening it and now is the page's own doing and has to be labelled as such.
+  const changedSinceOpen =
+    boot === null || now === null
+      ? null
+      : [
+          boot.hasRegistration !== now.hasRegistration
+            ? `service worker ${now.hasRegistration ? 'appeared' : 'went'}`
+            : null,
+          boot.endpoint !== now.endpoint
+            ? `subscription ${endpointTail(boot.endpoint) ?? 'none'} → ${endpointTail(now.endpoint) ?? 'none'}`
+            : null,
+          boot.permission !== now.permission
+            ? `permission ${boot.permission} → ${now.permission}`
+            : null,
+        ]
+          .filter((change) => change !== null)
+          .join(', ') || null;
 
   async function enable() {
     setBusy(true);
@@ -58,7 +135,7 @@ export default function NotificationsPage() {
 
   async function disable() {
     setBusy(true);
-    await unsubscribeThisDevice();
+    await unsubscribeThisDevice('disabled-by-user');
     await load();
     setBusy(false);
   }
@@ -85,7 +162,7 @@ export default function NotificationsPage() {
 
   async function forget(endpoint: string) {
     await apiFetch(
-      `/api/notifications?endpoint=${encodeURIComponent(endpoint)}`,
+      `/api/notifications?endpoint=${encodeURIComponent(endpoint)}&reason=forgotten-in-ui`,
       { method: 'DELETE' }
     );
     await load();
@@ -188,6 +265,17 @@ export default function NotificationsPage() {
                               this one
                             </span>
                           )}
+                          {device.endpoint !== thisEndpoint &&
+                            device.installId !== null &&
+                            device.installId === boot?.installId && (
+                              <span className="ml-2 text-xs text-amber-400">
+                                same install
+                              </span>
+                            )}
+                        </div>
+                        <div className="text-xs font-mono text-foreground/40 truncate">
+                          {device.installId ?? 'no install id'} ·{' '}
+                          {endpointTail(device.endpoint)}
                         </div>
                         <div className="text-xs text-foreground/40">
                           {new Date(device.createdAt).toLocaleString(
@@ -210,6 +298,29 @@ export default function NotificationsPage() {
                 </div>
               )}
             </section>
+
+            {boot !== null && (
+              <section className="space-y-2">
+                <h2 className="text-sm font-medium text-foreground/60 px-1">
+                  As this page load found it
+                </h2>
+                <div className="rounded-lg border border-foreground/10 px-4 py-2">
+                  {describeState(boot).map((row) => (
+                    <Detail key={row.label} {...row} />
+                  ))}
+                </div>
+                {changedSinceOpen !== null && (
+                  <div className="text-xs text-amber-400 px-1">
+                    Changed since this page opened: {changedSinceOpen}
+                  </div>
+                )}
+                <div className="text-xs text-foreground/40 px-1">
+                  Read before the page registers anything, so a missing worker
+                  reads as missing. The same lines, timestamped, are in
+                  ~/.local/share/gitmob/notification-events.jsonl.
+                </div>
+              </section>
+            )}
           </>
         )}
       </main>

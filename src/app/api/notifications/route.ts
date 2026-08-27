@@ -14,12 +14,13 @@ export async function GET() {
       endpoint: d.subscription.endpoint,
       label: d.label,
       createdAt: d.createdAt,
+      installId: d.installId,
     })),
   });
 }
 
 export async function POST(request: NextRequest) {
-  const { subscription, label, replaces } = await request.json();
+  const { subscription, label, installId, replaces } = await request.json();
 
   if (!subscription?.endpoint) {
     return NextResponse.json(
@@ -29,9 +30,15 @@ export async function POST(request: NextRequest) {
   }
 
   // `replaces` comes from the service worker's pushsubscriptionchange handler: it knows the
-  // endpoint it is standing in for, but not the label that device was enrolled under.
+  // endpoint it is standing in for, but neither the label nor the install id that device was
+  // enrolled under, so the row carries those over.
   if (typeof replaces === 'string') replaceDevice(replaces, subscription);
-  else addDevice(subscription, label || 'Unnamed device');
+  else
+    addDevice(
+      subscription,
+      label || 'Unnamed device',
+      typeof installId === 'string' ? installId : null
+    );
 
   return NextResponse.json({ success: true });
 }
@@ -42,7 +49,10 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'endpoint required' }, { status: 400 });
   }
 
-  removeDevice(endpoint);
+  removeDevice(
+    endpoint,
+    request.nextUrl.searchParams.get('reason') ?? 'unspecified'
+  );
 
   return NextResponse.json({ success: true });
 }
