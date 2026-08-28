@@ -62,13 +62,13 @@ export async function POST(
       }
       const initialPrompt = typeof prompt === 'string' ? prompt.trim() : '';
       const sessionName = project.path.split('/').pop() || id;
-      await launchDesktopSession(
-        id,
-        project.path,
+      await launchDesktopSession({
+        projectId: id,
+        directory: project.path,
         mode,
-        sessionName,
-        initialPrompt
-      );
+        name: sessionName,
+        prompt: initialPrompt,
+      });
       return NextResponse.json({ success: true, name: sessionName });
     }
 

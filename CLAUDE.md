@@ -77,6 +77,12 @@ manifest would follow `/pinboard` around. Each PWA's manifest is named by its ow
   outside the manifest scope and open in Chrome's in-app browser instead of the installed PWA.
   Adding and editing notes stay on a project's Pinboard tab; the overview reads all boards
   through `/api/pinboard`.
+- `claudex handoff` parks a briefing here instead of opening a window when `am-i-afk` says
+  nobody is at the desktop: `~/.local/share/gitmob/pending-handoffs`, one file per handoff,
+  announced at the top of the front page — above the project list, whichever project it names —
+  to edit and launch from there. The same trade gg makes when it sends a commit message to the
+  Commit tab rather than a review overlay nobody is sitting in front of. Contract in
+  [docs/cli-integrations.md](docs/cli-integrations.md).
 - A project page is `/app/p/<projectId>`, never `/app/<projectId>`. Project ids come from
   rworkspaces and are not this app's to choose — one named `files` or `notifications` would
   otherwise be shadowed by a page of the same name, silently and only for that project. The

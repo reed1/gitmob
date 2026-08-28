@@ -161,6 +161,42 @@ window itself carries, not through its session registry — so a session resumed
 the same as a fresh one. `session_id` and `cwd` come from that registry and are the two fields that
 can be null on a live session; nothing here may treat a null as a session it cannot reach.
 
+## Handoffs — parked by `claudex handoff`
+
+`src/lib/handoffs.ts`, read by the front page: the waiting handoffs lead it, above the project
+list and outside it — the project cards say nothing about them, because a section announcing
+them a screen-width above would only be saying it twice.
+
+A handoff is a briefing one Claude Code session writes for another to run alone. At the desktop
+`claudex handoff` opens that session itself. Away from it — `am-i-afk` again — a window opening
+on an empty desktop is a session nobody meets for hours, so the briefing is parked here instead,
+one file per handoff under `~/.local/share/gitmob/pending-handoffs`:
+
+```json
+{ "project_id": "gitmob", "directory": "/home/reed/proj/gitmob", "prompt": "…", "timestamp": "…" }
+```
+
+This is a handover, not a cache read behind claudex's back: claudex writes the file and never
+looks at it again, and this app is the only reader — it lists them all through `/api/handoffs`,
+and deletes the file once the session it describes has been launched, or dropped. claudex
+resolves `project_id` (worktrees included) before writing, so nothing here maps a path back to a
+project; the launch reads the project's checkout back out of it for the session name. The file is
+renamed into place from a dotfile beside it, because the page reads the directory while claudex
+writes to it.
+
+They belong on the front page rather than on the project they name: a briefing waiting for a
+session to be started is an announcement, and a tab nobody opens announces nothing.
+
+Launching one is the same two commands as "New", with the handoff's own directory and
+`--title "Claude (handoff)"` — the title claudex-handoff would have given the window it opened
+itself. Editing the prompt first is the point of parking it: the text is the browser's, the
+directory is not, so a launch takes the prompt from the request and everything else from the
+file. A launch that fails leaves the handoff parked, to fix and try again.
+
+The prompt has to survive being typed into a session's input box, so `claudex handoff` holds it
+to claudex-kitty's 2000-byte cap when it parks it rather than letting it fail here, where there
+is no longer a session that could rewrite it.
+
 ## Usage — `claudex usage`
 
 `src/lib/claude-usage.ts`, read by the dollar badge beside the GitMob title.

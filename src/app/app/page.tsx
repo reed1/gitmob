@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import ProjectCard from './ProjectCard';
+import { PendingHandoffs } from './PendingHandoffs';
 import UsagePanel from './UsagePanel';
 import { ClaudeUsage, Project } from './types';
 import { addToast } from '../../lib/api';
@@ -422,6 +423,8 @@ export default function Home() {
             </svg>
           </Link>
         )}
+
+        <PendingHandoffs onLaunched={() => refreshProjects()} />
 
         {error && (
           <div className="p-4 rounded-lg border border-red-500/50 bg-red-500/10">

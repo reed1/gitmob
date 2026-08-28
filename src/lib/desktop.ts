@@ -60,6 +60,16 @@ function claudexDesktop(args: string[]): Promise<string> {
   return run('claudex', ['desktop', ...args]);
 }
 
+export interface DesktopLaunch {
+  projectId: string;
+  /** Where the session opens — the project's checkout, or the directory a handoff named. */
+  directory: string;
+  mode: ClaudeMode;
+  name: string;
+  prompt: string;
+  title?: string;
+}
+
 /**
  * A new session is two commands. `rv open` puts the desktop on the project — switching to its
  * workspaces and opening them when they were closed — and `claudex kitty` then lands the Claude
@@ -71,23 +81,20 @@ function claudexDesktop(args: string[]): Promise<string> {
  * the session is looked at; without one there is nothing to submit and the session waits.
  */
 export async function launchDesktopSession(
-  projectId: string,
-  projectPath: string,
-  mode: ClaudeMode,
-  name: string,
-  prompt: string
+  launch: DesktopLaunch
 ): Promise<void> {
-  await run('rv', ['open', projectId, '--focus-ide'], OPEN_TIMEOUT_MS);
+  await run('rv', ['open', launch.projectId, '--focus-ide'], OPEN_TIMEOUT_MS);
   await run('claudex', [
     'kitty',
     '--detach',
     '--mode',
-    mode,
+    launch.mode,
     '--directory',
-    projectPath,
+    launch.directory,
     '--remote-control',
-    name,
-    ...(prompt ? ['--press-enter', prompt] : []),
+    launch.name,
+    ...(launch.title ? ['--title', launch.title] : []),
+    ...(launch.prompt ? ['--press-enter', launch.prompt] : []),
   ]);
 }
 
