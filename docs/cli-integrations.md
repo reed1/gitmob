@@ -193,9 +193,9 @@ itself. Editing the prompt first is the point of parking it: the text is the bro
 directory is not, so a launch takes the prompt from the request and everything else from the
 file. A launch that fails leaves the handoff parked, to fix and try again.
 
-The prompt has to survive being typed into a session's input box, so `claudex handoff` holds it
-to claudex-kitty's 2000-byte cap when it parks it rather than letting it fail here, where there
-is no longer a session that could rewrite it.
+The prompt is parked whole: nothing trims it on the way in. claudex-kitty caps initial text at
+5000 bytes, the most a session's input box takes, and rejects anything over — a briefing that
+long fails the launch and stays parked, where the box that edits it is the way to cut it down.
 
 ## Usage — `claudex usage`
 
