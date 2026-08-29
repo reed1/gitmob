@@ -197,6 +197,27 @@ The prompt is parked whole: nothing trims it on the way in. claudex-kitty caps i
 5000 bytes, the most a session's input box takes, and rejects anything over — a briefing that
 long fails the launch and stays parked, where the box that edits it is the way to cut it down.
 
+## AFK — `am-i-afk`
+
+`src/lib/afk.ts`, read by the badge left of the refresh button on the front page.
+
+- `am-i-afk` — the away verdict, exit 0 away and 1 here. It rides along on `/api/projects` as
+  `away`, one more sweep in that route's `Promise.all`, null when it cannot be asked at all.
+- Touching `/tmp/rlocal/am-i-afk-forced.flag` forces that verdict away. `POST /api/afk` is the
+  badge tapping it.
+
+`am-i-afk` draws the away line for everything that has to choose between the screen in front of
+the user and somewhere they will find it later — a parked handoff, gg's commit message. This app
+is the somewhere, so it is the one worth saying which way the line falls: while the badge shows,
+the next handoff opens a window on the desktop instead of landing here.
+
+The badge appears only on "here", the answer that is surprising on a phone. Tapping it covers the
+case the idle timer cannot: the user got up mid-keystroke and is holding the phone, with 180s to
+go before the desktop notices. The flag lasts exactly that long, so it expires into the idle
+timeout rather than needing to be cleared — which is why this app only ever touches it, and never
+reads it back to decide anything. A tap that succeeded is away by definition, so the badge hides
+itself without asking again.
+
 ## Usage — `claudex usage`
 
 `src/lib/claude-usage.ts`, read by the dollar badge beside the GitMob title.

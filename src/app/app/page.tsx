@@ -6,7 +6,7 @@ import ProjectCard from './ProjectCard';
 import { PendingHandoffs } from './PendingHandoffs';
 import UsagePanel from './UsagePanel';
 import { ClaudeUsage, Project } from './types';
-import { addToast } from '../../lib/api';
+import { addToast, apiFetch } from '../../lib/api';
 import { useOutsideClick } from '../../lib/use-outside-click';
 import { useAutoRefresh } from '../../lib/use-auto-refresh';
 import { needsNotificationSetup } from '../../lib/notifications-client';
@@ -47,6 +47,9 @@ async function waitForNewServer(
 export default function Home() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [claudeUsage, setClaudeUsage] = useState<ClaudeUsage | null>(null);
+  // Null while am-i-afk cannot be asked, which is neither here nor away and shows no badge.
+  const [away, setAway] = useState<boolean | null>(null);
+  const [forcingAfk, setForcingAfk] = useState(false);
   const [usageOpen, setUsageOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -68,6 +71,7 @@ export default function Home() {
         }
         setProjects(data.projects);
         setClaudeUsage(data.claudeUsage);
+        setAway(data.away);
         setError(null);
       })
       .catch((err) =>
@@ -80,6 +84,21 @@ export default function Home() {
   }, []);
 
   useAutoRefresh(refreshProjects);
+
+  // The desktop's own idle timer has not run out — I am simply not at it. Saying so is what
+  // sends the next handoff and commit review here instead of to a screen nobody is watching.
+  // A touched flag is away by definition, so nothing needs asking again to know it took.
+  const forceAfk = async () => {
+    setForcingAfk(true);
+    try {
+      const res = await apiFetch('/api/afk', { method: 'POST' });
+      if (!res.ok) return;
+      setAway(true);
+      addToast('Counted away from the desktop', 'success');
+    } finally {
+      setForcingAfk(false);
+    }
+  };
 
   // Starts hidden so a phone that is already subscribed never flashes the prompt.
   const [notificationsOff, setNotificationsOff] = useState(false);
@@ -185,6 +204,29 @@ export default function Home() {
             )}
           </div>
           <div className="flex items-center gap-1">
+            {away === false && (
+              <button
+                onClick={forceAfk}
+                disabled={forcingAfk}
+                title="At the desktop: handoffs and commit reviews land there, not here. Tap to count yourself away."
+                className="flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/15 text-emerald-400 text-xs font-medium active:opacity-80 disabled:opacity-50"
+              >
+                <svg
+                  className="w-3.5 h-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                  />
+                </svg>
+                At desk
+              </button>
+            )}
             <button
               onClick={() => refreshProjects()}
               disabled={refreshing}
