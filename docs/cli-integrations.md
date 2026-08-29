@@ -130,8 +130,8 @@ the IDE focused, which is what decides where the window `claudex kitty` spawns n
 - `claudex desktop screen <windowId>` — that window's current terminal content.
 - `claudex desktop send <windowId> <text> --press-enter` — types into that window.
 - `claudex desktop keys <windowId> <key>` — presses one named key in it, whatever is on screen.
-- `claudex kitty --detach --press-enter --mode <mode> --directory <path> "/remote-control <name>"`
-  — opens a new session.
+- `claudex kitty --detach --press-enter --mode <mode> --directory <path>
+  --remote-control <name> "<prompt>"` — opens a new session.
 
 claudex owns the session registry, the kitty remote sockets and the i3 lookup, so this app only
 ever handles window ids and never talks to X itself.
@@ -140,11 +140,14 @@ ever handles window ids and never talks to X itself.
 the window i3 spawns lands on one of its workspaces, then `claudex kitty`. `--detach` hands that
 window to i3, so it outlives a gitmob restart the way a child process would not. The mode picker
 is `claudex`'s own — `auto`, `edit`, `yolo` — not a `claude --permission-mode` value. The session
-is named after the project folder and submits `/remote-control <name>` on startup; this app never
-sees the URL that publishes, because the Claude app lists the session by that name.
+is named after the project folder, which `--remote-control <name>` passes to `claude` itself; this
+app never sees the URL that publishes, because the Claude app lists the session by that name.
 
 The Desktop section's "Remote" types `/remote-control <name>` into a session that already has a
-window; "Exit" types `/exit` into one.
+window. Claude Code now connects every session on startup, so that command reaches an already
+connected one and only opens its Remote Control dialog — a modal the session then sits behind
+until someone sends Esc. It names a session again only after "Disconnect this session" in that
+dialog has cut one off. "Exit" types `/exit` into a session.
 
 "Send Keys" is the keyboard for a session with nobody at its desktop. Its text box goes out as
 `send --force --paste`: `--force` because the empty-prompt check `send` normally applies would

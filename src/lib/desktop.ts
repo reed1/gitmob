@@ -75,7 +75,8 @@ export interface DesktopLaunch {
  * workspaces and opening them when they were closed — and `claudex kitty` then lands the Claude
  * window on whatever that left focused, which `--focus-ide` makes the IDE, so the session opens
  * beside it at full size. `--detach` hands the window to i3 so it outlives this server, and
- * `--remote-control` is run first for the Claude app to pick the session up.
+ * `--remote-control` names the session for the Claude app, which would otherwise list it under
+ * an auto-generated name.
  *
  * An initial prompt is typed in after that and submitted, so the agent is already working when
  * the session is looked at; without one there is nothing to submit and the session waits.
