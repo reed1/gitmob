@@ -28,12 +28,6 @@ into `.next-dev`, so leave it running.
 Deployed on my PC as the `gitmob` systemd user service, which runs `run_production.sh`: it builds
 `.next-prod` (`GITMOB_DIST_DIR`) when HEAD moved, then serves it with `next start`.
 
-The unit hangs off `i3-session.target`, not `default.target`: launching a Claude session runs
-`rv open` and `claudex kitty`, which reach i3 and X through `DISPLAY`, and neither exists when
-systemd reaches `default.target` — the service won that race on every boot and every launch died
-on "Failed to retrieve the i3 or sway IPC socket path". No i3, no GitMob, which is the honest
-dependency: half of what the app does is drive that desktop.
-
 ## App Icons
 
 All PNGs/ICO in `public/` are generated from `assets/icon.svg` (GitMob) and
