@@ -132,6 +132,12 @@ the IDE focused, which is what decides where the window `claudex kitty` spawns n
 - `claudex desktop keys <windowId> <key>` — presses one named key in it, whatever is on screen.
 - `claudex kitty --detach --press-enter --mode <mode> --directory <path>
   --remote-control <name> "<prompt>"` — opens a new session.
+- `claudex purgatory send --window <windowId>` — ends a session the recoverable way: the
+  window is parked on claudex's own workspace and SIGTERMed 30s later, until `claudex
+  purgatory cancel` takes it back. The only call here that closes a session rather than
+  reading or typing into one, and the only one outside `claudex desktop`. No pid is passed:
+  claudex finds the process behind the window when it acts, which beats a pid noted hours
+  earlier. Made by the Commit tab, below, not the Desktop section.
 
 claudex owns the session registry, the kitty remote sockets and the i3 lookup, so this app only
 ever handles window ids and never talks to X itself.
@@ -199,6 +205,41 @@ file. A launch that fails leaves the handoff parked, to fix and try again.
 The prompt is parked whole: nothing trims it on the way in. claudex-kitty caps initial text at
 5000 bytes, the most a session's input box takes, and rejects anything over — a briefing that
 long fails the launch and stays parked, where the box that edits it is the way to cut it down.
+
+## Commit messages — parked by `gg kitty-commit`
+
+`src/app/api/projects/[id]/pending-message/route.ts`, read by the Commit tab.
+
+`gg c` generates a commit message and puts it in front of the user to accept. At the desktop
+that is a kitty overlay over the session that asked; away from it — `am-i-afk` again — the
+message is parked here instead, one file per repo under
+`~/.local/share/gitmob/pending-messages`, named after the base64url of its path:
+
+```json
+{
+  "repo_path": "/home/reed/proj/gitmob",
+  "message": "…",
+  "timestamp": "…",
+  "source": "remote",
+  "window_id": "12582915",
+  "close_session": true
+}
+```
+
+The Commit tab loads it into the message boxes, badged with `source`, and the Clear button
+drops it. Committing drops it too — and both hand back the repo's commit lock, which the
+session that sent the message holds until the commit lands: `claudex gitlock release --repo`.
+
+`window_id` is the kitty window of the Claude Code session that asked, and the whole of what
+this app needs to end it: `claudex purgatory send --window` above. It is what turns the
+overlay's `t` toggle into a checkbox here — "Close the Claude Code session after committing",
+defaulting to `close_session`, which gg sets from the same ctrl+n no-close flag that sets the
+toggle's default at the desktop. Both fields are null and false where there was no session to
+close: a `gg c` typed into a plain terminal parks a message like any other.
+
+The checkbox only fires on a commit. Clearing the message means the work is not done, so the
+session stays. The delete goes first either way — a session parked while still holding the
+commit lock would take it to the grave.
 
 ## AFK — `am-i-afk`
 

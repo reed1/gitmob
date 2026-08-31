@@ -5,7 +5,11 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Project, GitStatus, Tab } from './types';
 import { FileBrowser } from './components/FileBrowser';
 import { ChangesView } from './components/ChangesView';
-import { CommitView } from './components/CommitView';
+import {
+  CommitView,
+  NO_PENDING_MESSAGE,
+  type PendingMessage,
+} from './components/CommitView';
 import { RunView } from './components/RunView';
 import { CLIView } from './components/CLIView';
 import { DooitView } from './components/DooitView';
@@ -52,8 +56,7 @@ export default function ProjectPage() {
   const [wordWrap, setWordWrap] = useState(true);
   const [commitTitle, setCommitTitle] = useState('');
   const [commitBody, setCommitBody] = useState('');
-  const [pendingSource, setPendingSource] = useState<string | null>(null);
-  const [pendingLoaded, setPendingLoaded] = useState(false);
+  const [pending, setPending] = useState<PendingMessage>(NO_PENDING_MESSAGE);
 
   const goToTab = (id: Tab) => {
     router.replace(`/app/p/${projectId}?tab=${id}`);
@@ -270,10 +273,8 @@ export default function ProjectPage() {
             setCommitTitle={setCommitTitle}
             commitBody={commitBody}
             setCommitBody={setCommitBody}
-            pendingSource={pendingSource}
-            setPendingSource={setPendingSource}
-            pendingLoaded={pendingLoaded}
-            setPendingLoaded={setPendingLoaded}
+            pending={pending}
+            setPending={setPending}
           />
         )}
         {tab === 'run' && (

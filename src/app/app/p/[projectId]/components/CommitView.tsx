@@ -29,6 +29,28 @@ function joinMessage(title: string, body: string): string {
   return body.trim() ? `${title.trim()}\n\n${body.trim()}` : title.trim();
 }
 
+/**
+ * A commit message parked here by `gg kitty-commit`, and what to do with the session that
+ * parked it. It lives in the page rather than this component so switching tabs does not
+ * throw away a message being edited, and it travels as one value because its fields only
+ * ever mean anything together.
+ */
+export interface PendingMessage {
+  loaded: boolean;
+  source: string | null;
+  /** The kitty window of the session that sent the message, null when it had none. */
+  windowId: string | null;
+  /** Whether committing also sends that session to purgatory. */
+  closeSession: boolean;
+}
+
+export const NO_PENDING_MESSAGE: PendingMessage = {
+  loaded: false,
+  source: null,
+  windowId: null,
+  closeSession: false,
+};
+
 export function CommitView({
   projectId,
   onRefresh,
@@ -36,10 +58,8 @@ export function CommitView({
   setCommitTitle,
   commitBody,
   setCommitBody,
-  pendingSource,
-  setPendingSource,
-  pendingLoaded,
-  setPendingLoaded,
+  pending,
+  setPending,
 }: {
   projectId: string;
   onRefresh: () => void;
@@ -47,10 +67,8 @@ export function CommitView({
   setCommitTitle: (title: string) => void;
   commitBody: string;
   setCommitBody: (body: string) => void;
-  pendingSource: string | null;
-  setPendingSource: (source: string | null) => void;
-  pendingLoaded: boolean;
-  setPendingLoaded: (loaded: boolean) => void;
+  pending: PendingMessage;
+  setPending: (pending: PendingMessage) => void;
 }) {
   const [shortenVariants, setShortenVariants] = useState<string[]>([]);
   const [showShortenModal, setShowShortenModal] = useState(false);
@@ -58,35 +76,36 @@ export function CommitView({
   const [historyKey, setHistoryKey] = useState(0);
 
   useEffect(() => {
-    if (pendingLoaded) return;
+    if (pending.loaded) return;
     async function checkPending() {
       const res = await fetch(`/api/projects/${projectId}/pending-message`);
       const data = await res.json();
-      if (data.pending) {
-        const { title, body } = splitMessage(data.pending.message);
-        setCommitTitle(title);
-        setCommitBody(body);
-        setPendingSource(data.pending.source);
+      if (!data.pending) {
+        setPending({ ...NO_PENDING_MESSAGE, loaded: true });
+        return;
       }
-      setPendingLoaded(true);
+      const { title, body } = splitMessage(data.pending.message);
+      setCommitTitle(title);
+      setCommitBody(body);
+      setPending({
+        loaded: true,
+        source: data.pending.source,
+        windowId: data.pending.windowId,
+        closeSession: data.pending.closeSession,
+      });
     }
     checkPending();
-  }, [
-    projectId,
-    pendingLoaded,
-    setCommitTitle,
-    setCommitBody,
-    setPendingSource,
-    setPendingLoaded,
-  ]);
+  }, [projectId, pending.loaded, setCommitTitle, setCommitBody, setPending]);
 
+  // Dropping the message leaves the session alone: nothing was committed, so there is
+  // nothing it is finished with.
   const clearPendingMessage = async () => {
     await apiFetch(`/api/projects/${projectId}/pending-message`, {
       method: 'DELETE',
     });
     setCommitTitle('');
     setCommitBody('');
-    setPendingSource(null);
+    setPending({ ...NO_PENDING_MESSAGE, loaded: true });
   };
 
   const handleAction = async (action: string, body?: object) => {
@@ -100,11 +119,23 @@ export function CommitView({
     if (action === 'commit') {
       setCommitTitle('');
       setCommitBody('');
-      if (pendingSource) {
+      if (pending.source) {
+        // The delete hands back the repo's commit lock, so it goes first: a session
+        // parked with the lock still held would take it to the grave.
         await apiFetch(`/api/projects/${projectId}/pending-message`, {
           method: 'DELETE',
         });
-        setPendingSource(null);
+        if (pending.windowId && pending.closeSession) {
+          await apiFetch(`/api/projects/${projectId}/desktop`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'purgatory',
+              windowId: pending.windowId,
+            }),
+          });
+        }
+        setPending({ ...NO_PENDING_MESSAGE, loaded: true });
       }
     }
     onRefresh();
@@ -140,14 +171,14 @@ export function CommitView({
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-medium text-foreground/60">Commit</h3>
-            {pendingSource && (
+            {pending.source && (
               <span className="px-2 py-0.5 text-xs bg-blue-500/20 text-blue-400 rounded">
-                from {pendingSource}
+                from {pending.source}
               </span>
             )}
           </div>
           <div className="flex items-center gap-2">
-            {pendingSource && (
+            {pending.source && (
               <button
                 onClick={clearPendingMessage}
                 className="px-2 py-1 text-xs bg-red-500/20 text-red-400 rounded active:opacity-80"
@@ -183,6 +214,25 @@ export function CommitView({
           placeholder="Body (optional)..."
           className="mt-2 w-full p-3 bg-foreground/5 border border-foreground/10 rounded-lg text-sm resize-none h-32"
         />
+        {pending.windowId && (
+          <label className="mt-2 flex items-start gap-2.5 p-3 bg-foreground/5 border border-foreground/10 rounded-lg">
+            <input
+              type="checkbox"
+              checked={pending.closeSession}
+              onChange={(e) =>
+                setPending({ ...pending, closeSession: e.target.checked })
+              }
+              className="mt-0.5 w-4 h-4 shrink-0 accent-foreground"
+            />
+            <span className="text-sm">
+              Close the Claude Code session after committing
+              <span className="block text-xs text-foreground/50">
+                Parks its window for 30s first, so{' '}
+                <code>claudex purgatory cancel</code> takes it back.
+              </span>
+            </span>
+          </label>
+        )}
         <div className="mt-2 grid grid-cols-10 gap-2">
           <button
             onClick={() => setCommitBody('')}

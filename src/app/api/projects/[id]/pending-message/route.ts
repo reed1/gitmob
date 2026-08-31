@@ -19,6 +19,10 @@ interface PendingMessage {
   message: string;
   timestamp: string;
   source: string;
+  /** The kitty window of the session that sent the message, null when it had none. */
+  window_id: string | null;
+  /** Whether that session should be closed once the commit lands — only the default. */
+  close_session: boolean;
 }
 
 export async function GET(
@@ -52,6 +56,8 @@ export async function GET(
         message: data.message,
         timestamp: data.timestamp,
         source: data.source,
+        windowId: data.window_id ?? null,
+        closeSession: data.close_session ?? false,
       },
     });
   } catch {

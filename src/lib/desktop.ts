@@ -148,6 +148,19 @@ export async function startRemoteControl(
   ]);
 }
 
+/**
+ * The deferred close the commit overlay's `t` toggle makes at the desktop: claudex parks the
+ * window on its own workspace and SIGTERMs it 30s later, so `claudex purgatory cancel` takes
+ * the session back if the commit was not the end of the work. The window is the whole handle
+ * — claudex looks up the process behind it now, rather than trusting a pid noted hours ago.
+ *
+ * Not `claudex desktop`: purgatory is its own command, and this is the one call here that
+ * ends a session rather than reading or typing into one.
+ */
+export async function sendSessionToPurgatory(windowId: string): Promise<void> {
+  await run('claudex', ['purgatory', 'send', '--window', windowId]);
+}
+
 export async function exitSession(windowId: string): Promise<void> {
   await claudexDesktop(['send', windowId, '/exit', '--press-enter']);
 }

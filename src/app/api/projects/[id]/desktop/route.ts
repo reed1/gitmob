@@ -6,6 +6,7 @@ import {
   launchDesktopSession,
   listDesktopSessions,
   pressSessionKey,
+  sendSessionToPurgatory,
   startRemoteControl,
   typeIntoSession,
 } from '@/lib/desktop';
@@ -78,6 +79,9 @@ export async function POST(
 
     if (action === 'exit') {
       await exitSession(windowId);
+      return NextResponse.json({ success: true });
+    } else if (action === 'purgatory') {
+      await sendSessionToPurgatory(windowId);
       return NextResponse.json({ success: true });
     } else if (action === 'remote') {
       // The name is typed into a terminal as one slash command, so a newline would submit
