@@ -9,7 +9,7 @@ export interface Project {
 }
 
 export interface GitStatus {
-  staged: { path: string; status: string }[];
+  staged: { path: string; status: string; partiallyStaged?: boolean }[];
   unstaged: { path: string; status: string }[];
   untracked: string[];
 }

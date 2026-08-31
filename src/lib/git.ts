@@ -10,6 +10,9 @@ export interface GitStatus {
 export interface FileChange {
   path: string;
   status: 'M' | 'A' | 'D' | 'R' | 'C' | 'U' | '?';
+  // Staged, but the working tree has moved on since — only some of the file's
+  // changes would go into the next commit.
+  partiallyStaged?: boolean;
 }
 
 function getGit(cwd: string): SimpleGit {
@@ -37,40 +40,25 @@ export async function getStatus(cwd: string): Promise<GitStatus> {
   const unstaged: FileChange[] = [];
   const untracked: string[] = status.not_added;
 
-  for (const file of status.staged) {
-    staged.push({ path: file, status: 'A' });
-  }
-
-  for (const file of status.modified) {
-    if (status.staged.includes(file)) {
-      continue;
-    }
-    unstaged.push({ path: file, status: 'M' });
-  }
-
-  for (const file of status.deleted) {
-    if (status.staged.includes(file)) {
-      continue;
-    }
-    unstaged.push({ path: file, status: 'D' });
-  }
-
-  for (const file of status.renamed) {
-    staged.push({ path: file.to, status: 'R' });
-  }
-
   for (const file of status.files) {
-    const inStaged = staged.some((s) => s.path === file.path);
-    const inUnstaged = unstaged.some((u) => u.path === file.path);
-    const inUntracked = untracked.includes(file.path);
+    if (file.index === '?' && file.working_dir === '?') continue;
 
-    if (!inStaged && !inUnstaged && !inUntracked) {
-      if (file.index !== ' ' && file.index !== '?') {
-        staged.push({ path: file.path, status: mapStatus(file.index) });
-      }
-      if (file.working_dir !== ' ' && file.working_dir !== '?') {
-        unstaged.push({ path: file.path, status: mapStatus(file.working_dir) });
-      }
+    if (status.conflicted.includes(file.path)) {
+      unstaged.push({ path: file.path, status: 'U' });
+      continue;
+    }
+
+    const inIndex = file.index !== ' ';
+    const inWorkingTree = file.working_dir !== ' ';
+
+    if (inIndex) {
+      staged.push({
+        path: file.path,
+        status: mapStatus(file.index),
+        partiallyStaged: inWorkingTree,
+      });
+    } else if (inWorkingTree) {
+      unstaged.push({ path: file.path, status: mapStatus(file.working_dir) });
     }
   }
 

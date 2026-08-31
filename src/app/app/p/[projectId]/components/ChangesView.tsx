@@ -299,6 +299,9 @@ export function ChangesView({
 
   const hasChanges =
     status.staged.length + status.unstaged.length + status.untracked.length > 0;
+  const partiallyStagedCount = status.staged.filter(
+    (f) => f.partiallyStaged
+  ).length;
 
   const content = hasChanges ? (
     <div className="divide-y divide-foreground/10">
@@ -306,6 +309,12 @@ export function ChangesView({
         <section>
           <h3 className="px-4 py-2 text-sm font-medium text-green-400 bg-green-400/10">
             Staged ({status.staged.length})
+            {partiallyStagedCount > 0 && (
+              <span className="text-yellow-400">
+                {' '}
+                &middot; {partiallyStagedCount} partially staged
+              </span>
+            )}
           </h3>
           {status.staged.map((file) => (
             <button
@@ -313,10 +322,18 @@ export function ChangesView({
               onClick={() => openFile(file.path, true, false)}
               className="w-full px-4 py-3 text-left flex items-center gap-2 active:bg-foreground/5"
             >
-              <span className="text-xs font-mono w-5 shrink-0 text-green-400">
+              <span
+                className={`text-xs font-mono w-5 shrink-0 ${
+                  file.partiallyStaged ? 'text-yellow-400' : 'text-green-400'
+                }`}
+              >
                 {file.status}
               </span>
-              <span className="truncate text-sm font-mono min-w-0">
+              <span
+                className={`truncate text-sm font-mono min-w-0 ${
+                  file.partiallyStaged ? 'text-yellow-400' : ''
+                }`}
+              >
                 {file.path}
               </span>
             </button>
