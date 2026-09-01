@@ -6,11 +6,13 @@ import { useAutoRefresh } from '../../../../../lib/use-auto-refresh';
 
 export function DesktopScreenView({
   projectId,
+  canonicalId,
   windowId,
   title,
   onBack,
 }: {
   projectId: string;
+  canonicalId: string;
   windowId: string;
   title: string;
   onBack: () => void;
@@ -162,6 +164,7 @@ export function DesktopScreenView({
       {textOpen && (
         <SendTextModal
           projectId={projectId}
+          canonicalId={canonicalId}
           windowId={windowId}
           title={title}
           onClose={() => setTextOpen(false)}

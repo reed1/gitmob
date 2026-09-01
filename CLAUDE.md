@@ -83,6 +83,16 @@ manifest would follow `/pinboard` around. Each PWA's manifest is named by its ow
   to edit and launch from there. The same trade gg makes when it sends a commit message to the
   Commit tab rather than a review overlay nobody is sitting in front of. Contract in
   [docs/cli-integrations.md](docs/cli-integrations.md).
+- The Speak button in the Claude tab's modals dictates into the textarea, POSTing Opus straight
+  to `rvoice-stt.zerotail.r-mulyadi.com/transcribe` — not through `/api`. Caddy already answers
+  CORS on every portman route, so the audio takes one hop instead of two. It sends the project's
+  **canonical** id as `autocorrect`, which is what makes the server layer that project's phrase
+  table over the global one; a worktree id would match no table. `MediaRecorder` only offers Opus
+  in WebM (Chrome) or Ogg (Firefox), and needs a secure origin — the button is dead on the plain
+  HTTP fronts. Contract in [docs/cli-integrations.md](docs/cli-integrations.md).
+- Starting a Claude session goes through the same modal as everything else sent to one: mode,
+  opening prompt and dictation are composed together, then launched. The tab's button only opens
+  it. A launcher that fired on its own click had nowhere to dictate into.
 - A project page is `/app/p/<projectId>`, never `/app/<projectId>`. Project ids come from
   rworkspaces and are not this app's to choose — one named `files` or `notifications` would
   otherwise be shadowed by a page of the same name, silently and only for that project. The

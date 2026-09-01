@@ -276,3 +276,29 @@ claudex cannot answer, and the badge simply does not render then.
 Clicking the badge opens `src/app/UsagePanel.tsx` under the title: a bar per window with its
 percentage and how long until it resets. The windows come from one snapshot claudex captured when
 Claude Code last reported, so the panel says how old that reading is.
+
+## Dictation — the rvoice STT server
+
+`src/app/app/p/[projectId]/components/SpeakButton.tsx`, in the Claude tab's Send-text and
+New-session modals.
+
+The one integration on this page the **browser** makes itself rather than the server: a
+`multipart/form-data` POST to `https://rvoice-stt.zerotail.r-mulyadi.com/transcribe`, answered by
+`rlocal/app/rvoice/stt_server/main.py` on rdzero.
+
+- `file` — Opus, in whatever container `MediaRecorder` gives: WebM on Chrome, Ogg on Firefox. The
+  server sniffs both and hands them to FFmpeg. 32 kbps, which is what rvoice sends over the tailnet
+  and is transparent to Parakeet.
+- `language=en` — Parakeet on the GPU. Every other value routes to Whisper, which loads on demand.
+- `autocorrect=<canonical project id>` — the server layers that project's phrase table over the
+  global one before returning. The **canonical** id is the contract: the tables are keyed by
+  rofi-vscode project, so a worktree id matches none of them. An id with no entries of its own is
+  not an error, it just leaves the global table.
+
+It answers `{"text": ...}`, or `{"error": ...}` with a 400 — the shape `apiFetch` already reports,
+which is why the call goes through it despite being cross-origin.
+
+Going direct rather than through `/api` costs nothing and saves a hop: portman puts CORS headers on
+every Caddy route it makes, so every front already answers a cross-origin POST. What it does cost
+is the secure-origin requirement — `navigator.mediaDevices` does not exist on `.loc` or
+`dev.gitmob.loc`, so the button only works on an HTTPS front.

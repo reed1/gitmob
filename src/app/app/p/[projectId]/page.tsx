@@ -281,7 +281,9 @@ export default function ProjectPage() {
           <RunView projectId={projectId} urls={project?.urls} />
         )}
         {tab === 'cli' && project && <CLIView projectPath={project.path} />}
-        {tab === 'claude' && project && <ClaudeView projectId={projectId} />}
+        {tab === 'claude' && project && (
+          <ClaudeView projectId={projectId} canonicalId={project.canonicalId} />
+        )}
         {/* Todos belong to the repo, not to one checkout of it: rdooit keys its tables by
             the canonical id, and a worktree id makes no legal table name. */}
         {tab === 'dooit' && project && (

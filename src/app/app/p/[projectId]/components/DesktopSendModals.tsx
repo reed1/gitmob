@@ -3,11 +3,18 @@
 import { useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { addToast, apiFetch } from '../../../../../lib/api';
+import { launchDesktopSession } from '../../../../../lib/desktop-client';
 import {
   ARROW_KEY_ROWS,
   COMMAND_KEYS,
   type SpecialKey,
 } from '../../../../../lib/desktop-keys';
+import {
+  CLAUDE_MODES,
+  ClaudeMode,
+  DEFAULT_CLAUDE_MODE,
+} from '../../../../../lib/desktop-modes';
+import { SpeakButton, appendSpoken } from './SpeakButton';
 
 function Modal({
   heading,
@@ -45,11 +52,13 @@ function Modal({
 
 export function SendTextModal({
   projectId,
+  canonicalId,
   windowId,
   title,
   onClose,
 }: {
   projectId: string;
+  canonicalId: string;
   windowId: string;
   title: string;
   onClose: () => void;
@@ -89,20 +98,26 @@ export function SendTextModal({
           />
           Press Enter afterwards
         </label>
-        <div className="flex justify-end gap-2">
-          <button
-            onClick={onClose}
-            className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={send}
-            disabled={!text}
-            className="px-3 py-1.5 text-sm rounded-lg bg-foreground text-background hover:opacity-90 disabled:opacity-40"
-          >
-            Send
-          </button>
+        <div className="flex items-center justify-between gap-2">
+          <SpeakButton
+            projectId={canonicalId}
+            onText={(spoken) => setText((prev) => appendSpoken(prev, spoken))}
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={onClose}
+              className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={send}
+              disabled={!text}
+              className="px-3 py-1.5 text-sm rounded-lg bg-foreground text-background hover:opacity-90 disabled:opacity-40"
+            >
+              Send
+            </button>
+          </div>
         </div>
       </div>
     </Modal>
@@ -162,6 +177,85 @@ export function SendKeysModal({
         >
           Close
         </button>
+      </div>
+    </Modal>
+  );
+}
+
+/**
+ * Starting a session is composed here rather than fired off from the tab, so the mode, the
+ * opening prompt and dictation all sit behind the one button — the same trade every other
+ * thing sent to a session already makes.
+ */
+export function NewSessionModal({
+  projectId,
+  canonicalId,
+  onClose,
+  onLaunched,
+}: {
+  projectId: string;
+  canonicalId: string;
+  onClose: () => void;
+  onLaunched: () => void;
+}) {
+  const [mode, setMode] = useState<ClaudeMode>(DEFAULT_CLAUDE_MODE);
+  const [prompt, setPrompt] = useState('');
+  const [launching, setLaunching] = useState(false);
+
+  const launch = async () => {
+    setLaunching(true);
+    try {
+      if (await launchDesktopSession(projectId, mode, prompt.trim())) {
+        onClose();
+        onLaunched();
+      }
+    } finally {
+      setLaunching(false);
+    }
+  };
+
+  return (
+    <Modal heading="New session" subtitle={projectId} onClose={onClose}>
+      <div className="px-4 py-3 space-y-2">
+        <select
+          value={mode}
+          onChange={(e) => setMode(e.target.value as ClaudeMode)}
+          className="w-full text-sm bg-background border border-foreground/20 rounded-lg px-3 py-2"
+        >
+          {CLAUDE_MODES.map((entry) => (
+            <option key={entry.mode} value={entry.mode}>
+              {entry.label}
+            </option>
+          ))}
+        </select>
+        <textarea
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          rows={4}
+          placeholder="Opening prompt (optional)"
+          className="w-full text-sm border border-foreground/20 rounded-lg px-3 py-2 bg-background resize-y"
+        />
+        <div className="flex items-center justify-between gap-2">
+          <SpeakButton
+            projectId={canonicalId}
+            onText={(spoken) => setPrompt((prev) => appendSpoken(prev, spoken))}
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={onClose}
+              className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={launch}
+              disabled={launching}
+              className="px-3 py-1.5 text-sm rounded-lg bg-foreground text-background hover:opacity-90 disabled:opacity-40"
+            >
+              {launching ? 'Starting...' : 'Start'}
+            </button>
+          </div>
+        </div>
       </div>
     </Modal>
   );

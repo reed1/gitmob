@@ -2,16 +2,12 @@
 
 import { useState } from 'react';
 import { addToast, apiFetch } from '../../../../../lib/api';
-import { launchDesktopSession } from '../../../../../lib/desktop-client';
-import {
-  CLAUDE_MODES,
-  ClaudeMode,
-  DEFAULT_CLAUDE_MODE,
-} from '../../../../../lib/desktop-modes';
+import { NewSessionModal } from './DesktopSendModals';
 import type { DesktopSession } from './ClaudeView';
 
 export function DesktopSessions({
   projectId,
+  canonicalId,
   sessions,
   workspaces,
   error,
@@ -19,6 +15,7 @@ export function DesktopSessions({
   onOpenScreen,
 }: {
   projectId: string;
+  canonicalId: string;
   sessions: DesktopSession[] | null;
   workspaces: string[];
   error: string | null;
@@ -26,17 +23,7 @@ export function DesktopSessions({
   onOpenScreen: (windowId: string) => void;
 }) {
   const [menuWindowId, setMenuWindowId] = useState<string | null>(null);
-  const [mode, setMode] = useState<ClaudeMode>(DEFAULT_CLAUDE_MODE);
-  const [launching, setLaunching] = useState(false);
-
-  const launch = async () => {
-    setLaunching(true);
-    try {
-      if (await launchDesktopSession(projectId, mode)) onRetry();
-    } finally {
-      setLaunching(false);
-    }
-  };
+  const [newOpen, setNewOpen] = useState(false);
 
   const sendExit = async (session: DesktopSession) => {
     setMenuWindowId(null);
@@ -55,26 +42,12 @@ export function DesktopSessions({
         <h2 className="text-xs uppercase tracking-wide text-foreground/40">
           Desktop
         </h2>
-        <div className="flex items-center gap-1.5">
-          <select
-            value={mode}
-            onChange={(e) => setMode(e.target.value as ClaudeMode)}
-            className="text-xs bg-foreground/5 border border-foreground/15 rounded-lg px-2 py-1.5"
-          >
-            {CLAUDE_MODES.map((entry) => (
-              <option key={entry.mode} value={entry.mode}>
-                {entry.label}
-              </option>
-            ))}
-          </select>
-          <button
-            onClick={launch}
-            disabled={launching}
-            className="px-3 py-1.5 text-xs rounded-lg bg-blue-500/15 text-blue-500 border border-blue-500/20 active:opacity-80 disabled:opacity-40"
-          >
-            {launching ? 'Starting...' : 'New'}
-          </button>
-        </div>
+        <button
+          onClick={() => setNewOpen(true)}
+          className="px-3 py-1.5 text-xs rounded-lg bg-blue-500/15 text-blue-500 border border-blue-500/20 active:opacity-80"
+        >
+          New
+        </button>
       </div>
 
       {error && (
@@ -106,6 +79,15 @@ export function DesktopSessions({
         <div className="text-sm text-foreground/40">
           No Claude windows on this project&apos;s workspaces.
         </div>
+      )}
+
+      {newOpen && (
+        <NewSessionModal
+          projectId={projectId}
+          canonicalId={canonicalId}
+          onClose={() => setNewOpen(false)}
+          onLaunched={onRetry}
+        />
       )}
 
       {sessions?.map((session) => {

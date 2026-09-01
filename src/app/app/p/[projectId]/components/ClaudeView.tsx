@@ -16,7 +16,13 @@ export interface DesktopSession {
   cwd: string | null;
 }
 
-export function ClaudeView({ projectId }: { projectId: string }) {
+export function ClaudeView({
+  projectId,
+  canonicalId,
+}: {
+  projectId: string;
+  canonicalId: string;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const windowParam = searchParams.get('window');
@@ -50,6 +56,7 @@ export function ClaudeView({ projectId }: { projectId: string }) {
     return (
       <DesktopScreenView
         projectId={projectId}
+        canonicalId={canonicalId}
         windowId={windowParam}
         title={session?.title || `Window ${windowParam}`}
         onBack={() => router.back()}
@@ -60,6 +67,7 @@ export function ClaudeView({ projectId }: { projectId: string }) {
   return (
     <DesktopSessions
       projectId={projectId}
+      canonicalId={canonicalId}
       sessions={sessions}
       workspaces={workspaces}
       error={error}
