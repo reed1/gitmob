@@ -132,7 +132,7 @@ export default function ProjectPage() {
       <header className="sticky top-0 z-10 border-b border-foreground/10 bg-background/95 backdrop-blur">
         <div className="px-4 py-3 flex items-center gap-3">
           <button
-            onClick={() => router.back()}
+            onClick={() => router.push('/app')}
             className="text-foreground/50 hover:text-foreground transition-colors"
           >
             <svg

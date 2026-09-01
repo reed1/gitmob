@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { apiFetch } from '../../../../../lib/api';
 import { RecentCommits } from './RecentCommits';
 
@@ -36,7 +36,6 @@ function joinMessage(title: string, body: string): string {
  * ever mean anything together.
  */
 export interface PendingMessage {
-  loaded: boolean;
   source: string | null;
   /** The kitty window of the session that sent the message, null when it had none. */
   windowId: string | null;
@@ -45,7 +44,6 @@ export interface PendingMessage {
 }
 
 export const NO_PENDING_MESSAGE: PendingMessage = {
-  loaded: false,
   source: null,
   windowId: null,
   closeSession: false,
@@ -75,27 +73,31 @@ export function CommitView({
   // Bumped after commit/pull/push, to remount the commit list with fresh data.
   const [historyKey, setHistoryKey] = useState(0);
 
+  // What the draft looked like when the tab was entered: the check below asks about that
+  // moment only, so it never reruns on a keystroke.
+  const draftOnEntry = useRef({ commitTitle, commitBody, pending });
+
+  // Checked on every visit to the tab, so a message parked while the page sat on another
+  // tab still arrives — but never over a draft, which is the user's and not the sender's.
   useEffect(() => {
-    if (pending.loaded) return;
+    const draft = draftOnEntry.current;
+    if (draft.pending.source) return;
+    if (draft.commitTitle.trim() || draft.commitBody.trim()) return;
     async function checkPending() {
       const res = await fetch(`/api/projects/${projectId}/pending-message`);
       const data = await res.json();
-      if (!data.pending) {
-        setPending({ ...NO_PENDING_MESSAGE, loaded: true });
-        return;
-      }
+      if (!data.pending) return;
       const { title, body } = splitMessage(data.pending.message);
       setCommitTitle(title);
       setCommitBody(body);
       setPending({
-        loaded: true,
         source: data.pending.source,
         windowId: data.pending.windowId,
         closeSession: data.pending.closeSession,
       });
     }
     checkPending();
-  }, [projectId, pending.loaded, setCommitTitle, setCommitBody, setPending]);
+  }, [projectId, setCommitTitle, setCommitBody, setPending]);
 
   // Dropping the message leaves the session alone: nothing was committed, so there is
   // nothing it is finished with.
@@ -105,7 +107,7 @@ export function CommitView({
     });
     setCommitTitle('');
     setCommitBody('');
-    setPending({ ...NO_PENDING_MESSAGE, loaded: true });
+    setPending(NO_PENDING_MESSAGE);
   };
 
   const handleAction = async (action: string, body?: object) => {
@@ -135,7 +137,7 @@ export function CommitView({
             }),
           });
         }
-        setPending({ ...NO_PENDING_MESSAGE, loaded: true });
+        setPending(NO_PENDING_MESSAGE);
       }
     }
     onRefresh();
