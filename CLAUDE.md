@@ -92,7 +92,10 @@ manifest would follow `/pinboard` around. Each PWA's manifest is named by its ow
   HTTP fronts. Contract in [docs/cli-integrations.md](docs/cli-integrations.md).
 - Starting a Claude session goes through the same modal as everything else sent to one: mode,
   opening prompt and dictation are composed together, then launched. The tab's button only opens
-  it. A launcher that fired on its own click had nowhere to dictate into.
+  it. A launcher that fired on its own click had nowhere to dictate into. There is exactly one
+  such modal — `src/app/app/NewSessionModal.tsx`, opened by both the Claude tab and the project
+  card's menu on the front page, sharing the dialog shell in `src/app/app/Modal.tsx`. A second
+  copy of it on the front page is what left half the app without a Speak button.
 - A project page is `/app/p/<projectId>`, never `/app/<projectId>`. Project ids come from
   rworkspaces and are not this app's to choose — one named `files` or `notifications` would
   otherwise be shadowed by a page of the same name, silently and only for that project. The

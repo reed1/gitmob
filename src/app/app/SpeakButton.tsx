@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { addToast, apiFetch } from '../../../../../lib/api';
+import { addToast, apiFetch } from '../../lib/api';
 
 /**
  * Dictation straight into a textarea, transcribed by the rvoice STT server on rdzero.

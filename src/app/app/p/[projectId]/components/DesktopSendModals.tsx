@@ -1,54 +1,14 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
+import { useState } from 'react';
 import { addToast, apiFetch } from '../../../../../lib/api';
-import { launchDesktopSession } from '../../../../../lib/desktop-client';
 import {
   ARROW_KEY_ROWS,
   COMMAND_KEYS,
   type SpecialKey,
 } from '../../../../../lib/desktop-keys';
-import {
-  CLAUDE_MODES,
-  ClaudeMode,
-  DEFAULT_CLAUDE_MODE,
-} from '../../../../../lib/desktop-modes';
-import { SpeakButton, appendSpoken } from './SpeakButton';
-
-function Modal({
-  heading,
-  subtitle,
-  onClose,
-  children,
-}: {
-  heading: string;
-  subtitle: string;
-  onClose: () => void;
-  children: ReactNode;
-}) {
-  return createPortal(
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
-      onClick={(e) => {
-        e.stopPropagation();
-        onClose();
-      }}
-    >
-      <div
-        className="bg-background border border-foreground/20 rounded-lg shadow-xl max-w-sm w-full max-h-full overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="px-4 py-3 border-b border-foreground/10">
-          <h3 className="font-medium">{heading}</h3>
-          <div className="text-xs text-foreground/50 truncate">{subtitle}</div>
-        </div>
-        {children}
-      </div>
-    </div>,
-    document.body
-  );
-}
+import { Modal } from '../../../Modal';
+import { SpeakButton, appendSpoken } from '../../../SpeakButton';
 
 export function SendTextModal({
   projectId,
@@ -177,85 +137,6 @@ export function SendKeysModal({
         >
           Close
         </button>
-      </div>
-    </Modal>
-  );
-}
-
-/**
- * Starting a session is composed here rather than fired off from the tab, so the mode, the
- * opening prompt and dictation all sit behind the one button — the same trade every other
- * thing sent to a session already makes.
- */
-export function NewSessionModal({
-  projectId,
-  canonicalId,
-  onClose,
-  onLaunched,
-}: {
-  projectId: string;
-  canonicalId: string;
-  onClose: () => void;
-  onLaunched: () => void;
-}) {
-  const [mode, setMode] = useState<ClaudeMode>(DEFAULT_CLAUDE_MODE);
-  const [prompt, setPrompt] = useState('');
-  const [launching, setLaunching] = useState(false);
-
-  const launch = async () => {
-    setLaunching(true);
-    try {
-      if (await launchDesktopSession(projectId, mode, prompt.trim())) {
-        onClose();
-        onLaunched();
-      }
-    } finally {
-      setLaunching(false);
-    }
-  };
-
-  return (
-    <Modal heading="New session" subtitle={projectId} onClose={onClose}>
-      <div className="px-4 py-3 space-y-2">
-        <select
-          value={mode}
-          onChange={(e) => setMode(e.target.value as ClaudeMode)}
-          className="w-full text-sm bg-background border border-foreground/20 rounded-lg px-3 py-2"
-        >
-          {CLAUDE_MODES.map((entry) => (
-            <option key={entry.mode} value={entry.mode}>
-              {entry.label}
-            </option>
-          ))}
-        </select>
-        <textarea
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          rows={4}
-          placeholder="Opening prompt (optional)"
-          className="w-full text-sm border border-foreground/20 rounded-lg px-3 py-2 bg-background resize-y"
-        />
-        <div className="flex items-center justify-between gap-2">
-          <SpeakButton
-            projectId={canonicalId}
-            onText={(spoken) => setPrompt((prev) => appendSpoken(prev, spoken))}
-          />
-          <div className="flex gap-2">
-            <button
-              onClick={onClose}
-              className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={launch}
-              disabled={launching}
-              className="px-3 py-1.5 text-sm rounded-lg bg-foreground text-background hover:opacity-90 disabled:opacity-40"
-            >
-              {launching ? 'Starting...' : 'Start'}
-            </button>
-          </div>
-        </div>
       </div>
     </Modal>
   );

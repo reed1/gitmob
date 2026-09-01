@@ -19,7 +19,10 @@ if [ "$CURRENT_SHA" != "$CACHED_SHA" ] || [ ! -f "$BUILD_DIR/BUILD_ID" ]; then
     if [ ! -f "$BUILD_DIR/BUILD_ID" ]; then
         rm -f "$CACHE_FILE"
         echo "Build failed" >&2
-        exit 1
+        # 78 is the unit's RestartPreventExitStatus: a broken commit stops the service dead
+        # instead of rebuilding it every RestartSec. The build dir is already gone, so there
+        # is no older compile left for `next start` to serve in its place.
+        exit 78
     fi
     echo "$CURRENT_SHA" > "$CACHE_FILE"
 fi

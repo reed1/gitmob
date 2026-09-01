@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { addToast, apiFetch } from '../../../../../lib/api';
-import { NewSessionModal } from './DesktopSendModals';
+import { NewSessionModal } from '../../../NewSessionModal';
 import type { DesktopSession } from './ClaudeView';
 
 export function DesktopSessions({
