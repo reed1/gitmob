@@ -136,18 +136,6 @@ export function getSessionScreen(windowId: string): Promise<string> {
   return claudexDesktop(['screen', windowId]);
 }
 
-export async function startRemoteControl(
-  windowId: string,
-  name: string
-): Promise<void> {
-  await claudexDesktop([
-    'send',
-    windowId,
-    `/remote-control ${name}`,
-    '--press-enter',
-  ]);
-}
-
 /**
  * The deferred close the commit overlay's `t` toggle makes at the desktop: claudex parks the
  * window on its own workspace and SIGTERMs it 30s later, so `claudex purgatory cancel` takes

@@ -16,13 +16,7 @@ export interface DesktopSession {
   cwd: string | null;
 }
 
-export function ClaudeView({
-  projectId,
-  projectPath,
-}: {
-  projectId: string;
-  projectPath: string;
-}) {
+export function ClaudeView({ projectId }: { projectId: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const windowParam = searchParams.get('window');
@@ -66,7 +60,6 @@ export function ClaudeView({
   return (
     <DesktopSessions
       projectId={projectId}
-      projectPath={projectPath}
       sessions={sessions}
       workspaces={workspaces}
       error={error}

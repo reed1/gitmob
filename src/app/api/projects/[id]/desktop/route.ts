@@ -7,7 +7,6 @@ import {
   listDesktopSessions,
   pressSessionKey,
   sendSessionToPurgatory,
-  startRemoteControl,
   typeIntoSession,
 } from '@/lib/desktop';
 import { isSpecialKey } from '@/lib/desktop-keys';
@@ -50,7 +49,7 @@ export async function POST(
     return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   }
 
-  const { windowId, name, action, text, key, pressEnter, mode, prompt } =
+  const { windowId, action, text, key, pressEnter, mode, prompt } =
     await request.json();
 
   try {
@@ -83,18 +82,6 @@ export async function POST(
     } else if (action === 'purgatory') {
       await sendSessionToPurgatory(windowId);
       return NextResponse.json({ success: true });
-    } else if (action === 'remote') {
-      // The name is typed into a terminal as one slash command, so a newline would submit
-      // half of it and leave the rest as a new prompt.
-      const remoteName = typeof name === 'string' ? name.trim() : '';
-      if (!remoteName || /[\r\n]/.test(remoteName)) {
-        return NextResponse.json(
-          { error: 'Invalid remote control name' },
-          { status: 400 }
-        );
-      }
-      await startRemoteControl(windowId, remoteName);
-      return NextResponse.json({ success: true, name: remoteName });
     } else if (action === 'type') {
       if (typeof text !== 'string' || !text) {
         return NextResponse.json({ error: 'Missing text' }, { status: 400 });

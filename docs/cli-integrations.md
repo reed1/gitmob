@@ -149,11 +149,10 @@ is `claudex`'s own — `auto`, `edit`, `yolo` — not a `claude --permission-mod
 is named after the project folder, which `--remote-control <name>` passes to `claude` itself; this
 app never sees the URL that publishes, because the Claude app lists the session by that name.
 
-The Desktop section's "Remote" types `/remote-control <name>` into a session that already has a
-window. Claude Code now connects every session on startup, so that command reaches an already
-connected one and only opens its Remote Control dialog — a modal the session then sits behind
-until someone sends Esc. It names a session again only after "Disconnect this session" in that
-dialog has cut one off. "Exit" types `/exit` into a session.
+The Desktop section's "Exit" types `/exit` into a session. There is no button for
+`/remote-control`: `remoteControlAtStartup` is on in user settings, so every session is connected
+by the time it appears here, and the command would only raise a dialog the session then sits
+behind until someone sends Esc.
 
 "Send Keys" is the keyboard for a session with nobody at its desktop. Its text box goes out as
 `send --force --paste`: `--force` because the empty-prompt check `send` normally applies would
