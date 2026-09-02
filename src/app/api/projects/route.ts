@@ -9,6 +9,7 @@ import { getClaudeSessionCounts } from '@/lib/desktop';
 import { getGithubRepoUrl } from '@/lib/github';
 import { getClaudeUsage } from '@/lib/claude-usage';
 import { isAway } from '@/lib/afk';
+import { getStaleBuild } from '@/lib/build-version';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
@@ -79,6 +80,7 @@ export async function GET() {
     desktopSessions,
     claudeUsage,
     away,
+    staleBuild,
     projectResults,
   ] = await Promise.all([
     getAllRunning(),
@@ -88,6 +90,7 @@ export async function GET() {
     getClaudeSessionCounts(),
     getClaudeUsage(),
     isAway(),
+    getStaleBuild(),
     processWithWorkers(projects, WORKERS, async (project) => {
       const githubUrl = await getGithubRepoUrl(project.path);
       try {
@@ -147,5 +150,5 @@ export async function GET() {
     githubUrl: resultMap[p.id]?.githubUrl ?? null,
   }));
 
-  return NextResponse.json({ projects: list, claudeUsage, away });
+  return NextResponse.json({ projects: list, claudeUsage, away, staleBuild });
 }

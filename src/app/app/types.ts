@@ -10,6 +10,13 @@ export interface ClaudeUsage {
   sevenDay: UsageWindow | null;
 }
 
+/** The deployed build lagging behind HEAD: a restart rebuilds it. */
+export interface StaleBuild {
+  builtSha: string;
+  headSha: string;
+  behind: number | null;
+}
+
 export interface Project {
   id: string;
   canonicalId: string;
