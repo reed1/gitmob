@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, addToast } from '../../../lib/api';
+import { copyText } from '../../../lib/clipboard';
 import { useOutsideClick } from '../../../lib/use-outside-click';
 
 interface SharedFile {
@@ -35,9 +36,11 @@ function formatModified(ms: number): string {
 
 function EntryMenu({
   entry,
+  root,
   onDelete,
 }: {
   entry: SharedFile;
+  root: string;
   onDelete: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -81,6 +84,20 @@ function EntryMenu({
               Download
             </a>
           )}
+          <button
+            onClick={async () => {
+              setOpen(false);
+              const absolutePath = `${root}/${entry.path}`;
+              if (await copyText(absolutePath)) {
+                addToast(`Copied ${absolutePath}`, 'success');
+              } else {
+                addToast('Could not copy to the clipboard');
+              }
+            }}
+            className={itemClass}
+          >
+            Copy path
+          </button>
           <button
             onClick={() => {
               setOpen(false);
@@ -318,6 +335,7 @@ export default function FilesPage() {
               )}
               <EntryMenu
                 entry={entry}
+                root={root}
                 onDelete={() => setDeleteTarget(entry)}
               />
             </div>
