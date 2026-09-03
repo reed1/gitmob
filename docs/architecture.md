@@ -3,7 +3,7 @@
 ## Layout
 
 - `src/lib` — core logic (`git.ts`, `run.ts`, `projects.ts`, `files.ts`, `cli-jobs.ts`,
-  `notifications.ts`)
+  `notifications.ts`, `recall.ts`)
 - `src/app/api` — API routes (projects, cli jobs, pinboard, dooit todos)
 - `src/app/app` — the GitMob PWA; `src/app/pinboard` — the pinboard PWA
 - `src/app/app/p/[projectId]/components` — project views (FileBrowser, ChangesView, CommitView,
@@ -37,6 +37,19 @@ at the desktop: `~/.local/share/gitmob/pending-handoffs`, one file per handoff, 
 of the front page — above the project list, whichever project it names — to edit and launch from
 there. The same trade gg makes when it sends a commit message to the Commit tab rather than a review
 overlay nobody is sitting in front of. Contracts in [cli-integrations.md](cli-integrations.md).
+
+## The Claude tab holds sessions of both kinds
+
+Three views behind one tab, chosen by query parameter: the windows open at the desktop, `?recall=1`
+searching the sessions that came before, and `?session=<id>` reading one of them back. Past sessions
+live there rather than on a page of their own because they answer the same question the list does —
+what is going on with this project — and a search scoped to the project's path needs no project
+picker of its own. Each view is a `push`, so back walks them the way the screen view already does,
+and the list stops polling while a search box or a transcript is up: a five-second refresh under an
+input box is a keystroke lost every five seconds.
+
+Resuming one is `claudex kitty` again, with the session id after `--`. Contract, and the refusal
+when the conversation is already open in a window, in [cli-integrations.md](cli-integrations.md).
 
 ## One session modal
 

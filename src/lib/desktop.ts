@@ -83,6 +83,8 @@ export interface DesktopLaunch {
   name: string;
   prompt: string;
   title?: string;
+  /** Reopens that conversation instead of starting an empty one — see below. */
+  resumeSessionId?: string;
 }
 
 /**
@@ -95,6 +97,11 @@ export interface DesktopLaunch {
  *
  * An initial prompt is typed in after that and submitted, so the agent is already working when
  * the session is looked at; without one there is nothing to submit and the session waits.
+ *
+ * Everything after `--` belongs to `claude` rather than to claudex, which is how a resume gets
+ * its session id across — the detached relaunch carries those arguments through i3 too. `claude
+ * --resume` only finds a session under the directory it was held in, so the directory above is
+ * the contract, not a convenience.
  */
 export async function launchDesktopSession(
   launch: DesktopLaunch
@@ -111,7 +118,27 @@ export async function launchDesktopSession(
     launch.name,
     ...(launch.title ? ['--title', launch.title] : []),
     ...(launch.prompt ? ['--press-enter', launch.prompt] : []),
+    ...(launch.resumeSessionId
+      ? ['--', '--resume', launch.resumeSessionId]
+      : []),
   ]);
+}
+
+function toDesktopSession(row: ClaudexSessionRow): DesktopSession {
+  return {
+    windowId: row.window_id,
+    title: row.title,
+    workspace: row.workspace,
+    projectId: row.project_id,
+    focused: row.focused,
+    sessionId: row.session_id,
+    cwd: row.cwd,
+    context: row.context && {
+      usedTokens: row.context.used_tokens,
+      windowSize: row.context.window_size,
+      usedPercentage: row.context.used_percentage,
+    },
+  };
 }
 
 export async function listDesktopSessions(projectId: string): Promise<{
@@ -124,21 +151,21 @@ export async function listDesktopSessions(projectId: string): Promise<{
 
   return {
     workspaces: result.workspaces,
-    sessions: result.sessions.map((row) => ({
-      windowId: row.window_id,
-      title: row.title,
-      workspace: row.workspace,
-      projectId: row.project_id,
-      focused: row.focused,
-      sessionId: row.session_id,
-      cwd: row.cwd,
-      context: row.context && {
-        usedTokens: row.context.used_tokens,
-        windowSize: row.context.window_size,
-        usedPercentage: row.context.used_percentage,
-      },
-    })),
+    sessions: result.sessions.map(toDesktopSession),
   };
+}
+
+/**
+ * Every Claude window on the desktop, whatever project it belongs to. Asked before a resume:
+ * a conversation already open in a window is one `claude --resume` must not be pointed at a
+ * second time. A live session can report a null id, and one of those matches nothing here.
+ */
+export async function listAllDesktopSessions(): Promise<DesktopSession[]> {
+  const result: ClaudexListResult = JSON.parse(
+    await claudexDesktop(['list', '--all'])
+  );
+
+  return result.sessions.map(toDesktopSession);
 }
 
 export async function getClaudeSessionCounts(): Promise<

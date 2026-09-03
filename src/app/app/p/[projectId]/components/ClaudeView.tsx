@@ -4,6 +4,8 @@ import { useCallback, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { DesktopScreenView } from './DesktopScreenView';
 import { DesktopSessions } from './DesktopSessions';
+import { RecallSearch } from './RecallSearch';
+import { RecallTranscript } from './RecallTranscript';
 import { useAutoRefresh } from '../../../../../lib/use-auto-refresh';
 
 /** What Claude Code itself reports the session's context window to be holding. */
@@ -34,6 +36,8 @@ export function ClaudeView({
   const router = useRouter();
   const searchParams = useSearchParams();
   const windowParam = searchParams.get('window');
+  const searchParam = searchParams.get('recall');
+  const sessionParam = searchParams.get('session');
 
   const [sessions, setSessions] = useState<DesktopSession[] | null>(null);
   const [workspaces, setWorkspaces] = useState<string[]>([]);
@@ -51,13 +55,46 @@ export function ClaudeView({
     }
   }, [projectId]);
 
-  useAutoRefresh(fetchSessions, windowParam ? undefined : 5000);
+  // The list polls, but only while it is the thing on screen: a five-second refresh under a
+  // search box is a keystroke lost every five seconds.
+  const showingList = !windowParam && !searchParam && !sessionParam;
+  useAutoRefresh(fetchSessions, showingList ? 5000 : undefined);
+
+  const sessionsUrl = `/app/p/${projectId}?tab=claude`;
 
   const openScreen = (windowId: string) => {
-    router.push(
-      `/app/p/${projectId}?tab=claude&window=${encodeURIComponent(windowId)}`
-    );
+    router.push(`${sessionsUrl}&window=${encodeURIComponent(windowId)}`);
   };
+
+  if (sessionParam) {
+    return (
+      <RecallTranscript
+        projectId={projectId}
+        sessionId={sessionParam}
+        onBack={() => router.back()}
+        onResumed={() => router.replace(sessionsUrl)}
+        // The conversation is already open, so the window holding it replaces the transcript
+        // rather than stacking on top of it.
+        onOpenWindow={(windowId) =>
+          router.replace(
+            `${sessionsUrl}&window=${encodeURIComponent(windowId)}`
+          )
+        }
+      />
+    );
+  }
+
+  if (searchParam) {
+    return (
+      <RecallSearch
+        projectId={projectId}
+        onBack={() => router.back()}
+        onOpenSession={(sessionId) =>
+          router.push(`${sessionsUrl}&session=${encodeURIComponent(sessionId)}`)
+        }
+      />
+    );
+  }
 
   if (windowParam) {
     const session = sessions?.find((s) => s.windowId === windowParam);
@@ -81,6 +118,7 @@ export function ClaudeView({
       error={error}
       onRetry={fetchSessions}
       onOpenScreen={openScreen}
+      onOpenSearch={() => router.push(`${sessionsUrl}&recall=1`)}
     />
   );
 }

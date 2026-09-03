@@ -126,6 +126,8 @@ the IDE focused, which is what decides where the window `claudex kitty` spawns n
   from the code slot to the browser one stays on the project's list. A worktree is a project of
   its own here and answers only to its own id. Each session carries a `context` — the tokens in
   its context window, the window's size, and the percentage — or null.
+- `claudex desktop list --all` — the same, for every project open on the desktop. Asked once,
+  before a resume: see the recall section below.
 - `claudex desktop count` — session counts per project, the project-list sweep (~120ms) behind
   the sparkle icon that promotes a project with a live session to Active.
 - `claudex desktop screen <windowId>` — that window's current terminal content.
@@ -180,6 +182,55 @@ forgets. The window id is the whole handle — claudex reaches a window through 
 window itself carries, not through its session registry — so a session resumed into a window drives
 the same as a fresh one. `session_id` and `cwd` come from that registry and are the two fields that
 can be null on a live session; nothing here may treat a null as a session it cannot reach.
+
+## Past sessions — `recall`
+
+`src/lib/recall.ts`, read by the Search view on the Claude tab.
+
+`recall` indexes every Claude Code transcript on this machine and answers questions about them
+in JSON — the TUI it opens with is one caller of its own search, not the only one, so nothing
+here scrapes a terminal or reads the JSONL under `~/.claude`.
+
+- `recall search <query> -s claude --cwd <path> -l 5000 -C 1` — the matches, each with its
+  session id, the session's cwd and timestamp, and the messages that matched with one either
+  side. Trimmed to 25 here.
+- `recall list -s claude --cwd <path> -l 5000` — the recent sessions, which is what an empty
+  search box shows. It carries no message text at all, so each of the ten kept is then `read`
+  for the message its session opened with. That is a subprocess per row, and it is what holds
+  the list to ten: everything older is behind the search box, which reaches any distance back
+  for one call.
+- `recall read <sessionId>` — the whole conversation, user and assistant turns with the tool
+  calls already collapsed out. This is the transcript view.
+
+`-s claude` throughout: recall also indexes Codex, Droid and OpenCode, and none of those is a
+session `claudex kitty` can reopen. `--cwd` is an exact match, which is recall's own idea of a
+folder scope — a session started in a subdirectory of the project belongs to that subdirectory,
+and widening it here would be this app holding a second opinion about whose sessions are whose.
+
+`-l` is a lookback, not a page size: it caps what recall considers **before** `--cwd` narrows
+it, so a limit of ten answers with however many of the newest ten sessions on this machine
+happen to be the project's — six, on the first project this was tried against. It is set past
+the whole index instead, and the rows are trimmed here. That costs nothing: the index scan is
+the work, so `-l 5000` and `-l 10` both come back in about 0.2s, and a common word over a busy
+project is under half a megabyte of JSON. A project whose sessions all sit further back than
+this many would drop out of its own search, which is the one thing this number can still get
+wrong.
+
+A warm search answers in ~0.2s. The first call after a run of new sessions indexes them before
+answering, which is what the 60s budget is for; the progress it prints goes to stderr, so stdout
+is the JSON alone.
+
+Resuming is the same two commands as "New" — `rv open`, then `claudex kitty` — with
+`-- --resume <sessionId>` on the end, in yolo mode with no prompt, titled `Claude (recall)`.
+Everything after `--` belongs to `claude` rather than to claudex, and the detached relaunch
+carries it through i3. `claude --resume` only finds a session under the directory it was held
+in, which the project-scoped `--cwd` above is what guarantees.
+
+`claudex desktop list --all` goes first. A conversation already open in a window is one no
+second `claude --resume` may be pointed at, so that one is refused with a 409 and the window id
+that has it — the browser lands on that window's screen instead of opening a rival to it. A live
+session can report a null id, and one of those matches nothing here: the check covers every
+session claudex can name, which is not quite the same as all of them.
 
 ## Handoffs — parked by `claudex handoff`
 

@@ -34,6 +34,7 @@ export function DesktopSessions({
   error,
   onRetry,
   onOpenScreen,
+  onOpenSearch,
 }: {
   projectId: string;
   canonicalId: string;
@@ -42,6 +43,7 @@ export function DesktopSessions({
   error: string | null;
   onRetry: () => void;
   onOpenScreen: (windowId: string) => void;
+  onOpenSearch: () => void;
 }) {
   const [menuWindowId, setMenuWindowId] = useState<string | null>(null);
   const [newOpen, setNewOpen] = useState(false);
@@ -63,12 +65,20 @@ export function DesktopSessions({
         <h2 className="text-xs uppercase tracking-wide text-foreground/40">
           Desktop
         </h2>
-        <button
-          onClick={() => setNewOpen(true)}
-          className="px-3 py-1.5 text-xs rounded-lg bg-blue-500/15 text-blue-500 border border-blue-500/20 active:opacity-80"
-        >
-          New
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onOpenSearch}
+            className="px-3 py-1.5 text-xs rounded-lg bg-foreground/10 border border-foreground/15 active:opacity-80"
+          >
+            Search
+          </button>
+          <button
+            onClick={() => setNewOpen(true)}
+            className="px-3 py-1.5 text-xs rounded-lg bg-blue-500/15 text-blue-500 border border-blue-500/20 active:opacity-80"
+          >
+            New
+          </button>
+        </div>
       </div>
 
       {error && (
