@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import { apiFetch } from '../../../../../lib/api';
 import { useAutoRefresh } from '../../../../../lib/use-auto-refresh';
+import { SpeakButton, appendSpoken } from '../../../SpeakButton';
 
 interface Note {
   id: number;
@@ -186,25 +187,32 @@ export function PinboardView({ projectId }: { projectId: string }) {
               }}
               placeholder="Note text..."
               rows={5}
-              autoFocus
               autoCapitalize="off"
               autoCorrect="off"
               className="w-full px-3 py-2 text-sm bg-foreground/5 border border-foreground/10 rounded mb-3 resize-none"
             />
-            <div className="flex gap-2 justify-end">
-              <button
-                onClick={closeModal}
-                className="px-3 py-1.5 text-sm text-foreground/70 hover:text-foreground"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleModalSave}
-                disabled={!modalText.trim()}
-                className="px-3 py-1.5 text-sm bg-foreground text-background rounded disabled:opacity-30"
-              >
-                Save
-              </button>
+            <div className="flex items-center justify-between gap-2">
+              <SpeakButton
+                projectId={projectId}
+                onText={(spoken) =>
+                  setModalText((prev) => appendSpoken(prev, spoken))
+                }
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={closeModal}
+                  className="px-3 py-1.5 text-sm text-foreground/70 hover:text-foreground"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleModalSave}
+                  disabled={!modalText.trim()}
+                  className="px-3 py-1.5 text-sm bg-foreground text-background rounded disabled:opacity-30"
+                >
+                  Save
+                </button>
+              </div>
             </div>
           </div>
         </div>
