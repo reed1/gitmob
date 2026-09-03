@@ -150,12 +150,7 @@ export default function Home() {
   }, [refreshProjects]);
 
   const filtered = projects
-    .filter(
-      (p) =>
-        search === '' ||
-        p.id.toLowerCase().includes(search.toLowerCase()) ||
-        p.path.toLowerCase().includes(search.toLowerCase())
-    )
+    .filter((p) => search === '' || p.id.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => {
       if (a.hasPendingMessage !== b.hasPendingMessage) {
         return a.hasPendingMessage ? -1 : 1;
