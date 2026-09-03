@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getProject } from '@/lib/projects';
 import {
+  acceptSuggestedPrompt,
   getSessionScreen,
   launchDesktopSession,
   listDesktopSessions,
@@ -84,6 +85,9 @@ export async function POST(
         );
       }
       await sendSessionCommand(windowId, command);
+      return NextResponse.json({ success: true });
+    } else if (action === 'accept-prompt') {
+      await acceptSuggestedPrompt(windowId);
       return NextResponse.json({ success: true });
     } else if (action === 'purgatory') {
       await sendSessionToPurgatory(windowId);

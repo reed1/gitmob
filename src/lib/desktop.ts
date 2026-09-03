@@ -230,3 +230,13 @@ export async function pressSessionKey(
 ): Promise<void> {
   await claudexDesktop(['keys', windowId, key]);
 }
+
+/**
+ * Accept the follow-up prompt Claude Code offers: Right fills the prompt with it, and Enter
+ * submits. The pause between them lets the TUI redraw, which it needs to accept the Enter.
+ */
+export async function acceptSuggestedPrompt(windowId: string): Promise<void> {
+  await pressSessionKey(windowId, 'right');
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  await pressSessionKey(windowId, 'enter');
+}

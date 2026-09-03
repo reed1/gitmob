@@ -9,6 +9,11 @@ import {
 } from '../../../../../lib/desktop-keys';
 import { useAutoRefresh } from '../../../../../lib/use-auto-refresh';
 
+/** A physical keycap: a raised grey box, its thick bottom border reading as the key's side. */
+const keycapClass =
+  'inline-flex items-center justify-center w-7 h-7 rounded-md bg-foreground/10 ' +
+  'border border-b-[3px] border-foreground/25 text-foreground/70 shadow-sm';
+
 export function DesktopScreenView({
   projectId,
   canonicalId,
@@ -47,6 +52,17 @@ export function DesktopScreenView({
   }, [projectId, windowId]);
 
   useAutoRefresh(fetchScreen, 3000);
+
+  const acceptPrompt = async () => {
+    setMenuOpen(false);
+
+    const res = await apiFetch(`/api/projects/${projectId}/desktop`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ windowId, action: 'accept-prompt' }),
+    });
+    if (res.ok) addToast('Accepted the offered prompt', 'success');
+  };
 
   const sendCommand = async (command: CommonCommand) => {
     setMenuOpen(false);
@@ -153,6 +169,43 @@ export function DesktopScreenView({
                     {command}
                   </button>
                 ))}
+                <div className="my-1 border-t border-foreground/10" />
+                <button
+                  onClick={acceptPrompt}
+                  aria-label="Accept the offered prompt"
+                  className="flex w-full items-center gap-2 px-4 py-2 text-left hover:bg-foreground/10"
+                >
+                  <span className={keycapClass}>
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 12h14M13 6l6 6-6 6"
+                      />
+                    </svg>
+                  </span>
+                  <span className={keycapClass}>
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 7v4a2 2 0 01-2 2H6m0 0l4-4m-4 4l4 4"
+                      />
+                    </svg>
+                  </span>
+                </button>
               </div>
             </>
           )}
