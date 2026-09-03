@@ -24,4 +24,5 @@ export type Tab =
   | 'dooit'
   | 'claude'
   | 'push'
-  | 'sudo';
+  | 'sudo'
+  | 'wtman';

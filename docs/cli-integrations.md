@@ -35,6 +35,55 @@ project it is.
 What is _not_ per-worktree is sudo, env checks and monitored sites — those belong to the repo
 and its servers, so the project list reads them under `canonicalId`, as do the dooit todos.
 
+## Worktrees on disk — `wtman`
+
+`src/lib/wtman.ts`, read by the Wtman tab: every worktree of the project, the button that opens
+one, and the box that creates one.
+
+- `wtman list --json` — every worktree on this machine, each with its `~/wtman` directory name,
+  the repo directory under it, and when it was last touched. There is no per-project call: the
+  layout *is* the index, so a worktree is this project's when that repo directory carries its
+  name. Two projects checked out under the same folder name share worktrees as far as wtman is
+  concerned, and nothing here holds a second opinion about that.
+- `wtman open <repoPath> --branch <branch>` — opens one, and creates the branch and the
+  checkout first when they are not there. Both buttons on the tab are this one command. For a
+  worktree that already exists it is nothing but wtman's hand-off to `rofi-vscode open`.
+
+The branch that goes out is the repo's answer, never the directory name. `wtman list` reports the
+directory, which is the branch with everything git allows and a path does not folded away —
+`refactor/api-endpoint-registry` lives in `refactor_api-endpoint-registry` — and `wtman open`
+given that folded name would find no such branch and **create** one. So each row is joined
+against `git worktree list --porcelain` in the main checkout for the branch it is really on.
+
+That join is also what "living" means, which is the whole of what this tab lists: a directory
+left behind by a worktree git no longer knows about is dropped, and a branch with no worktree
+never appears at all — including one Create makes a worktree for, which stops being invisible
+by acquiring one.
+
+No `--interactive`, which is the whole contract with wtman from here. wtman tells its prompts
+apart by what it may assume of somebody who is not there: an **offer** — carrying the main
+checkout's uncommitted changes into the new branch — is declined, and a **confirmation** —
+everything `remove` and `merge` ask — is refused outright, which is why neither is on the tab
+and why nothing here has to pass a flag saying so. `--yes` used to mean "take every default",
+which read like consent to whatever wtman felt like doing; the offers were what it was actually
+answering, so they say no for themselves now.
+
+The one thing that is not simply an offer declined is which branch a new one forks off. wtman
+forks off main here, not off whatever the main checkout is parked on: declining the offer would
+mean HEAD, and a checkout's current branch is invisible to whoever is tapping Create from a
+phone, so it is not a base anybody chose.
+
+The request waits for that open, and should: nothing about it needs detaching. `launch-on-left`
+starts Cursor and the project terminal through i3's own `exec`, so they belong to i3 rather than
+to this server, and `rofi-vscode open` returns once they are launched. Waiting is what turns a
+failed open into an error the tab can show — the few seconds it costs buy the difference between
+an open that worked and one that went nowhere.
+
+Opening a worktree is what announces it to rworkspaces, and so what gives it a project of its
+own here — which is why the row for one already open links to that page instead of opening it
+again. Whether it is open comes from the same `rw-msg get_state` the project list reads, on the
+same round trip: a stale "not open" would invite opening a worktree twice.
+
 ## Pinboard — `rv pinboard`
 
 `src/lib/pinboard.ts`, read and written by the Pinboard tab and read by the `/pinboard`

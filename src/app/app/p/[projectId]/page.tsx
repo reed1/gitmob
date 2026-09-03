@@ -17,6 +17,7 @@ import { PinboardView } from './components/PinboardView';
 import { ClaudeView } from './components/ClaudeView';
 import { PushView } from './components/PushView';
 import { SudoView } from './components/SudoView';
+import { WtmanView } from './components/WtmanView';
 import ProjectContextMenu from '../../ProjectContextMenu';
 import { useAutoRefresh } from '../../../../lib/use-auto-refresh';
 
@@ -31,6 +32,7 @@ const tabs = [
   { id: 'claude', label: 'Claude' },
   { id: 'push', label: 'Push' },
   { id: 'sudo', label: 'Sudo' },
+  { id: 'wtman', label: 'Wtman' },
 ] as const;
 
 const validTabs = new Set<string>(tabs.map((t) => t.id));
@@ -335,6 +337,14 @@ export default function ProjectPage() {
         )}
         {tab === 'push' && <PushView projectId={projectId} />}
         {tab === 'sudo' && <SudoView projectId={projectId} />}
+        {/* Worktrees belong to the repo, so a worktree page lists its own siblings
+            alongside itself rather than an empty board of its own. */}
+        {tab === 'wtman' && project && (
+          <WtmanView
+            projectId={project.canonicalId}
+            currentProjectId={project.id}
+          />
+        )}
       </main>
     </div>
   );

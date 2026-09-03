@@ -5,9 +5,9 @@ React 19, Next.js 16, TypeScript, Tailwind CSS 4, simple-git.
 
 It serves two installable PWAs off one server: **GitMob** (`/app`) — per-project browsing, changes,
 commits, pushes, runs, CLI jobs, todos, notes and Claude sessions — and **Pinboard** (`/pinboard`),
-the overview of every project's notes. Projects and their per-project state come from the desktop
-CLIs (`rworkspaces`, `pt`, `rv`, `claudex`, `gg`); long-running work runs as detached jobs that
-report back over Web Push.
+the overview of every project's notes. Projects and their per-project state come from the
+desktop CLIs (`rworkspaces`, `wtman`, `pt`, `rv`, `claudex`, `gg`); long-running work runs as
+detached jobs that report back over Web Push.
 
 ## Docs
 
