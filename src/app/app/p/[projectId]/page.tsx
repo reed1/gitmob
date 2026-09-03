@@ -41,6 +41,14 @@ function getInitialTab(searchParams: URLSearchParams): Tab {
   return 'pinboard';
 }
 
+// A tab stacks history entries on top of its own: one per folder drilled into on Files, one for
+// an open file or diff. Switching tabs unwinds them, so back from the new tab leaves the project
+// instead of retracing the tree it was never in.
+function depthInTab(searchParams: URLSearchParams): number {
+  const folders = (searchParams.get('path') ?? '').split('/').filter(Boolean);
+  return folders.length + (searchParams.get('file') === null ? 0 : 1);
+}
+
 export default function ProjectPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const router = useRouter();
@@ -58,9 +66,40 @@ export default function ProjectPage() {
   const [commitBody, setCommitBody] = useState('');
   const [pending, setPending] = useState<PendingMessage>(NO_PENDING_MESSAGE);
 
+  // Deep-linking straight into a folder or a file leaves nothing under it to go back to, so
+  // entries are only ever unwound down to the depth the page was loaded at.
+  const loadedDepth = useRef(depthInTab(searchParams));
+
   const goToTab = (id: Tab) => {
-    router.replace(`/app/p/${projectId}?tab=${id}`);
+    const url = `/app/p/${projectId}?tab=${id}`;
+    const unwind = depthInTab(searchParams) - loadedDepth.current;
+    loadedDepth.current = 0;
+    if (unwind <= 0) {
+      router.replace(url);
+      return;
+    }
+    const onPopState = () => {
+      window.removeEventListener('popstate', onPopState);
+      setTimeout(() => router.replace(url), 0);
+    };
+    window.addEventListener('popstate', onPopState);
+    window.history.go(-unwind);
   };
+
+  // Closing a file or stepping up a folder retraces the entry that opened it, unless the page was
+  // loaded there and that entry belongs to whatever came before the app.
+  const goBack = useCallback(
+    (fallback: string) => {
+      if (depthInTab(searchParams) > loadedDepth.current) {
+        router.back();
+        return;
+      }
+      const url = new URL(fallback, window.location.href);
+      loadedDepth.current = depthInTab(url.searchParams);
+      router.replace(fallback);
+    },
+    [router, searchParams]
+  );
 
   const navRef = useRef<HTMLElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -255,7 +294,11 @@ export default function ProjectPage() {
           <PinboardView projectId={project.canonicalId} />
         )}
         {tab === 'files' && (
-          <FileBrowser projectId={projectId} wordWrap={wordWrap} />
+          <FileBrowser
+            projectId={projectId}
+            wordWrap={wordWrap}
+            goBack={goBack}
+          />
         )}
         {tab === 'changes' && (
           <ChangesView
@@ -263,6 +306,7 @@ export default function ProjectPage() {
             status={status}
             onRefresh={refreshStatus}
             wordWrap={wordWrap}
+            goBack={goBack}
           />
         )}
         {tab === 'commit' && (

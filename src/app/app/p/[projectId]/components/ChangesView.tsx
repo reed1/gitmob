@@ -11,11 +11,13 @@ export function ChangesView({
   status,
   onRefresh,
   wordWrap,
+  goBack,
 }: {
   projectId: string;
   status: GitStatus | null;
   onRefresh: () => Promise<void>;
   wordWrap: boolean;
+  goBack: (fallback: string) => void;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -46,7 +48,7 @@ export function ChangesView({
     else router.push(url);
   };
 
-  const closeFile = () => router.back();
+  const closeFile = () => goBack(`/app/p/${projectId}?tab=changes`);
 
   const loadDiff = useCallback(async () => {
     if (!selectedFile) return;
@@ -115,7 +117,7 @@ export function ChangesView({
       body: JSON.stringify({ action, file }),
     });
     setDiff('');
-    router.replace(`/app/p/${projectId}?tab=changes`);
+    closeFile();
     onRefresh();
   };
 
@@ -170,7 +172,9 @@ export function ChangesView({
                   <button
                     onClick={() => {
                       setMenuOpen(false);
-                      router.push(
+                      // A sideways jump into the same file, not a step deeper: back belongs to
+                      // the change list this diff was opened from.
+                      router.replace(
                         `/app/p/${projectId}?tab=files&file=${encodeURIComponent(selectedFile)}`
                       );
                     }}

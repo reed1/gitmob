@@ -172,18 +172,27 @@ function FileViewer({
 export function FileBrowser({
   projectId,
   wordWrap,
+  goBack,
 }: {
   projectId: string;
   wordWrap: boolean;
+  goBack: (fallback: string) => void;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedFile = searchParams.get('file');
-  const [path, setPath] = useState('');
+  const path = searchParams.get('path') ?? '';
   const [entries, setEntries] = useState<
     { name: string; path: string; isDirectory: boolean }[]
   >([]);
   const [loading, setLoading] = useState(true);
+
+  const urlFor = (dir: string, file?: string) => {
+    const params = new URLSearchParams({ tab: 'files' });
+    if (dir) params.set('path', dir);
+    if (file) params.set('file', file);
+    return `/app/p/${projectId}?${params}`;
+  };
 
   useEffect(() => {
     async function load() {
@@ -197,20 +206,18 @@ export function FileBrowser({
     load();
   }, [projectId, path]);
 
+  // Each folder drilled into is its own history entry, so the phone's back gesture walks back up
+  // the tree the same way the ".." row does.
   const navigateTo = (entry: { path: string; isDirectory: boolean }) => {
-    if (entry.isDirectory) {
-      setPath(entry.path);
-    } else {
-      router.push(
-        `/app/p/${projectId}?tab=files&file=${encodeURIComponent(entry.path)}`
-      );
-    }
+    router.push(
+      entry.isDirectory ? urlFor(entry.path) : urlFor(path, entry.path)
+    );
   };
 
   const goUp = () => {
     const parts = path.split('/').filter(Boolean);
     parts.pop();
-    setPath(parts.join('/'));
+    goBack(urlFor(parts.join('/')));
   };
 
   if (selectedFile) {
@@ -219,7 +226,7 @@ export function FileBrowser({
         projectId={projectId}
         filePath={selectedFile}
         wordWrap={wordWrap}
-        onClose={() => router.back()}
+        onClose={() => goBack(urlFor(path))}
       />
     );
   }
