@@ -87,7 +87,7 @@ export default function ProjectCard({
           )}
           {project.envCheckFailed && (
             <svg
-              className="w-3.5 h-3.5 text-orange-500"
+              className="w-3.5 h-3.5 text-orange-500/40"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"

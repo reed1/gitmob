@@ -171,7 +171,6 @@ export default function Home() {
     p.hasRunningProcess ||
     p.hasPendingMessage ||
     p.downSites.length > 0 ||
-    p.envCheckFailed ||
     p.sudoEnabled ||
     p.claudeSessions > 0;
   const active = filtered.filter(isActive);
