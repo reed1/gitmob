@@ -6,6 +6,13 @@ import { DesktopScreenView } from './DesktopScreenView';
 import { DesktopSessions } from './DesktopSessions';
 import { useAutoRefresh } from '../../../../../lib/use-auto-refresh';
 
+/** What Claude Code itself reports the session's context window to be holding. */
+export interface SessionContext {
+  usedTokens: number;
+  windowSize: number;
+  usedPercentage: number;
+}
+
 export interface DesktopSession {
   windowId: string;
   title: string;
@@ -14,6 +21,7 @@ export interface DesktopSession {
   focused: boolean;
   sessionId: string | null;
   cwd: string | null;
+  context: SessionContext | null;
 }
 
 export function ClaudeView({

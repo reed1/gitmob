@@ -5,6 +5,23 @@ import { addToast, apiFetch } from '../../../../../lib/api';
 import { NewSessionModal } from '../../../NewSessionModal';
 import type { DesktopSession } from './ClaudeView';
 
+function formatTokens(tokens: number): string {
+  if (tokens >= 1000000) {
+    const millions = tokens / 1000000;
+    return `${millions % 1 === 0 ? millions : millions.toFixed(1)}M`;
+  }
+  if (tokens >= 10000) return `${Math.round(tokens / 1000)}k`;
+  if (tokens >= 1000) return `${(tokens / 1000).toFixed(1)}k`;
+  return `${tokens}`;
+}
+
+/** Under 10% a whole number hides most of the movement, and over it a decimal is noise. */
+function formatPercentage(percentage: number): string {
+  return percentage < 10
+    ? `${percentage.toFixed(1)}%`
+    : `${Math.round(percentage)}%`;
+}
+
 export function DesktopSessions({
   projectId,
   canonicalId,
@@ -91,9 +108,7 @@ export function DesktopSessions({
       )}
 
       {sessions?.map((session) => {
-        const details = [`ws ${session.workspace}`];
-        if (session.projectId !== projectId) details.push(session.projectId);
-        if (session.sessionId) details.push(session.sessionId.slice(0, 8));
+        const { context } = session;
 
         return (
           <div
@@ -111,8 +126,28 @@ export function DesktopSessions({
               />
               <div className="min-w-0">
                 <div className="font-medium truncate">{session.title}</div>
-                <div className="text-xs text-foreground/50 truncate">
-                  {details.join(' · ')}
+                <div className="text-xs truncate tabular-nums">
+                  {session.projectId !== projectId && (
+                    <span className="text-amber-500">
+                      {session.projectId}
+                      {' · '}
+                    </span>
+                  )}
+                  {context ? (
+                    <>
+                      <span className="text-foreground/50">
+                        {formatTokens(context.usedTokens)} /{' '}
+                        {formatTokens(context.windowSize)}
+                      </span>{' '}
+                      <span className="text-blue-500">
+                        {formatPercentage(context.usedPercentage)}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-foreground/40">
+                      context not reported yet
+                    </span>
+                  )}
                 </div>
               </div>
             </button>

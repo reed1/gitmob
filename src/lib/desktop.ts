@@ -2,6 +2,13 @@ import { execFile } from 'child_process';
 import type { SpecialKey } from './desktop-keys';
 import type { ClaudeMode } from './desktop-modes';
 
+/** What Claude Code itself reports the session's context window to be holding. */
+export interface SessionContext {
+  usedTokens: number;
+  windowSize: number;
+  usedPercentage: number;
+}
+
 export interface DesktopSession {
   windowId: string;
   title: string;
@@ -10,6 +17,13 @@ export interface DesktopSession {
   focused: boolean;
   sessionId: string | null;
   cwd: string | null;
+  context: SessionContext | null;
+}
+
+interface ClaudexSessionContext {
+  used_tokens: number;
+  window_size: number;
+  used_percentage: number;
 }
 
 interface ClaudexSessionRow {
@@ -21,6 +35,7 @@ interface ClaudexSessionRow {
   session_id: string | null;
   listen_on: string | null;
   cwd: string | null;
+  context: ClaudexSessionContext | null;
 }
 
 interface ClaudexListResult {
@@ -117,6 +132,11 @@ export async function listDesktopSessions(projectId: string): Promise<{
       focused: row.focused,
       sessionId: row.session_id,
       cwd: row.cwd,
+      context: row.context && {
+        usedTokens: row.context.used_tokens,
+        windowSize: row.context.window_size,
+        usedPercentage: row.context.used_percentage,
+      },
     })),
   };
 }

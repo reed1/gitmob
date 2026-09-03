@@ -124,7 +124,8 @@ the IDE focused, which is what decides where the window `claudex kitty` spawns n
 - `claudex desktop list <projectId>` — the Claude Code sessions on that project's workspaces. A
   window counts wherever the project's number prefixes the workspace name, so a session dragged
   from the code slot to the browser one stays on the project's list. A worktree is a project of
-  its own here and answers only to its own id.
+  its own here and answers only to its own id. Each session carries a `context` — the tokens in
+  its context window, the window's size, and the percentage — or null.
 - `claudex desktop count` — session counts per project, the project-list sweep (~120ms) behind
   the sparkle icon that promotes a project with a live session to Active.
 - `claudex desktop screen <windowId>` — that window's current terminal content.
@@ -161,6 +162,15 @@ lines instead of submitting at every newline. Its key buttons are `keys`, listed
 `src/lib/desktop-keys.ts` — the client component cannot import `desktop.ts` for them, since that
 one reaches for child_process. The launch modes live in `src/lib/desktop-modes.ts` for the same
 reason.
+
+The context on a session is Claude Code's own count, not one this app works out. Claude Code
+reports it in the statusline payload, `claudex usage store` records it under the session id on
+every render, and `list` joins it in — so `list` costs what it always did (~0.2s, all of it the
+kitty round trip it already made per window) and the sessions are never probed. The alternatives
+were both worse: a transcript carries token counts but not the window they are measured against,
+so a 1M session reads as 169% of a 200k one, and the number on a session's screen is a regex over
+rendered terminal text that a dialog covers up. A session that has not rendered a statusline yet
+has no context, which the Desktop section says rather than guessing at.
 
 There is no session file on either side: every window on the list comes from claudex's own lookup,
 so a session this app never started is still listed, and one it started is still listed after it
