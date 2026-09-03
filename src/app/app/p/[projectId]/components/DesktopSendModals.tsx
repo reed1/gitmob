@@ -45,7 +45,6 @@ export function SendTextModal({
           value={text}
           onChange={(e) => setText(e.target.value)}
           rows={4}
-          autoFocus
           placeholder="Text to type into the session"
           className="w-full text-sm border border-foreground/20 rounded-lg px-3 py-2 bg-background resize-y"
         />
