@@ -9,6 +9,7 @@ import { ClaudeUsage, Project, StaleBuild } from './types';
 import { addToast, apiFetch } from '../../lib/api';
 import { useOutsideClick } from '../../lib/use-outside-click';
 import { useAutoRefresh } from '../../lib/use-auto-refresh';
+import { useBackToDismiss } from '../../lib/use-back-to-dismiss';
 import { needsNotificationSetup } from '../../lib/notifications-client';
 
 const RESUME_REFRESH_THRESHOLD_MS = 10000;
@@ -61,6 +62,7 @@ export default function Home() {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useOutsideClick(menuOpen, menuRef, () => setMenuOpen(false));
+  useBackToDismiss(search !== '', () => setSearch(''));
 
   const restart = useCallback(async () => {
     const health = await fetchHealthWithTimeout(3000);
