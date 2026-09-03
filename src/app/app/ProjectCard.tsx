@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Project } from './types';
 import ProjectContextMenu from './ProjectContextMenu';
@@ -47,20 +48,14 @@ export default function ProjectCard({
               className="flex items-center gap-0.5 text-[11px] leading-none tabular-nums px-1.5 py-0.5 rounded-full border border-[#d97757]/40 bg-[#d97757]/15 text-[#d97757]"
               aria-label={`${project.claudeSessions} Claude Code session(s)`}
             >
-              <svg
+              <Image
+                src="/claude-logo.svg"
+                alt=""
+                width={12}
+                height={12}
+                unoptimized
                 className="w-3 h-3"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
-                />
-              </svg>
+              />
               {project.claudeSessions}
             </span>
           )}
