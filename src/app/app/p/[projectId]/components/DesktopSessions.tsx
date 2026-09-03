@@ -141,12 +141,6 @@ export function DesktopSessions({
               <div className="min-w-0">
                 <div className="font-medium truncate">{session.title}</div>
                 <div className="text-xs truncate tabular-nums">
-                  {session.projectId !== projectId && (
-                    <span className="text-amber-500">
-                      {session.projectId}
-                      {' · '}
-                    </span>
-                  )}
                   {context ? (
                     <>
                       <span className="text-foreground/50">
