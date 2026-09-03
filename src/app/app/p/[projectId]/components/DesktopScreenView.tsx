@@ -2,6 +2,11 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { SendKeysModal, SendTextModal } from './DesktopSendModals';
+import { addToast, apiFetch } from '../../../../../lib/api';
+import {
+  COMMON_COMMANDS,
+  type CommonCommand,
+} from '../../../../../lib/desktop-keys';
 import { useAutoRefresh } from '../../../../../lib/use-auto-refresh';
 
 export function DesktopScreenView({
@@ -42,6 +47,17 @@ export function DesktopScreenView({
   }, [projectId, windowId]);
 
   useAutoRefresh(fetchScreen, 3000);
+
+  const sendCommand = async (command: CommonCommand) => {
+    setMenuOpen(false);
+
+    const res = await apiFetch(`/api/projects/${projectId}/desktop`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ windowId, action: 'command', command }),
+    });
+    if (res.ok) addToast(`Sent ${command}`, 'success');
+  };
 
   // Only on the way in: the prompt sits at the bottom, but a poll must not yank the view
   // back down while the screen is being read.
@@ -127,6 +143,16 @@ export function DesktopScreenView({
                 >
                   Send Keys
                 </button>
+                <div className="my-1 border-t border-foreground/10" />
+                {COMMON_COMMANDS.map((command) => (
+                  <button
+                    key={command}
+                    onClick={() => sendCommand(command)}
+                    className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 whitespace-nowrap"
+                  >
+                    {command}
+                  </button>
+                ))}
               </div>
             </>
           )}

@@ -150,10 +150,12 @@ is `claudex`'s own — `auto`, `edit`, `yolo` — not a `claude --permission-mod
 is named after the project folder, which `--remote-control <name>` passes to `claude` itself; this
 app never sees the URL that publishes, because the Claude app lists the session by that name.
 
-The Desktop section's "Exit" types `/exit` into a session. There is no button for
-`/remote-control`: `remoteControlAtStartup` is on in user settings, so every session is connected
-by the time it appears here, and the command would only raise a dialog the session then sits
-behind until someone sends Esc.
+Both session menus — the list's, and the screen view's where they sit below Send Keys behind a
+separator — end in the common commands from `src/lib/desktop-keys.ts`, each typed into the
+session with `--press-enter`. It is a plain array, so the list grows by editing it. There is no
+button for `/remote-control`: `remoteControlAtStartup` is on in user settings, so every session
+is connected by the time it appears here, and the command would only raise a dialog the session
+then sits behind until someone sends Esc.
 
 "Send Keys" is the keyboard for a session with nobody at its desktop. Its text box goes out as
 `send --force --paste`: `--force` because the empty-prompt check `send` normally applies would

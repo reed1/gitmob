@@ -1,5 +1,5 @@
 import { execFile } from 'child_process';
-import type { SpecialKey } from './desktop-keys';
+import type { CommonCommand, SpecialKey } from './desktop-keys';
 import type { ClaudeMode } from './desktop-modes';
 
 /** What Claude Code itself reports the session's context window to be holding. */
@@ -169,8 +169,11 @@ export async function sendSessionToPurgatory(windowId: string): Promise<void> {
   await run('claudex', ['purgatory', 'send', '--window', windowId]);
 }
 
-export async function exitSession(windowId: string): Promise<void> {
-  await claudexDesktop(['send', windowId, '/exit', '--press-enter']);
+export async function sendSessionCommand(
+  windowId: string,
+  command: CommonCommand
+): Promise<void> {
+  await claudexDesktop(['send', windowId, command, '--press-enter']);
 }
 
 /**

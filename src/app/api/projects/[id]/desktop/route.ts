@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getProject } from '@/lib/projects';
 import {
-  exitSession,
   getSessionScreen,
   launchDesktopSession,
   listDesktopSessions,
   pressSessionKey,
+  sendSessionCommand,
   sendSessionToPurgatory,
   typeIntoSession,
 } from '@/lib/desktop';
-import { isSpecialKey } from '@/lib/desktop-keys';
+import { isCommonCommand, isSpecialKey } from '@/lib/desktop-keys';
 import { isClaudeMode } from '@/lib/desktop-modes';
 
 export async function GET(
@@ -49,7 +49,7 @@ export async function POST(
     return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   }
 
-  const { windowId, action, text, key, pressEnter, mode, prompt } =
+  const { windowId, action, text, key, command, pressEnter, mode, prompt } =
     await request.json();
 
   try {
@@ -76,8 +76,14 @@ export async function POST(
       return NextResponse.json({ error: 'Missing window' }, { status: 400 });
     }
 
-    if (action === 'exit') {
-      await exitSession(windowId);
+    if (action === 'command') {
+      if (!isCommonCommand(command)) {
+        return NextResponse.json(
+          { error: `Unexpected command: ${command}` },
+          { status: 400 }
+        );
+      }
+      await sendSessionCommand(windowId, command);
       return NextResponse.json({ success: true });
     } else if (action === 'purgatory') {
       await sendSessionToPurgatory(windowId);

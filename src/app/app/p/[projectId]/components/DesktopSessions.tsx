@@ -2,6 +2,10 @@
 
 import { useState } from 'react';
 import { addToast, apiFetch } from '../../../../../lib/api';
+import {
+  COMMON_COMMANDS,
+  type CommonCommand,
+} from '../../../../../lib/desktop-keys';
 import { NewSessionModal } from '../../../NewSessionModal';
 import type { DesktopSession } from './ClaudeView';
 
@@ -42,15 +46,15 @@ export function DesktopSessions({
   const [menuWindowId, setMenuWindowId] = useState<string | null>(null);
   const [newOpen, setNewOpen] = useState(false);
 
-  const sendExit = async (session: DesktopSession) => {
+  const sendCommand = async (windowId: string, command: CommonCommand) => {
     setMenuWindowId(null);
 
     const res = await apiFetch(`/api/projects/${projectId}/desktop`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ windowId: session.windowId, action: 'exit' }),
+      body: JSON.stringify({ windowId, action: 'command', command }),
     });
-    if (res.ok) addToast('Sent /exit', 'success');
+    if (res.ok) addToast(`Sent ${command}`, 'success');
   };
 
   return (
@@ -182,12 +186,15 @@ export function DesktopSessions({
                     onClick={() => setMenuWindowId(null)}
                   />
                   <div className="absolute right-0 top-full mt-1 z-20 bg-background border border-foreground/20 rounded-lg shadow-lg py-1 min-w-[120px]">
-                    <button
-                      onClick={() => sendExit(session)}
-                      className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
-                    >
-                      Exit
-                    </button>
+                    {COMMON_COMMANDS.map((command) => (
+                      <button
+                        key={command}
+                        onClick={() => sendCommand(session.windowId, command)}
+                        className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
+                      >
+                        {command}
+                      </button>
+                    ))}
                   </div>
                 </>
               )}
