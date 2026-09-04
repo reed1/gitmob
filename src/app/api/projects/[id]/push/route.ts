@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getProject } from '@/lib/projects';
-import { getPushConfig, readPushJob, resolvePush, startPush } from '@/lib/push';
+import { checkPush, getPushConfig, readPushJob, startPush } from '@/lib/push';
 import { checkSelection, PushSelection } from '@/lib/push-command';
 
 function selectionFromQuery(params: URLSearchParams): PushSelection {
@@ -29,17 +29,17 @@ export async function GET(
     return NextResponse.json({ job: readPushJob(id) });
   }
 
-  // What the tab confirms against, asked when Push is tapped: pt's dry run of this selection.
-  if (request.nextUrl.searchParams.get('action') === 'resolve') {
+  // What the tab highlights from, asked as the scope is typed: pt's answer for this selection.
+  if (request.nextUrl.searchParams.get('action') === 'check') {
     try {
-      const resolution = await resolvePush(
+      const resolution = await checkPush(
         project,
         selectionFromQuery(request.nextUrl.searchParams)
       );
       return NextResponse.json({ resolution });
     } catch (err) {
       return NextResponse.json(
-        { error: err instanceof Error ? err.message : 'pt push -n failed' },
+        { error: err instanceof Error ? err.message : 'pt push check failed' },
         { status: 500 }
       );
     }

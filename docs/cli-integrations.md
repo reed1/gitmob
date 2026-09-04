@@ -42,7 +42,7 @@ one, and the box that creates one.
 
 - `wtman list --json` — every worktree on this machine, each with its `~/wtman` directory name,
   the repo directory under it, and when it was last touched. There is no per-project call: the
-  layout *is* the index, so a worktree is this project's when that repo directory carries its
+  layout _is_ the index, so a worktree is this project's when that repo directory carries its
   name. Two projects checked out under the same folder name share worktrees as far as wtman is
   concerned, and nothing here holds a second opinion about that.
 - `wtman open <repoPath> --branch <branch>` — opens one, and creates the branch and the
@@ -121,11 +121,17 @@ recents` looks close but answers with one line of prose per board, not notes.
   hosts, the targets pt discovers from the `push-*` tags in the project's ansible playbooks, the
   `push_scope` keys, and which servers a push with none named would go to. A word rather than a
   `--json` flag, since it answers a different question than a push does.
-- `pt push [server...] [target...] [scope N] -n --json`, when Push is tapped — the same push,
-  asked rather than run: the servers and targets it resolves to, and under a scope the changed
-  files and which target each one picked. The confirmation is built from that answer.
+- `pt push check [server...] [scope N] --json`, as the scope is typed — the same push, asked
+  rather than run: the servers and targets it resolves to, and the changed files with the target
+  each one picked. The tab highlights the targets from that answer, so what is lit is pt's own,
+  never a second reading of `push_scope` here.
 - `pt push [server...] [target...] [scope N]` — the deploy: `git push`, then
   `ansible-playbook` limited to those servers with the matching tags.
+
+`check` is a mode of pt's rather than a flag on the push, which is what lets the tab ask on every
+keystroke: there is no `-n` that a mistake here could drop and turn a question into a deploy to
+production. It is also why the tab has no confirmation step — the answer is already on screen
+before Deploy is tapped, so a second screen saying the same thing bought nothing.
 
 Nothing here reads the ansible tree or repeats pt's default-server rule. The argument line is the
 only thing this app builds, and it lives in `push-command.ts` — pure, so the tab can preview the
@@ -183,10 +189,10 @@ the IDE focused, which is what decides where the window `claudex kitty` spawns n
 - `claudex desktop send <windowId> <text> --press-enter` — types into that window.
 - `claudex desktop keys <windowId> <key>` — presses one named key in it, whatever is on screen.
 - `claudex kitty --detach --press-enter --mode <mode> --directory <path>
-  --remote-control <name> "<prompt>"` — opens a new session.
+--remote-control <name> "<prompt>"` — opens a new session.
 - `claudex purgatory send --window <windowId>` — ends a session the recoverable way: the
   window is parked on claudex's own workspace and SIGTERMed 30s later, until `claudex
-  purgatory cancel` takes it back. The only call here that closes a session rather than
+purgatory cancel` takes it back. The only call here that closes a session rather than
   reading or typing into one, and the only one outside `claudex desktop`. No pid is passed:
   claudex finds the process behind the window when it acts, which beats a pid noted hours
   earlier. Made by the Commit tab, below, not the Desktop section.
@@ -293,7 +299,12 @@ on an empty desktop is a session nobody meets for hours, so the briefing is park
 one file per handoff under `~/.local/share/gitmob/pending-handoffs`:
 
 ```json
-{ "project_id": "gitmob", "directory": "/home/reed/proj/gitmob", "prompt": "…", "timestamp": "…" }
+{
+  "project_id": "gitmob",
+  "directory": "/home/reed/proj/gitmob",
+  "prompt": "…",
+  "timestamp": "…"
+}
 ```
 
 This is a handover, not a cache read behind claudex's back: claudex writes the file and never
