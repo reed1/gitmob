@@ -97,10 +97,10 @@ export function SendKeysModal({
   // The modal stays open on a key press: answering a dialog is usually Down, Down, Enter.
   // Only failures are worth a toast; apiFetch raises those on its own.
   const pressKey = async (key: SpecialKey) => {
-    await apiFetch(`/api/projects/${projectId}/desktop`, {
+    await apiFetch(`/api/projects/${projectId}/desktop/keys`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ windowId, action: 'key', key }),
+      body: JSON.stringify({ windowId, key }),
     });
   };
 

@@ -219,7 +219,8 @@ then sits behind until someone sends Esc.
 refuse the dialogs this exists to answer, and `--paste` so a multi-line box arrives as multiple
 lines instead of submitting at every newline. Its key buttons are `keys`, listed in
 `src/lib/desktop-keys.ts` — the client component cannot import `desktop.ts` for them, since that
-one reaches for child_process. The launch modes live in `src/lib/desktop-modes.ts` for the same
+one reaches for child_process. They post to `/desktop/keys` rather than to `/desktop`, so the
+duplicate guard can let a repeated press through by path; see [architecture.md](architecture.md). The launch modes live in `src/lib/desktop-modes.ts` for the same
 reason.
 
 The context on a session is Claude Code's own count, not one this app works out. Claude Code

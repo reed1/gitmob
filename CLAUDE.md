@@ -12,7 +12,7 @@ detached jobs that report back over Web Push.
 ## Docs
 
 - [docs/architecture.md](docs/architecture.md) — code layout, where projects come from, detached
-  jobs, parked handoffs, the session modal, dictation
+  jobs, the guard against resent requests, parked handoffs, the session modal, dictation
 - [docs/pwas.md](docs/pwas.md) — the two hostnames and `src/proxy.ts`, routing rules, icons and
   manifests
 - [docs/notifications.md](docs/notifications.md) — Web Push, subscriptions, the service worker

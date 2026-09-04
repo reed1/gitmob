@@ -5,12 +5,11 @@ import {
   getSessionScreen,
   launchDesktopSession,
   listDesktopSessions,
-  pressSessionKey,
   sendSessionCommand,
   sendSessionToPurgatory,
   typeIntoSession,
 } from '@/lib/desktop';
-import { isCommonCommand, isSpecialKey } from '@/lib/desktop-keys';
+import { isCommonCommand } from '@/lib/desktop-keys';
 import { isClaudeMode } from '@/lib/desktop-modes';
 
 export async function GET(
@@ -50,7 +49,7 @@ export async function POST(
     return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   }
 
-  const { windowId, action, text, key, command, pressEnter, mode, prompt } =
+  const { windowId, action, text, command, pressEnter, mode, prompt } =
     await request.json();
 
   try {
@@ -97,15 +96,6 @@ export async function POST(
         return NextResponse.json({ error: 'Missing text' }, { status: 400 });
       }
       await typeIntoSession(windowId, text, pressEnter === true);
-      return NextResponse.json({ success: true });
-    } else if (action === 'key') {
-      if (!isSpecialKey(key)) {
-        return NextResponse.json(
-          { error: `Unexpected key: ${key}` },
-          { status: 400 }
-        );
-      }
-      await pressSessionKey(windowId, key);
       return NextResponse.json({ success: true });
     } else {
       return NextResponse.json(

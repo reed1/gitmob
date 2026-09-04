@@ -30,6 +30,28 @@ CLI commands and deploys run as detached processes through `src/lib/cli-jobs.ts`
 them. A job with `notify` set pushes its result to every subscribed browser; see
 [notifications.md](notifications.md).
 
+## A resent request must not run twice
+
+The phone's connection drops, and a browser that loses one mid-POST resends it byte for byte. The
+resend happens below `fetch`, so the client never hears about it: what reaches the server is a
+second `claudex kitty`, a second commit, a second push.
+
+`src/lib/duplicate-guard.ts` catches those in `src/proxy.ts`, ahead of every `/api` route rather
+than inside each handler — so an endpoint is covered by the shape of its request, and a new one is
+guarded the day it is written. Non-GET only. It keeps the last five requests that got through, one
+history for the whole API rather than one per URL, and answers 400 to a sixth that matches on
+method, path, query and a hash of the body.
+
+Nothing in that comparison separates a resend from a repeat that was meant, so it only holds for
+two seconds: a connection that dies on the way out is resent at once, a second tap is slower. What
+is genuinely meant to repeat faster than that is exempt by path, in `REPEATABLE` — Send Keys, which
+is a keyboard, where pressing Down twice is one request sent twice. That is why a key press has its
+own route, `/api/projects/[id]/desktop/keys`, instead of being another action on `/desktop`: the
+exemption is read off the path, and `launch` on the endpoint next to it stays guarded.
+
+Reading the body in the proxy costs the handler nothing: Next hands it the original request, not
+the one the proxy drained.
+
 ## Parked work from the desktop
 
 `claudex handoff` parks a briefing here instead of opening a window when `am-i-afk` says nobody is
