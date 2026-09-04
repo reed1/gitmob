@@ -19,6 +19,8 @@ export const COMMAND_KEYS = [
   { key: 'shift-tab', label: 'Shift+Tab' },
   { key: 'ctrl-c', label: 'Ctrl+C' },
   { key: 'ctrl-d', label: 'Ctrl+D' },
+  { key: 'ctrl-l', label: 'Ctrl+L' },
+  { key: 'ctrl-u', label: 'Ctrl+U' },
 ] as const;
 
 /** Arrows sit where they do on a keyboard: Up alone, then Left/Down/Right beneath it. */
