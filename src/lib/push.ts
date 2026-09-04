@@ -2,8 +2,8 @@ import { execFile } from 'child_process';
 import { CliJob, readJob, startJob } from './cli-jobs';
 import { Project } from './projects';
 import {
+  buildCheckArgv,
   buildPushArgv,
-  buildResolveArgv,
   PushConfig,
   PushResolution,
   PushSelection,
@@ -45,14 +45,14 @@ export function getPushConfig(project: Project): Promise<PushConfig> {
 }
 
 /**
- * What the Push tab confirms against: pt's own dry run of the selection, so the servers and
- * targets shown are the ones it would deploy rather than a second reading of the pick-list.
+ * What the Push tab highlights from: pt's own answer for this selection, so the targets shown
+ * are the ones it would deploy rather than a second reading of the pick-list.
  */
-export function resolvePush(
+export function checkPush(
   project: Project,
   selection: PushSelection
 ): Promise<PushResolution> {
-  const [command, ...args] = buildResolveArgv(selection);
+  const [command, ...args] = buildCheckArgv(selection);
   return new Promise((resolve, reject) => {
     execFile(
       command,

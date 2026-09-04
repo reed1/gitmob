@@ -22,7 +22,7 @@ export interface PushConfig {
 export interface PushSelection {
   servers: string[];
   targets: string[];
-  /** A commit count or a duration like `2h`; null when not scoping. */
+  /** A commit count or a duration like `2h`; null when the targets are chosen by hand. */
   scope: string | null;
 }
 
@@ -44,20 +44,28 @@ export interface PushResolution {
 
 export const SCOPE_PATTERN = /^\d+[hmd]?$/;
 
+/** The words a deploy is named with: the servers, then either the targets or the scope. */
+function pushWords(selection: PushSelection): string[] {
+  const words = [...selection.servers].sort();
+  // Under a scope, pt picks the targets from what changed, so naming any would be an error.
+  if (selection.scope === null) words.push(...[...selection.targets].sort());
+  else words.push('scope', selection.scope);
+  return words;
+}
+
 export function buildPushArgv(selection: PushSelection): string[] {
-  const argv = ['pt', 'push', ...[...selection.servers].sort()];
-  // Under a scope, pt picks the targets from what changed, so naming any would be ignored.
-  if (selection.scope === null) argv.push(...[...selection.targets].sort());
-  else argv.push('scope', selection.scope);
-  return argv;
+  return ['pt', 'push', ...pushWords(selection)];
 }
 
 /**
- * The same push, asked rather than run: pt resolves the names into the deploy it would do.
+ * The same push, asked rather than run: pt resolves the words into the deploy it would do.
  * Under a scope the targets are pt's answer alone, so this is the only way to show them.
+ *
+ * `check` is a mode of its own rather than a flag on the push, so the line this tab sends on
+ * every keystroke has nothing that could go missing and leave a deploy behind.
  */
-export function buildResolveArgv(selection: PushSelection): string[] {
-  return [...buildPushArgv(selection), '-n', '--json'];
+export function buildCheckArgv(selection: PushSelection): string[] {
+  return ['pt', 'push', 'check', ...pushWords(selection), '--json'];
 }
 
 /** The reason this selection cannot be pushed, or null when it can. */

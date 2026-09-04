@@ -22,6 +22,9 @@ interface PushJob {
   output: string;
 }
 
+/** How long typing settles before the scope is sent to pt. */
+const CHECK_DEBOUNCE_MS = 350;
+
 function toggle(list: string[], value: string): string[] {
   return list.includes(value)
     ? list.filter((v) => v !== value)
@@ -32,7 +35,7 @@ function fileCount(n: number): string {
   return `${n} changed file${n === 1 ? '' : 's'}`;
 }
 
-/** Why a resolved deploy has no target: only a scope can select none. */
+/** Why a checked deploy has no target: only a scope can select none. */
 function nothingToPushReason(scope: PushScope): string {
   if (scope.files.length === 0) return 'nothing changed in that scope.';
   return `no target matched the ${fileCount(scope.files.length)}.`;
@@ -75,18 +78,18 @@ export function PushView({ projectId }: { projectId: string }) {
 
   const [servers, setServers] = useState<string[]>([]);
   const [targets, setTargets] = useState<string[]>([]);
-  const [scopeOn, setScopeOn] = useState(false);
+  const [pickBy, setPickBy] = useState<'scope' | 'hand'>('scope');
   const [scopeValue, setScopeValue] = useState('1');
   const [notify, setNotify] = useState(true);
-  /** The command line the open confirmation is about; a changed selection makes it stale. */
-  const [confirmingCommand, setConfirmingCommand] = useState<string | null>(
-    null
-  );
-  const [resolution, setResolution] = useState<PushResolution | null>(null);
-  const [resolveError, setResolveError] = useState<string | null>(null);
+  /** pt's last answer, and the words it answers for — a scope edited since is not it. */
+  const [answer, setAnswer] = useState<{
+    words: string;
+    resolution: PushResolution | null;
+    error: string | null;
+  } | null>(null);
 
   const logRef = useRef<HTMLPreElement>(null);
-  const resolveRequest = useRef(0);
+  const checkRequest = useRef(0);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/projects/${projectId}/push`);
@@ -118,42 +121,54 @@ export function PushView({ projectId }: { projectId: string }) {
     if (running) logRef.current?.scrollTo({ top: logRef.current.scrollHeight });
   }, [job?.output, running]);
 
-  const scopeValid = !scopeOn || SCOPE_PATTERN.test(scopeValue);
+  // A project with no push_scope block cannot scope, whichever radio is on.
+  const scoping = pickBy === 'scope' && (config?.scopeTargets.length ?? 0) > 0;
+  const scopeValid = SCOPE_PATTERN.test(scopeValue);
+  const serverWords = [...servers].sort().join(',');
+  /** The words worth asking pt about, and the key its answer is kept under. */
+  const checkWords =
+    scoping && scopeValid && servers.length > 0
+      ? `${serverWords} scope ${scopeValue}`
+      : null;
+
+  // The scope is reactive: every settled edit asks pt which targets it now picks, so the
+  // highlight below is pt's own answer for the push the Deploy button would run.
+  useEffect(() => {
+    if (checkWords === null) return;
+    const timer = setTimeout(async () => {
+      const request = ++checkRequest.current;
+      const query = new URLSearchParams({
+        action: 'check',
+        servers: serverWords,
+        scope: scopeValue,
+      });
+      const res = await fetch(`/api/projects/${projectId}/push?${query}`);
+      const data = await res.json();
+      // A slower earlier answer must not land on top of a later one it has been overtaken by.
+      if (request !== checkRequest.current) return;
+      setAnswer({
+        words: checkWords,
+        resolution: res.ok ? data.resolution : null,
+        error: res.ok ? null : data.error || 'Could not check this push',
+      });
+    }, CHECK_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [checkWords, projectId, scopeValue, serverWords]);
+
+  // An answer to different words is not an answer to these, so it reads as still asking.
+  const answered = answer?.words === checkWords ? answer : null;
+  const checked = answered?.resolution ?? null;
+  const checkError = answered?.error ?? null;
+  const checking = checkWords !== null && answered === null;
 
   const selection: PushSelection = {
     servers,
-    targets,
-    scope: scopeOn ? scopeValue : null,
+    targets: scoping ? [] : targets,
+    scope: scoping ? scopeValue : null,
   };
   const commandLine = buildPushArgv(selection).join(' ');
-  // A confirmation stands on one resolved deploy, so editing the selection dismisses it
-  // rather than leaving pt's answer to a question nobody is asking any more on screen.
-  const confirming = confirmingCommand === commandLine;
-
-  /** Ask pt what this selection deploys — under a scope, only it knows the targets. */
-  const openConfirmation = async () => {
-    const request = ++resolveRequest.current;
-    setConfirmingCommand(commandLine);
-    setResolution(null);
-    setResolveError(null);
-
-    const query = new URLSearchParams({ action: 'resolve' });
-    if (servers.length > 0) query.set('servers', servers.join(','));
-    if (targets.length > 0) query.set('targets', targets.join(','));
-    if (selection.scope !== null) query.set('scope', selection.scope);
-
-    const res = await fetch(`/api/projects/${projectId}/push?${query}`);
-    const data = await res.json();
-    if (request !== resolveRequest.current) return;
-    if (!res.ok) {
-      setResolveError(data.error || 'Could not resolve this push');
-      return;
-    }
-    setResolution(data.resolution);
-  };
 
   const run = async () => {
-    setConfirmingCommand(null);
     const res = await apiFetch(`/api/projects/${projectId}/push`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -204,7 +219,12 @@ export function PushView({ projectId }: { projectId: string }) {
     );
   }
 
-  const canRun = servers.length > 0 && scopeValid && !running;
+  // Under a scope the deploy is what pt answered for these exact words, so a scope still being
+  // checked, or one that picked no target, has nothing to deploy yet.
+  const canRun =
+    servers.length > 0 &&
+    !running &&
+    (!scoping || (checked !== null && checked.targets.length > 0));
 
   return (
     <div className="p-4 space-y-5">
@@ -237,12 +257,12 @@ export function PushView({ projectId }: { projectId: string }) {
         )}
       </section>
 
-      <section className="space-y-2">
+      <section className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-xs font-medium uppercase tracking-wide text-foreground/40">
             Targets
           </h2>
-          {targets.length > 0 && !scopeOn && (
+          {!scoping && targets.length > 0 && (
             <button
               onClick={() => setTargets([])}
               className="text-xs text-foreground/50 active:opacity-80"
@@ -251,77 +271,123 @@ export function PushView({ projectId }: { projectId: string }) {
             </button>
           )}
         </div>
-        <div className={`flex flex-wrap gap-2 ${scopeOn ? 'opacity-40' : ''}`}>
+
+        {config.scopeTargets.length === 0 ? (
+          <p className="text-xs text-foreground/40">
+            No <code className="px-1 bg-foreground/10 rounded">push_scope</code>{' '}
+            block in this project, so the targets can only be picked by hand.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="radio"
+                  name="push-pick-by"
+                  checked={pickBy === 'scope'}
+                  onChange={() => setPickBy('scope')}
+                  disabled={running}
+                  className="w-4 h-4"
+                />
+                From what changed in
+              </label>
+              <input
+                type="text"
+                value={scopeValue}
+                onChange={(e) => setScopeValue(e.target.value.trim())}
+                onFocus={() => setPickBy('scope')}
+                disabled={running}
+                inputMode="text"
+                autoCapitalize="off"
+                autoComplete="off"
+                spellCheck={false}
+                className="w-16 px-2 py-1 text-sm font-mono bg-foreground/5 border border-foreground/10 rounded disabled:opacity-40"
+              />
+              <span className="text-sm text-foreground/50">
+                commits, or 2h / 3d
+              </span>
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="radio"
+                name="push-pick-by"
+                checked={pickBy === 'hand'}
+                onChange={() => setPickBy('hand')}
+                disabled={running}
+                className="w-4 h-4"
+              />
+              Picked by hand
+            </label>
+          </div>
+        )}
+
+        <div className={`flex flex-wrap gap-2 ${scoping ? 'opacity-90' : ''}`}>
           {config.targets.map((target) => {
-            const selected = targets.includes(target);
+            const selected = scoping
+              ? (checked?.targets.includes(target) ?? false)
+              : targets.includes(target);
             return (
               <button
                 key={target}
                 onClick={() => setTargets(toggle(targets, target))}
-                disabled={running || scopeOn}
-                className={`px-3 py-1.5 text-sm border rounded-full disabled:opacity-60 active:opacity-80 ${
+                disabled={running || scoping}
+                className={`px-3 py-1.5 text-sm border rounded-full active:opacity-80 ${
                   selected
                     ? 'border-yellow-500/60 bg-yellow-500/10'
-                    : 'border-foreground/10 bg-foreground/5'
-                }`}
+                    : 'border-foreground/10 bg-foreground/5 opacity-50'
+                } ${scoping ? '' : 'disabled:opacity-60'}`}
               >
                 {target}
               </button>
             );
           })}
         </div>
-        <p className="text-xs text-foreground/40">
-          {scopeOn
-            ? 'Scope picks the targets from what changed.'
-            : targets.length === 0
+
+        {!scoping ? (
+          <p className="text-xs text-foreground/40">
+            {targets.length === 0
               ? 'Nothing selected — pt deploys every target.'
               : `Deploys ${targets.length} of ${config.targets.length} targets.`}
-        </p>
-      </section>
-
-      <section className="space-y-2">
-        <h2 className="text-xs font-medium uppercase tracking-wide text-foreground/40">
-          Scope
-        </h2>
-        {config.scopeTargets.length === 0 ? (
+          </p>
+        ) : !scopeValid ? (
+          <p className="text-xs text-red-400">
+            Not a commit count or duration: {scopeValue}
+          </p>
+        ) : servers.length === 0 ? (
           <p className="text-xs text-foreground/40">
-            Unavailable — this project has no{' '}
-            <code className="px-1 bg-foreground/10 rounded">push_scope</code>{' '}
-            block to map changed files onto targets.
+            Pick a server and pt will say what that scope deploys to it.
+          </p>
+        ) : checkError !== null ? (
+          <div className="space-y-1">
+            <p className="text-xs text-red-400">
+              pt could not check this scope.
+            </p>
+            <pre className="p-2 text-xs bg-foreground/5 border border-foreground/10 rounded overflow-x-auto whitespace-pre-wrap">
+              {checkError}
+            </pre>
+          </div>
+        ) : checking || checked === null ? (
+          <p className="text-xs text-foreground/40">
+            Asking pt what that scope picks...
+          </p>
+        ) : checked.scope === null ? (
+          <p className="text-xs text-foreground/40">
+            Deploys {checked.targets.length} of {config.targets.length} targets.
+          </p>
+        ) : checked.targets.length === 0 ? (
+          <p className="text-xs text-amber-400">
+            Nothing to push: {nothingToPushReason(checked.scope)}
           </p>
         ) : (
-          <>
-            <div className="flex items-center gap-3">
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={scopeOn}
-                  onChange={(e) => setScopeOn(e.target.checked)}
-                  disabled={running}
-                  className="w-4 h-4"
-                />
-                Pick targets from recent changes
-              </label>
-              <input
-                type="text"
-                value={scopeValue}
-                onChange={(e) => setScopeValue(e.target.value.trim())}
-                disabled={running || !scopeOn}
-                inputMode="text"
-                autoCapitalize="off"
-                autoComplete="off"
-                spellCheck={false}
-                className="w-20 px-2 py-1 text-sm font-mono bg-foreground/5 border border-foreground/10 rounded disabled:opacity-40"
-              />
-            </div>
-            <p
-              className={`text-xs ${scopeValid ? 'text-foreground/40' : 'text-red-400'}`}
-            >
-              {scopeValid
-                ? 'A commit count, or a duration like 2h, 30m, 3d.'
-                : `Not a commit count or duration: ${scopeValue}`}
-            </p>
-          </>
+          <div className="text-xs text-foreground/50 space-y-0.5">
+            <div>{fileCount(checked.scope.files.length)} picked them:</div>
+            {Object.entries(checked.scope.selected).map(([target, files]) => (
+              <div key={target} className="font-mono break-all">
+                {target} &larr; {files[0]}
+                {files.length > 1 && ` (+${files.length - 1})`}
+              </div>
+            ))}
+          </div>
         )}
       </section>
 
@@ -340,97 +406,13 @@ export function PushView({ projectId }: { projectId: string }) {
           Notify when the deploy finishes
         </label>
 
-        {confirming ? (
-          <div className="p-3 space-y-3 border border-foreground/15 bg-foreground/5 rounded-lg">
-            {resolveError !== null ? (
-              <div className="space-y-2">
-                <div className="text-sm text-red-400">
-                  pt could not resolve this push.
-                </div>
-                <pre className="p-2 text-xs bg-foreground/5 border border-foreground/10 rounded overflow-x-auto whitespace-pre-wrap">
-                  {resolveError}
-                </pre>
-              </div>
-            ) : resolution === null ? (
-              <div className="text-sm text-foreground/50">
-                Asking pt what this deploys...
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="text-sm">
-                  Deploy to{' '}
-                  <span className="font-semibold">
-                    {resolution.servers.join(', ')}
-                  </span>
-                  ? This pushes the current branch and runs the playbooks there.
-                </div>
-                {resolution.scope !== null &&
-                resolution.targets.length === 0 ? (
-                  <div className="text-sm text-amber-400">
-                    Nothing to push: {nothingToPushReason(resolution.scope)}
-                  </div>
-                ) : (
-                  <div className="space-y-1.5">
-                    <h3 className="text-xs font-medium uppercase tracking-wide text-foreground/40">
-                      Targets
-                    </h3>
-                    <div className="flex flex-wrap gap-1.5">
-                      {resolution.targets.map((target) => (
-                        <span
-                          key={target}
-                          className="px-2 py-0.5 text-sm border border-yellow-500/60 bg-yellow-500/10 rounded-full"
-                        >
-                          {target}
-                        </span>
-                      ))}
-                    </div>
-                    {resolution.scope !== null && (
-                      <div className="pt-1 text-xs text-foreground/50 space-y-0.5">
-                        <div>
-                          {fileCount(resolution.scope.files.length)} picked
-                          them:
-                        </div>
-                        {Object.entries(resolution.scope.selected).map(
-                          ([target, files]) => (
-                            <div key={target} className="font-mono break-all">
-                              {target} &larr; {files[0]}
-                              {files.length > 1 && ` (+${files.length - 1})`}
-                            </div>
-                          )
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-            <div className="flex gap-2">
-              <button
-                onClick={run}
-                disabled={
-                  resolution === null || resolution.targets.length === 0
-                }
-                className="px-5 py-2 bg-foreground text-background font-medium rounded-lg active:opacity-80 disabled:opacity-40"
-              >
-                Deploy
-              </button>
-              <button
-                onClick={() => setConfirmingCommand(null)}
-                className="px-4 py-2 bg-foreground/10 border border-foreground/15 rounded-lg active:opacity-80"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button
-            onClick={openConfirmation}
-            disabled={!canRun}
-            className="px-6 py-2 bg-foreground text-background font-medium rounded-lg active:opacity-80 disabled:opacity-40"
-          >
-            {running ? 'Pushing...' : 'Push'}
-          </button>
-        )}
+        <button
+          onClick={run}
+          disabled={!canRun}
+          className="px-6 py-2 bg-foreground text-background font-medium rounded-lg active:opacity-80 disabled:opacity-40"
+        >
+          {running ? 'Deploying...' : 'Deploy'}
+        </button>
       </section>
 
       {job && (
