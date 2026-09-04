@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { apiFetch, addToast } from '../../../lib/api';
 import { copyText } from '../../../lib/clipboard';
 import { useOutsideClick } from '../../../lib/use-outside-click';
+import { goHome } from '../../../lib/app-depth';
 
 interface SharedFile {
   name: string;
@@ -186,7 +187,7 @@ export default function FilesPage() {
       <header className="sticky top-0 z-10 border-b border-foreground/10 bg-background/95 backdrop-blur px-4 py-3">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => router.push('/app')}
+            onClick={() => goHome(router)}
             className="text-foreground/50 hover:text-foreground transition-colors"
           >
             <svg
