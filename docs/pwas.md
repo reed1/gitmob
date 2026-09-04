@@ -21,6 +21,14 @@ state.
 Adding and editing notes stay on a project's Pinboard tab; the overview reads all boards through
 `/api/pinboard`.
 
+That call takes a couple of seconds — it runs `rv pinboard list` once per project — so the overview
+does not wait on it to draw anything. Its last response is kept in localStorage through
+`useCachedState` (`src/lib/use-cached-state.ts`), painted on open, and replaced when the fetch
+lands; the spinning refresh icon is the only sign that a fetch is in flight. The full-page
+"Loading..." is now only ever seen before the first successful fetch on a device. The hook keeps the
+value in localStorage rather than in React state, reading it through `useSyncExternalStore` so the
+server-rendered markup, which has no store to read, still hydrates cleanly.
+
 ## Routing rules
 
 - Keep every GitMob page under `/app`: a page left at the root would fall outside the manifest scope

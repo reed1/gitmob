@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { apiFetch } from '../../lib/api';
 import { useAutoRefresh } from '../../lib/use-auto-refresh';
+import { useCachedState } from '../../lib/use-cached-state';
 
 interface RecentNote {
   projectId: string;
@@ -17,6 +18,13 @@ interface Failure {
   projectId: string;
   error: string;
 }
+
+interface Snapshot {
+  notes: RecentNote[];
+  failures: Failure[];
+}
+
+const SNAPSHOT_KEY = 'pinboard:snapshot';
 
 function noteKey(note: RecentNote): string {
   return `${note.projectId}#${note.id}`;
@@ -108,19 +116,22 @@ function NoteBody({
 }
 
 export default function PinboardOverviewPage() {
-  const [notes, setNotes] = useState<RecentNote[]>([]);
-  const [failures, setFailures] = useState<Failure[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [snapshot, setSnapshot, restored] =
+    useCachedState<Snapshot>(SNAPSHOT_KEY);
+  const [refreshing, setRefreshing] = useState(true);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<RecentNote | null>(null);
 
+  const notes = snapshot?.notes ?? [];
+  const failures = snapshot?.failures ?? [];
+
   const load = useCallback(async () => {
+    setRefreshing(true);
     const res = await fetch('/api/pinboard');
     const data = await res.json();
-    setNotes(data.notes);
-    setFailures(data.failures);
-    setLoading(false);
-  }, []);
+    setSnapshot({ notes: data.notes, failures: data.failures });
+    setRefreshing(false);
+  }, [setSnapshot]);
 
   useAutoRefresh(load);
 
@@ -136,7 +147,10 @@ export default function PinboardOverviewPage() {
     setExpandedKey(null);
     // Dropping the row keeps the list honest without re-reading all 39 boards; the next
     // refresh backfills whatever fell into the 50 this one vacated.
-    setNotes((current) => current.filter((n) => noteKey(n) !== noteKey(note)));
+    setSnapshot({
+      notes: notes.filter((n) => noteKey(n) !== noteKey(note)),
+      failures,
+    });
   };
 
   return (
@@ -146,7 +160,7 @@ export default function PinboardOverviewPage() {
           <div className="flex-1 min-w-0">
             <h1 className="text-lg font-semibold">Pinboard</h1>
             <div className="text-xs text-foreground/50 truncate">
-              {loading
+              {snapshot === null
                 ? 'Reading every board...'
                 : `${notes.length} most recent notes, all projects`}
             </div>
@@ -157,7 +171,9 @@ export default function PinboardOverviewPage() {
             aria-label="Refresh"
           >
             <svg
-              className="w-5 h-5 text-foreground/60"
+              className={`w-5 h-5 text-foreground/60 ${
+                refreshing ? 'animate-spin' : ''
+              }`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -185,11 +201,11 @@ export default function PinboardOverviewPage() {
           </div>
         )}
 
-        {loading && (
+        {restored && snapshot === null && (
           <div className="text-center text-foreground/50 py-8">Loading...</div>
         )}
 
-        {!loading && notes.length === 0 && failures.length === 0 && (
+        {snapshot !== null && notes.length === 0 && failures.length === 0 && (
           <div className="text-center text-foreground/50 py-8">
             No notes pinned anywhere
           </div>
