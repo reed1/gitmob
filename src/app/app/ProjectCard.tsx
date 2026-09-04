@@ -42,7 +42,7 @@ export default function ProjectCard({
     >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="font-medium">{project.id}</span>
+          <span className="font-medium">{project.canonicalId}</span>
           {project.claudeSessions > 0 && (
             <span
               className="flex items-center gap-0.5 text-[11px] leading-none tabular-nums px-1.5 py-0.5 rounded-full border border-[#d97757]/40 bg-[#d97757]/15 text-[#d97757]"
@@ -148,17 +148,35 @@ export default function ProjectCard({
             <span>{warning}</span>
           </div>
         ))}
-        {project.branch && (
-          <div className="mt-2 flex flex-wrap gap-1">
-            <span
-              className={`text-xs px-2 py-0.5 rounded-full ${
-                DEFAULT_BRANCHES.has(project.branch)
-                  ? 'bg-foreground/10 text-foreground/60'
-                  : 'bg-amber-500/15 text-amber-400'
-              }`}
-            >
-              {project.branch}
-            </span>
+        {(project.worktreeName || project.branch) && (
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            {project.worktreeName && (
+              <svg
+                className="w-3.5 h-3.5 text-amber-400/70"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-label="Worktree checkout"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 2h8a2 2 0 012 2v8a2 2 0 01-2 2h-8a2 2 0 01-2-2v-8a2 2 0 012-2z"
+                />
+              </svg>
+            )}
+            {project.branch && (
+              <span
+                className={`text-xs px-2 py-0.5 rounded-full ${
+                  DEFAULT_BRANCHES.has(project.branch)
+                    ? 'bg-foreground/10 text-foreground/60'
+                    : 'bg-amber-500/15 text-amber-400'
+                }`}
+              >
+                {project.branch}
+              </span>
+            )}
           </div>
         )}
       </div>
