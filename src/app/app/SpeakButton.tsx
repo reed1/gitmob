@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { addToast, apiFetch } from '../../lib/api';
 
 /**
@@ -27,6 +27,36 @@ export function SpeakButton({
 }) {
   const [phase, setPhase] = useState<Phase>('idle');
   const recorderRef = useRef<MediaRecorder | null>(null);
+
+  // A phone that dims and locks mid-sentence suspends the recorder, and the tail of what was
+  // said never reaches the encoder. Hold the screen awake for as long as we are recording.
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+
+  const keepScreenAwake = async () => {
+    if (!('wakeLock' in navigator)) return;
+    if (wakeLockRef.current && !wakeLockRef.current.released) return;
+    // Denied while the tab is hidden or the battery is low; dictation still works, dimmed.
+    wakeLockRef.current = await navigator.wakeLock
+      .request('screen')
+      .catch(() => null);
+  };
+
+  const letScreenSleep = () => {
+    wakeLockRef.current?.release();
+    wakeLockRef.current = null;
+  };
+
+  // The lock is dropped whenever the tab is hidden, and is not restored on its own.
+  useEffect(() => {
+    if (phase !== 'recording') return;
+    const reacquire = () => {
+      if (document.visibilityState === 'visible') keepScreenAwake();
+    };
+    document.addEventListener('visibilitychange', reacquire);
+    return () => document.removeEventListener('visibilitychange', reacquire);
+  }, [phase]);
+
+  useEffect(() => letScreenSleep, []);
 
   const transcribe = async (audio: Blob) => {
     const form = new FormData();
@@ -73,6 +103,7 @@ export function SpeakButton({
     };
     recorder.onstop = () => {
       for (const track of stream.getTracks()) track.stop();
+      letScreenSleep();
       setPhase('transcribing');
       // apiFetch has already reported anything that went wrong; this only clears the button.
       transcribe(new Blob(chunks, { type: mimeType }))
@@ -83,6 +114,7 @@ export function SpeakButton({
     recorderRef.current = recorder;
     recorder.start();
     setPhase('recording');
+    keepScreenAwake();
   };
 
   if (phase === 'idle') {
