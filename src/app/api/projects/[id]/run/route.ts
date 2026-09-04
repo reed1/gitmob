@@ -22,11 +22,19 @@ export async function GET(
   const action = request.nextUrl.searchParams.get('action');
 
   if (action === 'status') {
-    const runs = getRunStatus(id, project.cmd);
-    return NextResponse.json({
-      runs,
-      hasRuns: runs.length > 0,
-    });
+    try {
+      const runs = getRunStatus(id, project.cmd);
+      return NextResponse.json({
+        runs,
+        hasRuns: runs.length > 0,
+      });
+    } catch (err) {
+      // Reporting every run as stopped would invite a second start of something already up.
+      return NextResponse.json(
+        { error: err instanceof Error ? err.message : 'rv run status failed' },
+        { status: 500 }
+      );
+    }
   }
 
   if (action === 'logs') {
@@ -58,18 +66,28 @@ export async function POST(
     return NextResponse.json({ error: 'Missing action' }, { status: 400 });
   }
 
-  let result: { success: boolean; error?: string };
-
   if (!runName) {
     return NextResponse.json({ error: 'Missing runName' }, { status: 400 });
-  } else if (action === 'start') {
-    result = await startRun(id, runName);
-  } else if (action === 'stop') {
-    result = await stopRun(id, runName, project.cmd);
-  } else if (action === 'restart') {
-    result = await restartRun(id, runName, project.cmd);
-  } else {
-    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+  }
+
+  let result: { success: boolean; error?: string };
+
+  try {
+    if (action === 'start') {
+      result = await startRun(id, runName);
+    } else if (action === 'stop') {
+      result = await stopRun(id, runName, project.cmd);
+    } else if (action === 'restart') {
+      result = await restartRun(id, runName, project.cmd);
+    } else {
+      return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+    }
+  } catch (err) {
+    // Reading the group's members can fail the same way status does.
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : `rv run ${action} failed` },
+      { status: 500 }
+    );
   }
 
   if (!result.success) {

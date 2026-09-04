@@ -164,8 +164,13 @@ a lie about a security setting.
 `src/lib/run.ts`, read by the Run tab.
 
 Transient systemd user units named `rvp-{projectId}-{cmd}.service`, with logs read via journalctl.
-Note the asymmetry: starting is `rv run --mode systemd --project X --cmd Y`, while `stop`,
-`restart` and `status` are subcommands of `rv run`.
+Every verb is a subcommand of `rv run` — `start`, `stop`, `restart`, `status`, `logs` — with the
+project always `-p` and the command the positional after the verb: `rv run start --mode systemd
+-p X Y`, `rv run stop -p X Y`. Status is scoped to one project by default (the cwd's, which for
+this server is gitmob), so the project-list sweep passes `--all` and buckets the rows itself,
+while the Run tab asks for its one project with `-p`. A worktree id (`krisna::feat-x`) is a
+project id like any other to `-p`: rv splits it and runs the canonical project's config against
+the worktree's checkout.
 
 `rv open <projectId> --focus-ide` is the other call, made by the session launch below: it switches
 the desktop to the project and opens its workspaces when they were closed. Whether the project was

@@ -1,4 +1,4 @@
-import { exec, execFileSync, execSync, spawn } from 'child_process';
+import { exec, execFileSync, spawn } from 'child_process';
 import { Project } from './projects';
 
 const UNIT_PREFIX = 'rvp-';
@@ -58,8 +58,9 @@ export function captureLog(
 
 export async function getAllRunning(): Promise<Record<string, string[]>> {
   return new Promise((resolve) => {
-    exec('rv run status --json', (error, stdout) => {
+    exec('rv run status --all --json', (error, stdout) => {
       if (error) {
+        // The project list still has to render without rv; the Run tab reports the failure.
         resolve({});
         return;
       }
@@ -90,26 +91,33 @@ interface RunningUnitMap {
   [key: string]: { pid: string; uptime: string };
 }
 
-function getRunningUnits(projectId: string): RunningUnitMap {
+// execFileSync hangs rv's stderr off the error and leaves the message at 'Command failed',
+// which is no use to whoever reads it. Everything below reports the failure, so it has to say why.
+function rvSync(args: string[]): string {
   try {
-    const result = execSync('rv run status --json', { encoding: 'utf-8' });
-    const entries = JSON.parse(result) as Array<{
-      project: string;
-      command: string;
-      state: string;
-      pid: string;
-      uptime: string;
-    }>;
-    const map: RunningUnitMap = {};
-    for (const entry of entries) {
-      if (entry.project === projectId && entry.state === 'running') {
-        map[entry.command] = { pid: entry.pid, uptime: entry.uptime };
-      }
-    }
-    return map;
-  } catch {
-    return {};
+    return execFileSync('rv', args, { encoding: 'utf-8' });
+  } catch (err) {
+    const stderr = (err as { stderr?: Buffer | string }).stderr?.toString().trim();
+    throw new Error(stderr || (err as Error).message);
   }
+}
+
+function getRunningUnits(projectId: string): RunningUnitMap {
+  const entries = JSON.parse(
+    rvSync(['run', 'status', '-p', projectId, '--json'])
+  ) as Array<{
+    command: string;
+    state: string;
+    pid: string;
+    uptime: string;
+  }>;
+  const map: RunningUnitMap = {};
+  for (const entry of entries) {
+    if (entry.state === 'running') {
+      map[entry.command] = { pid: entry.pid, uptime: entry.uptime };
+    }
+  }
+  return map;
 }
 
 function getEntryRun(
@@ -231,9 +239,8 @@ export function getRunStatus(
   });
 }
 
-// Starting is 'rv run' in systemd mode; the lifecycle verbs are subcommands of it.
 function startArgs(projectId: string, runName: string): string[] {
-  return ['run', '--mode', 'systemd', '--project', projectId, '--cmd', runName];
+  return ['run', 'start', '--mode', 'systemd', '-p', projectId, runName];
 }
 
 function runRv(args: string[]): Promise<{ success: boolean; error?: string }> {
@@ -280,7 +287,7 @@ export async function stopRun(
     }
     const errors: string[] = [];
     for (const member of runningMembers) {
-      const result = await runRv(['run', 'stop', projectId, member]);
+      const result = await runRv(['run', 'stop', '-p', projectId, member]);
       if (!result.success && result.error)
         errors.push(`${member}: ${result.error}`);
     }
@@ -289,7 +296,7 @@ export async function stopRun(
     }
     return { success: true };
   }
-  return runRv(['run', 'stop', projectId, runName]);
+  return runRv(['run', 'stop', '-p', projectId, runName]);
 }
 
 export async function restartRun(
@@ -303,5 +310,5 @@ export async function restartRun(
     if (!stopResult.success) return stopResult;
     return runRv(startArgs(projectId, runName));
   }
-  return runRv(['run', 'restart', projectId, runName]);
+  return runRv(['run', 'restart', '-p', projectId, runName]);
 }

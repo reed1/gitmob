@@ -31,6 +31,7 @@ export function RunView({
   const [runs, setRuns] = useState<RunInfo[]>([]);
   const [hasRuns, setHasRuns] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [monitors, setMonitors] = useState<MonitorStatus[]>([]);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -39,8 +40,13 @@ export function RunView({
   const fetchStatus = useCallback(async () => {
     const res = await fetch(`/api/projects/${projectId}/run?action=status`);
     const data = await res.json();
-    setRuns(data.runs || []);
-    setHasRuns(data.hasRuns);
+    if (res.ok) {
+      setRuns(data.runs || []);
+      setHasRuns(data.hasRuns);
+      setError(null);
+    } else {
+      setError(data.error || 'Could not read run state');
+    }
     setLoading(false);
   }, [projectId]);
 
@@ -85,6 +91,23 @@ export function RunView({
   if (loading) {
     return (
       <div className="p-4 text-center text-foreground/50">Loading runs...</div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 space-y-2 text-center">
+        <div className="text-red-500">Could not read run state</div>
+        <pre className="p-2 text-xs text-left bg-foreground/5 border border-foreground/10 rounded overflow-x-auto whitespace-pre-wrap">
+          {error}
+        </pre>
+        <button
+          onClick={fetchStatus}
+          className="px-3 py-1.5 text-xs bg-foreground/10 border border-foreground/15 rounded active:opacity-80"
+        >
+          Retry
+        </button>
+      </div>
     );
   }
 
