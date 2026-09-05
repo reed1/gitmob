@@ -1,17 +1,19 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import Link from 'next/link';
-import { apiFetch } from '../../lib/api';
 import { useAutoRefresh } from '../../lib/use-auto-refresh';
 import { useCachedState } from '../../lib/use-cached-state';
+import {
+  PinboardDeleteConfirm,
+  PinboardNoteCard,
+  PinboardNoteModal,
+  mutatePinboard,
+  type PinboardNote,
+} from '../../components/PinboardNote';
 
-interface RecentNote {
+interface RecentNote extends PinboardNote {
   projectId: string;
-  id: number;
-  text: string;
-  createdAt: string | null;
-  editedAt: string | null;
 }
 
 interface Failure {
@@ -30,96 +32,12 @@ function noteKey(note: RecentNote): string {
   return `${note.projectId}#${note.id}`;
 }
 
-const MINUTE = 60_000;
-const HOUR = 60 * MINUTE;
-const DAY = 24 * HOUR;
-const MONTH = 30 * DAY;
-const YEAR = 365 * DAY;
-
-function formatAge(note: RecentNote): string {
-  const stamp = note.editedAt ?? note.createdAt;
-  if (!stamp) return '';
-
-  const age = Date.now() - Date.parse(stamp);
-  if (age < MINUTE) return 'just now';
-  if (age < HOUR) return `${Math.floor(age / MINUTE)}m ago`;
-  if (age < DAY) return `${Math.floor(age / HOUR)}h ago`;
-  if (age < MONTH) return `${Math.floor(age / DAY)}d ago`;
-  if (age < YEAR) return `${Math.floor(age / MONTH)}mo ago`;
-  return `${Math.floor(age / YEAR)}y ago`;
-}
-
-const COLLAPSED_LINES = 'line-clamp-3';
-
-/**
- * Three lines, then an accordion. Only a note that actually overflows gets the chevron and the
- * tap target, and the measurement can only be taken while it is still clamped — so the answer
- * is kept once expanded rather than re-read from an element that no longer clips.
- */
-function NoteBody({
-  text,
-  expanded,
-  onToggle,
-}: {
-  text: string;
-  expanded: boolean;
-  onToggle: () => void;
-}) {
-  const textRef = useRef<HTMLDivElement>(null);
-  const [clipped, setClipped] = useState(false);
-
-  useEffect(() => {
-    const el = textRef.current;
-    if (!el || expanded) return;
-
-    const measure = () => setClipped(el.scrollHeight > el.clientHeight + 1);
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [text, expanded]);
-
-  return (
-    <div
-      className={`flex items-start gap-2 px-3 pb-2.5 pt-1 text-sm ${
-        clipped ? 'cursor-pointer' : ''
-      }`}
-      onClick={clipped ? onToggle : undefined}
-    >
-      <div
-        ref={textRef}
-        className={`flex-1 min-w-0 whitespace-pre-wrap break-words ${
-          expanded ? '' : COLLAPSED_LINES
-        }`}
-      >
-        {text}
-      </div>
-      {clipped && (
-        <svg
-          className={`w-4 h-4 mt-0.5 shrink-0 text-foreground/30 transition-transform ${
-            expanded ? 'rotate-180' : ''
-          }`}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M19 9l-7 7-7-7"
-          />
-        </svg>
-      )}
-    </div>
-  );
-}
-
 export default function PinboardOverviewPage() {
   const [snapshot, setSnapshot, restored] =
     useCachedState<Snapshot>(SNAPSHOT_KEY);
   const [refreshing, setRefreshing] = useState(true);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  const [editing, setEditing] = useState<RecentNote | null>(null);
   const [deleting, setDeleting] = useState<RecentNote | null>(null);
 
   const notes = snapshot?.notes ?? [];
@@ -135,13 +53,37 @@ export default function PinboardOverviewPage() {
 
   useAutoRefresh(load);
 
-  const deleteNote = async (note: RecentNote) => {
-    const res = await apiFetch(`/api/projects/${note.projectId}/pinboard`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'delete', noteId: note.id }),
+  const editNote = async (note: RecentNote, text: string) => {
+    const board = await mutatePinboard(note.projectId, {
+      action: 'edit',
+      noteId: note.id,
+      text,
     });
-    if (!res.ok) return;
+    if (board === null) return;
+
+    // The board comes back whole, but only this one row of the overview is about that
+    // project — take the note's new text and stamp from it and leave the rest alone.
+    const saved = board.find((n) => n.id === note.id);
+    setEditing(null);
+    setSnapshot({
+      notes: notes.map((n) =>
+        noteKey(n) === noteKey(note) && saved
+          ? { ...saved, projectId: note.projectId }
+          : n
+      ),
+      failures,
+    });
+  };
+
+  const deleteNote = async (note: RecentNote) => {
+    if (
+      (await mutatePinboard(note.projectId, {
+        action: 'delete',
+        noteId: note.id,
+      })) === null
+    ) {
+      return;
+    }
 
     setDeleting(null);
     setExpandedKey(null);
@@ -214,81 +156,43 @@ export default function PinboardOverviewPage() {
         {notes.map((note) => {
           const key = noteKey(note);
           return (
-            <div
+            <PinboardNoteCard
               key={key}
-              className="bg-foreground/5 border border-foreground/10 rounded-lg overflow-hidden"
-            >
-              <div className="flex items-center gap-2 px-3 pt-2 text-xs">
+              note={note}
+              label={
                 <Link
                   href={`/app/p/${note.projectId}?tab=pinboard`}
-                  className="font-mono text-blue-400/80 active:text-blue-300 truncate"
+                  onClick={(e) => e.stopPropagation()}
+                  className="font-mono text-blue-400/80 active:text-blue-300"
                 >
                   {note.projectId}
                 </Link>
-                <span className="flex-1 text-right text-stone-400/55 whitespace-nowrap">
-                  {formatAge(note)}
-                </span>
-                <button
-                  onClick={() => setDeleting(note)}
-                  className="shrink-0 -mr-1 -my-1 p-2 text-foreground/40 active:text-red-500"
-                  aria-label={`Remove note ${note.id} from ${note.projectId}`}
-                >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                    />
-                  </svg>
-                </button>
-              </div>
-              <NoteBody
-                text={note.text}
-                expanded={expandedKey === key}
-                onToggle={() =>
-                  setExpandedKey(expandedKey === key ? null : key)
-                }
-              />
-            </div>
+              }
+              expanded={expandedKey === key}
+              onToggle={() => setExpandedKey(expandedKey === key ? null : key)}
+              onEdit={() => setEditing(note)}
+              onDelete={() => setDeleting(note)}
+            />
           );
         })}
       </main>
 
+      {editing !== null && (
+        <PinboardNoteModal
+          projectId={editing.projectId}
+          initialText={editing.text}
+          onSave={(text) => editNote(editing, text)}
+          onClose={() => setEditing(null)}
+        />
+      )}
+
       {deleting !== null && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-background border border-foreground/20 rounded-lg p-4 w-80 max-w-full">
-            <p className="text-sm mb-1">
-              Remove this note from{' '}
-              <span className="font-mono text-blue-400">
-                {deleting.projectId}
-              </span>
-              ?
-            </p>
-            <p className="text-xs text-foreground/50 mb-4 line-clamp-3 break-words">
-              {deleting.text}
-            </p>
-            <div className="flex gap-2 justify-end">
-              <button
-                onClick={() => setDeleting(null)}
-                className="px-3 py-1.5 text-sm text-foreground/70 active:opacity-80"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => deleteNote(deleting)}
-                className="px-3 py-1.5 text-sm bg-red-500 text-white rounded active:opacity-80"
-              >
-                Remove
-              </button>
-            </div>
-          </div>
-        </div>
+        <PinboardDeleteConfirm
+          projectId={deleting.projectId}
+          text={deleting.text}
+          onCancel={() => setDeleting(null)}
+          onConfirm={() => deleteNote(deleting)}
+        />
       )}
     </div>
   );

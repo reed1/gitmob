@@ -6,6 +6,7 @@
   `notifications.ts`, `recall.ts`)
 - `src/app/api` — API routes (projects, cli jobs, pinboard, dooit todos)
 - `src/app/app` — the GitMob PWA; `src/app/pinboard` — the pinboard PWA
+- `src/components` — UI both PWAs draw (`PinboardNote.tsx`, the note card and its modals)
 - `src/app/app/p/[projectId]/components` — project views (FileBrowser, ChangesView, CommitView,
   RunView, CLIView, DooitView, ClaudeView, PushView, SudoView, WtmanView)
 - `src/proxy.ts` — host-based routing between the two PWAs, see [pwas.md](pwas.md)
