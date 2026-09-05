@@ -193,7 +193,7 @@ the IDE focused, which is what decides where the window `claudex kitty` spawns n
 - `claudex desktop screen <windowId>` — that window's current terminal content.
 - `claudex desktop send <windowId> <text> --press-enter` — types into that window.
 - `claudex desktop keys <windowId> <key>` — presses one named key in it, whatever is on screen.
-- `claudex kitty --detach --press-enter --mode <mode> --directory <path>
+- `claudex kitty --detach --submit --mode <mode> --directory <path>
 --remote-control <name> "<prompt>"` — opens a new session.
 - `claudex purgatory send --window <windowId>` — ends a session the recoverable way: the
   window is parked on claudex's own workspace and SIGTERMed 30s later, until `claudex
@@ -331,8 +331,9 @@ directory is not, so a launch takes the prompt from the request and everything e
 file. A launch that fails leaves the handoff parked, to fix and try again.
 
 The prompt is parked whole: nothing trims it on the way in. claudex-kitty caps initial text at
-5000 bytes, the most a session's input box takes, and rejects anything over — a briefing that
-long fails the launch and stays parked, where the box that edits it is the way to cut it down.
+100000 bytes, near the kernel's limit on a single argument, and rejects anything over — a
+briefing that long fails the launch and stays parked, where the box that edits it is the way to
+cut it down.
 
 ## Commit messages — parked by `gg kitty-commit`
 

@@ -117,7 +117,7 @@ export async function launchDesktopSession(
     '--remote-control',
     launch.name,
     ...(launch.title ? ['--title', launch.title] : []),
-    ...(launch.prompt ? ['--press-enter', launch.prompt] : []),
+    ...(launch.prompt ? ['--submit', launch.prompt] : []),
     ...(launch.resumeSessionId
       ? ['--', '--resume', launch.resumeSessionId]
       : []),
