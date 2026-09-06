@@ -299,10 +299,11 @@ session claudex can name, which is not quite the same as all of them.
 list and outside it — the project cards say nothing about them, because a section announcing
 them a screen-width above would only be saying it twice.
 
-A handoff is a briefing one Claude Code session writes for another to run alone. At the desktop
-`claudex handoff` opens that session itself. Away from it — `am-i-afk` again — a window opening
-on an empty desktop is a session nobody meets for hours, so the briefing is parked here instead,
-one file per handoff under `~/.local/share/gitmob/pending-handoffs`:
+A handoff is a briefing one Claude Code session writes for another to run alone. `claudex
+handoff` launches none of them: a session that opened its own window would drop it on top of
+whatever the user was doing, running a prompt nobody had read. Every handoff is parked instead,
+one file per handoff under `~/.local/share/gitmob/pending-handoffs`, and read before it runs —
+here, or through `claudex handoff --launch-rofi` at the desktop:
 
 ```json
 {
@@ -325,10 +326,10 @@ They belong on the front page rather than on the project they name: a briefing w
 session to be started is an announcement, and a tab nobody opens announces nothing.
 
 Launching one is the same two commands as "New", with the handoff's own directory and
-`--title "Claude (handoff)"` — the title claudex-handoff would have given the window it opened
-itself. Editing the prompt first is the point of parking it: the text is the browser's, the
-directory is not, so a launch takes the prompt from the request and everything else from the
-file. A launch that fails leaves the handoff parked, to fix and try again.
+`--title "Claude (handoff)"` — the title a handoff window carries whichever end launches it.
+Editing the prompt first is what this end is for: the text is the browser's, the directory is
+not, so a launch takes the prompt from the request and everything else from the file. A launch
+that fails leaves the handoff parked, to fix and try again.
 
 The prompt is parked whole: nothing trims it on the way in. claudex-kitty caps initial text at
 100000 bytes, near the kernel's limit on a single argument, and rejects anything over — a
@@ -379,10 +380,10 @@ commit lock would take it to the grave.
 - Touching `/tmp/rlocal/am-i-afk-forced.flag` forces that verdict away. `POST /api/afk` is the
   badge tapping it.
 
-`am-i-afk` draws the away line for everything that has to choose between the screen in front of
-the user and somewhere they will find it later — a parked handoff, gg's commit message. This app
-is the somewhere, so it is the one worth saying which way the line falls: while the badge shows,
-the next handoff opens a window on the desktop instead of landing here.
+`am-i-afk` draws the away line for anything that has to choose between the screen in front of
+the user and somewhere they will find it later — gg's commit message. This app is the somewhere,
+so it is the one worth saying which way the line falls: while the badge shows, the next commit
+message goes to a review overlay on the desktop instead of landing here.
 
 The badge appears only on "here", the answer that is surprising on a phone. Tapping it covers the
 case the idle timer cannot: the user got up mid-keystroke and is holding the phone, with 180s to

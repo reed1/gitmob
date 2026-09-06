@@ -20,10 +20,9 @@ interface PendingHandoff {
 }
 
 /**
- * The handoffs `claudex handoff` parked because nobody was at the desktop to receive the window
- * it would have opened. They lead the front page rather than sitting on one project's tab: a
- * briefing waiting for a session to be started is an announcement, and nothing announces it if
- * it has to be gone looking for.
+ * The handoffs `claudex handoff` parked for the user to read before anything runs on them. They
+ * lead the front page rather than sitting on one project's tab: a briefing waiting for a session
+ * to be started is an announcement, and nothing announces it if it has to be gone looking for.
  */
 export function PendingHandoffs({ onLaunched }: { onLaunched: () => void }) {
   const [handoffs, setHandoffs] = useState<PendingHandoff[]>([]);

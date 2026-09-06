@@ -9,7 +9,7 @@ import {
 import { launchDesktopSession } from '@/lib/desktop';
 import { isClaudeMode } from '@/lib/desktop-modes';
 
-/** What claudex-handoff would have titled the window it opened itself. */
+/** The title a handoff window carries, whichever end launches it. */
 const HANDOFF_TITLE = 'Claude (handoff)';
 
 export async function GET() {

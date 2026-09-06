@@ -55,11 +55,14 @@ the one the proxy drained.
 
 ## Parked work from the desktop
 
-`claudex handoff` parks a briefing here instead of opening a window when `am-i-afk` says nobody is
-at the desktop: `~/.local/share/gitmob/pending-handoffs`, one file per handoff, announced at the top
-of the front page — above the project list, whichever project it names — to edit and launch from
-there. The same trade gg makes when it sends a commit message to the Commit tab rather than a review
-overlay nobody is sitting in front of. Contracts in [cli-integrations.md](cli-integrations.md).
+`claudex handoff` opens no window of its own, wherever the user is: the briefing goes to
+`~/.local/share/gitmob/pending-handoffs`, one file per handoff, announced at the top of the front
+page — above the project list, whichever project it names — to read, edit and launch from there. A
+handoff hands a whole workspace to a session acting alone on a prompt nobody has read yet, so it
+waits for the user; this is where they read it when the desktop is not where they are, and rofi
+behind leader+c+h is where they read it when it is. The same trade gg makes when it sends a commit
+message to the Commit tab rather than a review overlay nobody is sitting in front of. Contracts in
+[cli-integrations.md](cli-integrations.md).
 
 ## The Claude tab holds sessions of both kinds
 

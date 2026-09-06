@@ -3,10 +3,11 @@ import { join } from 'path';
 import { homedir } from 'os';
 
 /**
- * Handoffs `claudex handoff` parked instead of launching, because the user was away from the
- * desktop when the session tried to hand its task over. One file per handoff — a project can
- * be handed several — written by claudex and consumed here, the way gg parks a commit message
- * it could not put a review overlay in front of.
+ * Handoffs `claudex handoff` parked instead of launching, which is what it does with every
+ * one: a briefing runs only once the user has read it, here or through
+ * `claudex handoff --launch-rofi` at the desktop. One file per handoff — a project can be
+ * handed several — written by claudex and consumed here, the way gg parks a commit message it
+ * could not put a review overlay in front of.
  */
 const PENDING_HANDOFFS_DIR = join(
   homedir(),
