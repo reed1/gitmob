@@ -341,7 +341,7 @@ cut it down.
 `src/lib/clone.ts` and `src/app/api/projects/[id]/clone`, behind the Clone entry on a project's
 menu.
 
-A project is a YAML file in rofi-vscode; whether it has been cloned onto *this* machine is a
+A project is a YAML file in rofi-vscode; whether it has been cloned onto _this_ machine is a
 separate question, and one the project list answers as `missing` — a `not cloned` pill on the
 card, and the same pill where the branch chip goes on the project page. It is a plain
 `existsSync` on the path, not a lookup: the path is already in the list this app reads.
@@ -463,3 +463,36 @@ Going direct rather than through `/api` costs nothing and saves a hop: portman p
 every Caddy route it makes, so every front already answers a cross-origin POST. What it does cost
 is the secure-origin requirement — `navigator.mediaDevices` does not exist on `.loc` or
 `dev.gitmob.loc`, so the button only works on an HTTPS front.
+
+## The agent's browser — `claude-in-chrome`
+
+`src/lib/browser.ts`, read and driven by `/app/browser`.
+
+`claude-in-chrome` (rlocal/bin) owns the Chrome the Claude extension drives — its profile, its
+window, the i3 workspace it lives alone on, and the systemd unit that keeps it there. It is one
+browser for the whole desktop, not a project's, so nothing on this path takes a project id and
+the page sits at the top of the app rather than on a tab.
+
+- `claude-in-chrome cdp tabs` — the open tabs, each with its id, title and url.
+- `claude-in-chrome cdp shot [--target <id>]` — a JPEG of one tab, base64, **sized in CSS
+  pixels**. That sizing is the contract the whole page rests on: a tap comes back as the
+  coordinate it landed on, with nothing on either side rescaling it.
+- `claude-in-chrome cdp click|scroll|text|key [--target <id>] ...` — driving that tab.
+- `claude-in-chrome cdp navigate|back|forward|reload [--target <id>]` — moving it.
+- `claude-in-chrome cdp open|close|activate` — the tabs themselves.
+
+It exists because the desktop's own answer does not travel. `chrome-rdzero-attach` mirrors that
+window's pixels to a laptop over x11vnc, and to do it at all it has to **focus** the window
+first: nothing composites on rdzero, so X hands back garbage for a window whose workspace is not
+in front, and the script puts the desktop back where it found it afterwards. A phone has no
+vncviewer and no ssh, and the workspace switch is a side effect nobody at the desk asked for.
+CDP renders from inside Chrome instead — the `--disable-backgrounding-occluded-windows` flags
+that Chrome is launched with are what keep an occluded renderer answering — so a frame comes
+back with the desktop left on whatever it was on.
+
+The one thing it does have to do is bring the target tab to the front of that window before
+capturing: Chrome composites the visible tab and no other, and a capture aimed at a background
+one never answers at all. Alone on its own workspace, that costs nothing.
+
+What it reaches is the **page**, not Chrome: no omnibox behind the URL box, no extension popup,
+no file picker, no HTTP-auth dialog. Those are still `chrome-rdzero-attach` and a laptop.

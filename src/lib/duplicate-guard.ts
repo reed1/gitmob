@@ -24,10 +24,12 @@ const WINDOW_MS = 2000;
 /**
  * The endpoints that are meant to be called twice with the same body. Send Keys is a keyboard,
  * and a keyboard repeats: pressing Down twice is one request sent twice, and the second press is
- * not a resend of the first. It has a URL of its own for exactly this — so the exemption can be
- * read off the path, rather than guessed at by looking inside the body of a shared endpoint.
+ * not a resend of the first. The Browser page is a keyboard and a mouse both — tapping the same
+ * button twice sends the same coordinate twice. Each has a URL of its own for exactly this — so
+ * the exemption can be read off the path, rather than guessed at by looking inside the body of a
+ * shared endpoint.
  */
-const REPEATABLE = ['/desktop/keys'];
+const REPEATABLE = ['/desktop/keys', '/browser/input'];
 
 interface Submission {
   key: string;

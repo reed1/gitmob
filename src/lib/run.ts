@@ -97,7 +97,9 @@ function rvSync(args: string[]): string {
   try {
     return execFileSync('rv', args, { encoding: 'utf-8' });
   } catch (err) {
-    const stderr = (err as { stderr?: Buffer | string }).stderr?.toString().trim();
+    const stderr = (err as { stderr?: Buffer | string }).stderr
+      ?.toString()
+      .trim();
     throw new Error(stderr || (err as Error).message);
   }
 }

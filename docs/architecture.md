@@ -3,8 +3,8 @@
 ## Layout
 
 - `src/lib` — core logic (`git.ts`, `run.ts`, `projects.ts`, `files.ts`, `cli-jobs.ts`,
-  `notifications.ts`, `recall.ts`)
-- `src/app/api` — API routes (projects, cli jobs, pinboard, dooit todos)
+  `notifications.ts`, `recall.ts`, `browser.ts`)
+- `src/app/api` — API routes (projects, cli jobs, pinboard, dooit todos, the agent's browser)
 - `src/app/app` — the GitMob PWA; `src/app/pinboard` — the pinboard PWA
 - `src/components` — UI both PWAs draw (`PinboardNote.tsx`, the note card and its modals)
 - `src/app/app/p/[projectId]/components` — project views (FileBrowser, ChangesView, CommitView,
@@ -46,9 +46,11 @@ method, path, query and a hash of the body.
 Nothing in that comparison separates a resend from a repeat that was meant, so it only holds for
 two seconds: a connection that dies on the way out is resent at once, a second tap is slower. What
 is genuinely meant to repeat faster than that is exempt by path, in `REPEATABLE` — Send Keys, which
-is a keyboard, where pressing Down twice is one request sent twice. That is why a key press has its
-own route, `/api/projects/[id]/desktop/keys`, instead of being another action on `/desktop`: the
-exemption is read off the path, and `launch` on the endpoint next to it stays guarded.
+is a keyboard, where pressing Down twice is one request sent twice, and `/api/browser/input`, which
+is a keyboard and a mouse both. That is why a key press has its own route,
+`/api/projects/[id]/desktop/keys`, instead of being another action on `/desktop`: the exemption is
+read off the path, and `launch` on the endpoint next to it stays guarded. `/api/browser` is split
+the same way — driving a tab repeats, opening one must not.
 
 Reading the body in the proxy costs the handler nothing: Next hands it the original request, not
 the one the proxy drained.
@@ -76,6 +78,30 @@ input box is a keystroke lost every five seconds.
 
 Resuming one is `claudex kitty` again, with the session id after `--`. Contract, and the refusal
 when the conversation is already open in a window, in [cli-integrations.md](cli-integrations.md).
+
+## The agent's browser, from the phone
+
+`/app/browser` is the Chrome the Claude extension drives, driven by hand instead: a JPEG of one
+tab refetched on a loop, with every tap sent back as the coordinate it landed on. It is there for
+the sign-in an agent cannot do for itself — a login page standing between a session and the work,
+on a desktop nobody is sitting at.
+
+Three things make it work, and each is the reason for the one after it. The frame comes from
+Chrome's own DevTools protocol rather than from a screenshot of the window, because nothing
+composites on rdzero and X answers for an unfocused workspace with garbage — which is why the
+desktop's own answer, `chrome-rdzero-attach`, has to focus that window and put the workspace back
+afterwards. Nothing here moves the desktop at all. The frame is captured **sized in CSS pixels**,
+so the coordinate a finger landed on is already the coordinate to send: neither end rescales
+anything, and the page's zoom, the phone's screen and the display's device ratio all drop out.
+And the tab is brought to the front of its own window before each capture, because Chrome
+composites the visible tab and no other — a capture aimed at a background one never answers.
+
+The page carries none of GitMob's furniture. A frame that has to share a phone with a header and
+a footer is a frame nobody can read, and this is the one page in the app whose whole content is
+somewhere else. Its own controls collapse too.
+
+It drives the page and not Chrome: no omnibox behind the URL box, no extension popup, no file
+picker, no HTTP-auth dialog. Contract in [cli-integrations.md](cli-integrations.md).
 
 ## One session modal
 
