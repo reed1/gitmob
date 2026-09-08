@@ -1,4 +1,5 @@
 import simpleGit from 'simple-git';
+import { existsSync } from 'fs';
 
 const REMOTE_PREFERENCE = ['origin', 'personal'];
 
@@ -11,6 +12,10 @@ function parseGithubRepo(url: string): string | null {
 }
 
 export async function getGithubRepoUrl(cwd: string): Promise<string | null> {
+  // simple-git throws on construction when the checkout is missing — a configured project
+  // nobody has cloned yet must not take the whole project list down with it.
+  if (!existsSync(cwd)) return null;
+
   const remotes = await simpleGit(cwd)
     .getRemotes(true)
     .catch(() => []);
