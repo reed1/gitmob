@@ -195,7 +195,7 @@ export default function ProjectPage() {
             <h1 className="text-lg font-semibold truncate">{project?.id}</h1>
             <div className="text-sm text-foreground/50 flex items-center gap-2">
               {project?.missing ? (
-                <span className="px-1.5 py-0.5 rounded text-xs border border-red-500/40 bg-red-500/15 text-red-400">
+                <span className="px-1.5 py-0.5 rounded text-xs bg-foreground/10 text-foreground/40">
                   not cloned
                 </span>
               ) : (

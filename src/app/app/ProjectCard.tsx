@@ -47,7 +47,7 @@ export default function ProjectCard({
           <span className="font-medium">{project.canonicalId}</span>
           {project.missing && (
             <span
-              className="text-[11px] leading-none px-1.5 py-0.5 rounded-full border border-red-500/40 bg-red-500/15 text-red-400"
+              className="text-[11px] leading-none px-1.5 py-0.5 rounded-full bg-foreground/10 text-foreground/40"
               title={`${project.path} does not exist`}
             >
               not cloned
