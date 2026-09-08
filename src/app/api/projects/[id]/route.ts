@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { existsSync } from 'fs';
 import { getProject } from '@/lib/projects';
 import { getGithubRepoUrl } from '@/lib/github';
 
@@ -15,5 +16,9 @@ export async function GET(
 
   const githubUrl = await getGithubRepoUrl(project.path);
 
-  return NextResponse.json({ ...project, githubUrl });
+  return NextResponse.json({
+    ...project,
+    missing: !existsSync(project.path),
+    githubUrl,
+  });
 }

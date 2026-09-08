@@ -518,7 +518,12 @@ export default function Home() {
             </h2>
             <div className="space-y-2">
               {active.map((project) => (
-                <ProjectCard key={project.id} project={project} isActive />
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                  isActive
+                  onCloned={refreshProjects}
+                />
               ))}
             </div>
           </section>
@@ -531,7 +536,11 @@ export default function Home() {
             </h2>
             <div className="space-y-2">
               {pinned.map((project) => (
-                <ProjectCard key={project.id} project={project} />
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                  onCloned={refreshProjects}
+                />
               ))}
             </div>
           </section>
@@ -546,7 +555,11 @@ export default function Home() {
             </h2>
             <div className="space-y-2">
               {others.map((project) => (
-                <ProjectCard key={project.id} project={project} />
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                  onCloned={refreshProjects}
+                />
               ))}
             </div>
           </section>

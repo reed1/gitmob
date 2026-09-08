@@ -3,6 +3,9 @@ export interface Project {
   canonicalId: string;
   worktreeName?: string;
   path: string;
+  repo?: string;
+  /** Configured, but not on disk: nobody has cloned it here yet. */
+  missing: boolean;
   urls?: Record<string, string>;
   push?: Record<string, { ssh: string; path?: string }>;
   githubUrl: string | null;

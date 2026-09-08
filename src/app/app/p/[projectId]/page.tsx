@@ -194,9 +194,15 @@ export default function ProjectPage() {
           <div className="flex-1 min-w-0">
             <h1 className="text-lg font-semibold truncate">{project?.id}</h1>
             <div className="text-sm text-foreground/50 flex items-center gap-2">
-              <span className="px-1.5 py-0.5 bg-foreground/10 rounded text-xs">
-                {branch}
-              </span>
+              {project?.missing ? (
+                <span className="px-1.5 py-0.5 rounded text-xs border border-red-500/40 bg-red-500/15 text-red-400">
+                  not cloned
+                </span>
+              ) : (
+                <span className="px-1.5 py-0.5 bg-foreground/10 rounded text-xs">
+                  {branch}
+                </span>
+              )}
             </div>
           </div>
           {(tab === 'changes' && showingDiff) ||
@@ -224,7 +230,12 @@ export default function ProjectPage() {
               Wrap
             </label>
           ) : (
-            project && <ProjectContextMenu project={project} />
+            project && (
+              <ProjectContextMenu
+                project={project}
+                onCloned={() => window.location.reload()}
+              />
+            )
           )}
         </div>
 

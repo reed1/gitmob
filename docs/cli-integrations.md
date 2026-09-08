@@ -336,6 +336,36 @@ The prompt is parked whole: nothing trims it on the way in. claudex-kitty caps i
 briefing that long fails the launch and stays parked, where the box that edits it is the way to
 cut it down.
 
+## Cloning a missing checkout — `gh`
+
+`src/lib/clone.ts` and `src/app/api/projects/[id]/clone`, behind the Clone entry on a project's
+menu.
+
+A project is a YAML file in rofi-vscode; whether it has been cloned onto *this* machine is a
+separate question, and one the project list answers as `missing` — a `not cloned` pill on the
+card, and the same pill where the branch chip goes on the project page. It is a plain
+`existsSync` on the path, not a lookup: the path is already in the list this app reads.
+
+- `gh repo clone <repo> <path>` — the clone. It is what `rv open` runs when it meets a project
+  with no checkout, so a clone started from a phone and one started at the desktop are the same
+  command. `gh` takes the ssh url out of the project config as readily as an `OWNER/REPO`, and
+  git makes the leading directories itself, so nothing here creates the parent.
+
+`rv open`'s own clone is not reusable from here for the reason it exists: it opens a floating
+terminal and waits for a keypress, which is a confirmation with nobody in front of it. The
+confirmation here is the menu entry — it appears only on a project whose checkout is missing.
+
+A clone is minutes of downloading, so it goes through the CLI job runner
+(`src/lib/cli-jobs.ts`) as a detached process logging to
+`~/.local/share/gitmob/cli-jobs/clone-{projectId}.log`, and the box showing it can be closed and
+reopened on one still running. Unlike a push it is always notified: there is no reason to start
+one and stay on the page. The list is told to refresh itself when the job exits 0, which is what
+drops the pill.
+
+Refused rather than run: a worktree, which is wtman's to create and would put a second checkout
+where git expects the one it tracks; a project with no `repo` in its YAML; a path that already
+exists; and a clone already running for that project.
+
 ## Commit messages — parked by `gg kitty-commit`
 
 `src/app/api/projects/[id]/pending-message/route.ts`, read by the Commit tab.

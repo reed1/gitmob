@@ -17,9 +17,11 @@ function getDefaultTab(project: Project): string {
 export default function ProjectCard({
   project,
   isActive,
+  onCloned,
 }: {
   project: Project;
   isActive?: boolean;
+  onCloned: () => void;
 }) {
   const router = useRouter();
 
@@ -43,6 +45,14 @@ export default function ProjectCard({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="font-medium">{project.canonicalId}</span>
+          {project.missing && (
+            <span
+              className="text-[11px] leading-none px-1.5 py-0.5 rounded-full border border-red-500/40 bg-red-500/15 text-red-400"
+              title={`${project.path} does not exist`}
+            >
+              not cloned
+            </span>
+          )}
           {project.claudeSessions > 0 && (
             <span
               className="flex items-center gap-0.5 text-[11px] leading-none tabular-nums px-1.5 py-0.5 rounded-full border border-[#d97757]/40 bg-[#d97757]/15 text-[#d97757]"
@@ -180,7 +190,7 @@ export default function ProjectCard({
           </div>
         )}
       </div>
-      <ProjectContextMenu project={project} />
+      <ProjectContextMenu project={project} onCloned={onCloned} />
     </div>
   );
 }

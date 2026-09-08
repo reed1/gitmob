@@ -4,6 +4,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../../../../../lib/api';
 import { useAutoRefresh } from '../../../../../lib/use-auto-refresh';
 import {
+  ClientJob,
+  elapsedSince,
+  formatSeconds,
+  statusLabel,
+} from '../../../../../lib/job-status';
+import {
   buildPushArgv,
   PushConfig,
   PushResolution,
@@ -11,16 +17,6 @@ import {
   PushSelection,
   SCOPE_PATTERN,
 } from '../../../../../lib/push-command';
-
-interface PushJob {
-  command: string;
-  startTime: number;
-  status: 'running' | 'completed' | 'lost';
-  exitCode: number | null;
-  signal: string | null;
-  duration: number | null;
-  output: string;
-}
 
 /** How long typing settles before the scope is sent to pt. */
 const CHECK_DEBOUNCE_MS = 350;
@@ -41,40 +37,10 @@ function nothingToPushReason(scope: PushScope): string {
   return `no target matched the ${fileCount(scope.files.length)}.`;
 }
 
-function formatSeconds(ms: number): string {
-  if (ms < 10000) return `${(Math.max(0, ms) / 1000).toFixed(1)}s`;
-  const total = Math.round(ms / 1000);
-  const minutes = Math.floor(total / 60);
-  if (minutes === 0) return `${total}s`;
-  return `${minutes}m ${total % 60}s`;
-}
-
-function elapsedSince(startTime: number): string {
-  return formatSeconds(Date.now() - startTime);
-}
-
-function statusLabel(job: PushJob): { text: string; className: string } {
-  if (job.status === 'running') {
-    return { text: 'Running', className: 'text-blue-400' };
-  }
-  if (job.status === 'lost') {
-    return { text: 'Interrupted', className: 'text-amber-400' };
-  }
-  if (job.status === 'completed') {
-    if (job.signal !== null) {
-      return { text: `Stopped (${job.signal})`, className: 'text-amber-400' };
-    }
-    return job.exitCode === 0
-      ? { text: 'Succeeded', className: 'text-green-500' }
-      : { text: `Failed (exit ${job.exitCode})`, className: 'text-red-500' };
-  }
-  throw new Error(`Unexpected job status: ${job.status}`);
-}
-
 export function PushView({ projectId }: { projectId: string }) {
   const [config, setConfig] = useState<PushConfig | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [job, setJob] = useState<PushJob | null>(null);
+  const [job, setJob] = useState<ClientJob | null>(null);
 
   const [servers, setServers] = useState<string[]>([]);
   const [targets, setTargets] = useState<string[]>([]);

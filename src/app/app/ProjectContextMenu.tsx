@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { useOutsideClick } from '../../lib/use-outside-click';
+import { CloneModal } from './CloneModal';
 import { Modal } from './Modal';
 import { NewSessionModal } from './NewSessionModal';
 
@@ -11,15 +12,20 @@ interface Props {
   project: {
     id: string;
     canonicalId: string;
+    path: string;
+    repo?: string;
+    missing: boolean;
     urls?: Record<string, string>;
     githubUrl: string | null;
   };
+  onCloned: () => void;
 }
 
-export default function ProjectContextMenu({ project }: Props) {
+export default function ProjectContextMenu({ project, onCloned }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [urlModalOpen, setUrlModalOpen] = useState(false);
   const [newSessionOpen, setNewSessionOpen] = useState(false);
+  const [cloneOpen, setCloneOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useOutsideClick(menuOpen, menuRef, () => setMenuOpen(false));
@@ -56,6 +62,19 @@ export default function ProjectContextMenu({ project }: Props) {
         </button>
         {menuOpen && (
           <div className="absolute right-0 top-full mt-1 z-20 bg-background border border-foreground/20 rounded-lg shadow-lg py-1 min-w-[120px]">
+            {/* Only ever the way in to a project that has no checkout: everything else on this
+                menu, and every tab behind the card, needs one. */}
+            {project.missing && project.repo && (
+              <button
+                onClick={() => {
+                  setMenuOpen(false);
+                  setCloneOpen(true);
+                }}
+                className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
+              >
+                Clone
+              </button>
+            )}
             <button
               onClick={() => {
                 setMenuOpen(false);
@@ -119,6 +138,16 @@ export default function ProjectContextMenu({ project }: Props) {
           </div>
         )}
       </div>
+
+      {cloneOpen && project.repo && (
+        <CloneModal
+          projectId={project.id}
+          repo={project.repo}
+          path={project.path}
+          onCloned={onCloned}
+          onClose={() => setCloneOpen(false)}
+        />
+      )}
 
       {newSessionOpen && (
         <NewSessionModal

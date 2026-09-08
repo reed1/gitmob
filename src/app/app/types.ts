@@ -23,7 +23,10 @@ export interface Project {
   worktreeName?: string;
   path: string;
   pinned?: boolean;
+  repo?: string;
   urls?: Record<string, string>;
+  /** Configured, but not on disk: nobody has cloned it here yet. */
+  missing: boolean;
   branch: string | null;
   editing: boolean;
   hasPendingMessage: boolean;

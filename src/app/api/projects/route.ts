@@ -135,6 +135,8 @@ export async function GET() {
 
   const list = projects.map((p) => ({
     ...p,
+    // Configured, but never cloned. Everything git-shaped below is null for one of these.
+    missing: !existsSync(p.path),
     branch: resultMap[p.id]?.branch ?? null,
     editing: resultMap[p.id]?.editing ?? false,
     hasPendingMessage: resultMap[p.id]?.hasPendingMessage ?? false,
