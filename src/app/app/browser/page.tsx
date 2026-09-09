@@ -50,17 +50,29 @@ export default function BrowserPage() {
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [tabsOpen, setTabsOpen] = useState(false);
   const [controls, setControls] = useState(true);
-  const [zoomed, setZoomed] = useState(false);
+  /** Only for the button's label — the scale itself is a ref, being written on every move. */
+  const [atFit, setAtFit] = useState(true);
   const [address, setAddress] = useState('');
   const [typing, setTyping] = useState('');
 
+  const boxRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const objectUrlRef = useRef<string | null>(null);
   const wakeRef = useRef<(() => void) | null>(null);
+  /** Where the frame sits in its box and how big it is drawn — this page's own, sent nowhere. */
+  const viewRef = useRef({ scale: 1, x: 0, y: 0 });
+  const atFitRef = useRef(true);
+  const sizedRef = useRef('');
   // Set while a scroll is on the wire. A drag produces far more deltas than a subprocess per
   // request can carry, so the ones raised meanwhile are added up and sent as one.
   const scrollingRef = useRef(false);
   const pendingScrollRef = useRef({ x: 0, y: 0, dx: 0, dy: 0 });
+  const pointersRef = useRef(new Map<number, { x: number; y: number }>());
+  const pinchRef = useRef<{
+    span: number;
+    midX: number;
+    midY: number;
+  } | null>(null);
   const dragRef = useRef<{
     lastX: number;
     lastY: number;
@@ -147,6 +159,22 @@ export default function BrowserPage() {
     };
   }, []);
 
+  // Turning the phone, or folding the controls away, changes the box the frame is fitted to.
+  // A view left at fit is refitted; one the user has zoomed is only pulled back inside.
+  useEffect(() => {
+    const box = boxRef.current;
+    if (box === null) return;
+    const observer = new ResizeObserver(() => {
+      if (imageRef.current === null || imageRef.current.naturalWidth === 0) {
+        return;
+      }
+      setScale(atFitRef.current ? fitScale() : viewRef.current.scale);
+    });
+    observer.observe(box);
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // The address bar follows the page except while it is being typed into, which focus says.
   useEffect(() => {
     if (frame && document.activeElement?.tagName !== 'INPUT') {
@@ -167,22 +195,89 @@ export default function BrowserPage() {
     [tab, refreshNow]
   );
 
-  /** How much the screen shrank the frame to fit, which is the whole of the difference between
-   *  the two: it is already 1:1 with the page's own pixels. Null before the first one loads. */
-  function pageScale() {
+  /**
+   * The frame is moved and scaled here rather than by the browser: `touch-action: none` is what
+   * stops a drag over the page from being taken as a scroll of GitMob itself, and it takes the
+   * browser's own pinch with it. So the view is a transform this page owns, written straight to
+   * the element — a re-render per finger-move would only make it stutter.
+   */
+  function applyView() {
     const image = imageRef.current;
-    if (image === null || image.naturalWidth === 0) return null;
-    return image.naturalWidth / image.getBoundingClientRect().width;
+    if (image === null) return;
+    const view = viewRef.current;
+    image.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.scale})`;
   }
 
-  /** Where on the page a point on the screen is. */
+  /** The scale at which the whole width of the page is on screen. */
+  function fitScale() {
+    const image = imageRef.current;
+    const box = boxRef.current;
+    if (image === null || box === null || image.naturalWidth === 0) return 1;
+    return box.clientWidth / image.naturalWidth;
+  }
+
+  /** Keeps the frame against the edges it has reached, and centred on any axis it fits in. */
+  function clampView() {
+    const image = imageRef.current;
+    const box = boxRef.current;
+    if (image === null || box === null) return;
+
+    const view = viewRef.current;
+    const width = image.naturalWidth * view.scale;
+    const height = image.naturalHeight * view.scale;
+    view.x =
+      width <= box.clientWidth
+        ? (box.clientWidth - width) / 2
+        : Math.min(0, Math.max(box.clientWidth - width, view.x));
+    view.y =
+      height <= box.clientHeight
+        ? (box.clientHeight - height) / 2
+        : Math.min(0, Math.max(box.clientHeight - height, view.y));
+  }
+
+  /** Kept in a ref beside the state: the resize observer reads it without being rebuilt on
+   *  every frame, and the button reads the state. */
+  function noteScale() {
+    const fitted = Math.abs(viewRef.current.scale - fitScale()) < 0.01;
+    atFitRef.current = fitted;
+    setAtFit(fitted);
+  }
+
+  function setScale(scale: number) {
+    viewRef.current.scale = scale;
+    clampView();
+    applyView();
+    noteScale();
+  }
+
+  /**
+   * A frame lands on the loop, so most of them must leave the view exactly where the last
+   * gesture put it — being pulled back to fit every second is not a view anybody can work in.
+   * Only a frame of a size this page has not sized itself against resets it, which is the
+   * first one and then a remote window that changed shape.
+   */
+  function onFrameLoad() {
+    const image = imageRef.current;
+    if (image === null) return;
+    const size = `${image.naturalWidth}x${image.naturalHeight}`;
+    if (sizedRef.current === size) {
+      applyView();
+      return;
+    }
+    sizedRef.current = size;
+    setScale(fitScale());
+  }
+
+  /** Where on the remote page a point on this screen is — the view transform, undone. */
   function toPage(clientX: number, clientY: number) {
-    const scale = pageScale();
-    if (scale === null) return null;
-    const rect = imageRef.current!.getBoundingClientRect();
+    const box = boxRef.current;
+    const image = imageRef.current;
+    if (box === null || image === null || image.naturalWidth === 0) return null;
+    const rect = box.getBoundingClientRect();
+    const view = viewRef.current;
     return {
-      x: (clientX - rect.left) * scale,
-      y: (clientY - rect.top) * scale,
+      x: (clientX - rect.left - view.x) / view.scale,
+      y: (clientY - rect.top - view.y) / view.scale,
     };
   }
 
@@ -201,19 +296,47 @@ export default function BrowserPage() {
     flushScroll();
   }
 
-  function onPointerDown(event: React.PointerEvent<HTMLImageElement>) {
-    event.currentTarget.setPointerCapture(event.pointerId);
-    dragRef.current = {
-      lastX: event.clientX,
-      lastY: event.clientY,
-      travelled: 0,
+  /** The two fingers of a pinch, as a span and a point between them. */
+  function pinchOf(points: { x: number; y: number }[]) {
+    const [first, second] = points;
+    return {
+      span: Math.hypot(second.x - first.x, second.y - first.y),
+      midX: (first.x + second.x) / 2,
+      midY: (first.y + second.y) / 2,
     };
   }
 
+  function onPointerDown(event: React.PointerEvent<HTMLImageElement>) {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const points = pointersRef.current;
+    points.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+    if (points.size === 1) {
+      dragRef.current = {
+        lastX: event.clientX,
+        lastY: event.clientY,
+        travelled: 0,
+      };
+      return;
+    }
+    // A second finger means the first was never a tap or a scroll of the page — it was half of
+    // a pinch that had not opened yet. Dropping the drag is what stops it landing as a click.
+    dragRef.current = null;
+    pinchRef.current = pinchOf([...points.values()]);
+  }
+
   function onPointerMove(event: React.PointerEvent<HTMLImageElement>) {
+    const points = pointersRef.current;
+    if (!points.has(event.pointerId)) return;
+    points.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+    if (points.size >= 2) {
+      movePinch([...points.values()]);
+      return;
+    }
+
     const drag = dragRef.current;
     if (drag === null) return;
-
     const movedX = event.clientX - drag.lastX;
     const movedY = event.clientY - drag.lastY;
     drag.travelled += Math.abs(movedX) + Math.abs(movedY);
@@ -222,19 +345,62 @@ export default function BrowserPage() {
     if (drag.travelled < TAP_SLOP_PX) return;
 
     const point = toPage(event.clientX, event.clientY);
-    const scale = pageScale();
-    if (point === null || scale === null) return;
-    // The page goes the other way from the finger, which is what dragging a page means.
+    if (point === null) return;
+    // The page goes the other way from the finger, which is what dragging a page means. In the
+    // page's own pixels, which the view's scale is the whole of the difference from.
     pendingScrollRef.current = {
       x: point.x,
       y: point.y,
-      dx: pendingScrollRef.current.dx - movedX * scale,
-      dy: pendingScrollRef.current.dy - movedY * scale,
+      dx: pendingScrollRef.current.dx - movedX / viewRef.current.scale,
+      dy: pendingScrollRef.current.dy - movedY / viewRef.current.scale,
     };
     flushScroll();
   }
 
+  /** Zoom about the point between the fingers, and follow it as it moves. Nothing is sent: two
+   *  fingers move the view over the page, where one finger moves the page under the view. */
+  function movePinch(points: { x: number; y: number }[]) {
+    const previous = pinchRef.current;
+    const now = pinchOf(points);
+    pinchRef.current = now;
+    if (previous === null || previous.span === 0 || now.span === 0) return;
+
+    const box = boxRef.current;
+    if (box === null) return;
+    const rect = box.getBoundingClientRect();
+    const view = viewRef.current;
+    const growth = now.span / previous.span;
+
+    // The page point under the midpoint has to stay under it, which is what anchors the zoom
+    // to the fingers instead of to the corner the transform is measured from.
+    const anchorX = previous.midX - rect.left;
+    const anchorY = previous.midY - rect.top;
+    view.x = now.midX - rect.left - (anchorX - view.x) * growth;
+    view.y = now.midY - rect.top - (anchorY - view.y) * growth;
+    view.scale = Math.min(Math.max(view.scale * growth, fitScale() / 2), 4);
+
+    clampView();
+    applyView();
+    noteScale();
+  }
+
   function onPointerUp(event: React.PointerEvent<HTMLImageElement>) {
+    const points = pointersRef.current;
+    points.delete(event.pointerId);
+    if (points.size < 2) pinchRef.current = null;
+    // A finger lifted off a pinch leaves the other one down, and carrying on from where it is
+    // would jump the page by however far apart they were.
+    if (points.size === 1) {
+      const [remaining] = [...points.values()];
+      dragRef.current = {
+        lastX: remaining.x,
+        lastY: remaining.y,
+        travelled: TAP_SLOP_PX,
+      };
+      return;
+    }
+    if (points.size > 0) return;
+
     const drag = dragRef.current;
     dragRef.current = null;
     if (drag === null) return;
@@ -380,32 +546,29 @@ export default function BrowserPage() {
         </div>
       )}
 
-      <div className="relative flex-1 overflow-auto">
-        {/* A desktop viewport is landscape and a phone held up is not, so a frame scaled to the
-            width leaves a band above and below it whatever happens. Centred, that band is a
-            margin; against the top it is a hole. The inner box is what keeps the centring from
-            cutting the top off the frame once 1:1 makes it the taller of the two. */}
-        <div className="min-h-full flex items-center justify-center">
-          {frame && (
-            // Not next/image: the frame is an object URL for a JPEG this server just made, so
-            // there is nothing for the optimiser to fetch, size or cache.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              ref={imageRef}
-              src={frame.src}
-              alt={frame.title}
-              draggable={false}
-              onPointerDown={onPointerDown}
-              onPointerMove={onPointerMove}
-              onPointerUp={onPointerUp}
-              onPointerCancel={onPointerUp}
-              style={{ touchAction: 'none' }}
-              className={
-                zoomed ? 'max-w-none select-none' : 'w-full h-auto select-none'
-              }
-            />
-          )}
-        </div>
+      {/* The frame is placed by the transform, not by the layout: it is drawn at its natural
+          size in the corner and moved from there, so panning and pinching are two numbers
+          rather than a scroll box the browser would want to drive itself. */}
+      <div ref={boxRef} className="relative flex-1 overflow-hidden">
+        {frame && (
+          // Not next/image: the frame is an object URL for a JPEG this server just made, so
+          // there is nothing for the optimiser to fetch, size or cache.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            ref={imageRef}
+            src={frame.src}
+            alt={frame.title}
+            draggable={false}
+            onLoad={onFrameLoad}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerUp}
+            onLostPointerCapture={onPointerUp}
+            style={{ touchAction: 'none', transformOrigin: '0 0' }}
+            className="absolute top-0 left-0 max-w-none select-none"
+          />
+        )}
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center text-foreground/50 text-sm">
             Reaching that Chrome...
@@ -460,12 +623,10 @@ export default function BrowserPage() {
               Send
             </button>
             <button
-              onClick={() => setZoomed(!zoomed)}
-              className={`shrink-0 px-3 py-1.5 rounded-lg text-sm active:opacity-80 ${
-                zoomed ? 'bg-foreground/25' : 'bg-foreground/10'
-              }`}
+              onClick={() => setScale(atFit ? 1 : fitScale())}
+              className="shrink-0 px-3 py-1.5 rounded-lg bg-foreground/10 text-sm tabular-nums active:opacity-80"
             >
-              1:1
+              {atFit ? '1:1' : 'Fit'}
             </button>
           </div>
           <div className="flex flex-wrap items-center gap-1">
