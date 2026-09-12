@@ -366,40 +366,55 @@ Refused rather than run: a worktree, which is wtman's to create and would put a 
 where git expects the one it tracks; a project with no `repo` in its YAML; a path that already
 exists; and a clone already running for that project.
 
-## Commit messages — parked by `gg kitty-commit`
+## Commits — parked by `gg kitty-commit`
 
-`src/app/api/projects/[id]/pending-message/route.ts`, read by the Commit tab.
+`src/lib/pending-commits.ts`, read by the Commit tab and by the front page.
 
 `gg c` generates a commit message and puts it in front of the user to accept. At the desktop
 that is a kitty overlay over the session that asked; away from it — `am-i-afk` again — the
-message is parked here instead, one file per repo under
-`~/.local/share/gitmob/pending-messages`, named after the base64url of its path:
+commit is parked here instead, one file per parked commit under
+`~/.local/share/gitmob/pending-commits`, named with a uuid:
 
-```json
-{
-  "repo_path": "/home/reed/proj/gitmob",
-  "message": "…",
-  "timestamp": "…",
-  "source": "remote",
-  "window_id": "12582915",
-  "close_session": true
-}
+```
+Repo: /home/reed/proj/gloss/datasets/oss
+Cwd: /home/reed/proj/gloss/datasets/oss/entries
+Time: 2026-09-12T13:44:26.040354+00:00
+Source: remote
+Window: 155189262
+Close-Session: false
+
+Add external links to entries and update KBLI to the 2025 edition
+
+Each entry that benefits now ends with a `Pranala luar:` block…
 ```
 
-The Commit tab loads it into the message boxes, badged with `source`, and the Clear button
-drops it. Committing drops it too — and both hand back the repo's commit lock, which the
-session that sent the message holds until the commit lands: `claudex gitlock release --repo`.
+Headers, a blank line, then the message — a commit object's own shape. The message is the
+tail of the file byte for byte, so it reads under `cat` and commits under `git commit -F`,
+neither of which is true of a subject and a body escaped onto one JSON line. Its first line is
+the subject by git's rule, so no header says so. Both ends split once at the first blank line,
+which is what leaves the body free to contain a `Fix: whatever` line or a `---` fence.
 
-`window_id` is the kitty window of the Claude Code session that asked, and the whole of what
-this app needs to end it: `claudex purgatory send --window` above. It is what turns the
-overlay's `t` toggle into a checkbox here — "Close the Claude Code session after committing",
-defaulting to `close_session`, which gg sets from the same ctrl+n no-close flag that sets the
-toggle's default at the desktop. Both fields are null and false where there was no session to
-close: a `gg c` typed into a plain terminal parks a message like any other.
+`Cwd:` appears only where `gg c` ran below the toplevel, and `Window:` only where a session
+asked: a `gg c` typed into a plain terminal parks a commit like any other. The uuid carries no
+meaning — `Repo:` says which repository this is for, and the reading side matches on it. One
+repository can hold only one parked commit anyway, since the session that parked it holds that
+repository's commit lock until the commit lands.
 
-The checkbox only fires on a commit. Clearing the message means the work is not done, so the
-session stays. The delete goes first either way — a session parked while still holding the
-commit lock would take it to the grave.
+`Window:` is the kitty window of the Claude Code session that asked, and the whole of what this
+app needs to end it: `claudex purgatory send --window` above. It is what turns the overlay's
+`t` toggle into a checkbox here — "Close the Claude Code session after committing", defaulting
+to `Close-Session:`, which gg sets from the same ctrl+n no-close flag that sets the toggle's
+default at the desktop.
+
+Accepting drops the file and hands back the commit lock — `claudex gitlock release --repo` —
+and so does rejecting. The delete goes first either way: a session parked while still holding
+the commit lock would take it to the grave. Only accepting closes the session; rejecting means
+the work is not done, so it stays.
+
+`Repo:` is matched against project paths **exactly**, and where it matches, the commit belongs
+to that project: its card goes blue, it sorts to the top of the list, and the Commit tab loads
+the message into its boxes. Where nothing matches, it is announced on the front page instead —
+see [architecture.md](architecture.md).
 
 ## AFK — `am-i-afk`
 

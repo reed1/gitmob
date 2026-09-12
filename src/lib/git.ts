@@ -253,6 +253,29 @@ export async function getRecentCommits(
     });
 }
 
+export interface StagedSummary {
+  files: FileChange[];
+  insertions: number;
+  deletions: number;
+}
+
+/**
+ * What the next commit would carry. A parked commit for a repository with no project has no
+ * Changes tab behind it, so this is the only look at the tree the message is describing.
+ */
+export async function getStagedSummary(cwd: string): Promise<StagedSummary> {
+  const git = getGit(cwd);
+  const [status, diff] = await Promise.all([
+    getStatus(cwd),
+    git.diffSummary(['--cached']),
+  ]);
+  return {
+    files: status.staged,
+    insertions: diff.insertions,
+    deletions: diff.deletions,
+  };
+}
+
 export interface RepoSummary {
   branch: string;
   hasChanges: boolean;

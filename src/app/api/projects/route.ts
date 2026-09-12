@@ -10,24 +10,8 @@ import { getGithubRepoUrl } from '@/lib/github';
 import { getClaudeUsage } from '@/lib/claude-usage';
 import { isAway } from '@/lib/afk';
 import { getStaleBuild } from '@/lib/build-version';
+import { listPendingCommits } from '@/lib/pending-commits';
 import { existsSync } from 'fs';
-import { join } from 'path';
-import { homedir } from 'os';
-
-const PENDING_MESSAGES_DIR = join(
-  homedir(),
-  '.local/share/gitmob/pending-messages'
-);
-
-function encodeRepoPath(repoPath: string): string {
-  return Buffer.from(repoPath).toString('base64url');
-}
-
-function hasPendingMessage(repoPath: string): boolean {
-  const filename = encodeRepoPath(repoPath) + '.json';
-  const filepath = join(PENDING_MESSAGES_DIR, filename);
-  return existsSync(filepath);
-}
 
 const WORKERS = 4;
 
@@ -72,6 +56,12 @@ export async function GET() {
   }
   const { projects, warnings } = projectList;
 
+  // One scan of the parked commits, rather than a stat per project: the files are keyed by
+  // the repository they belong to, not by a name any one project could look itself up under.
+  const pendingRepos = new Set(
+    listPendingCommits().map((pending) => pending.repo)
+  );
+
   const [
     allRunningProcesses,
     downSites,
@@ -95,7 +85,7 @@ export async function GET() {
       const githubUrl = await getGithubRepoUrl(project.path);
       try {
         const { branch, hasChanges } = await getRepoSummary(project.path);
-        const pendingMessage = hasPendingMessage(project.path);
+        const pendingMessage = pendingRepos.has(project.path);
         return {
           id: project.id,
           branch,

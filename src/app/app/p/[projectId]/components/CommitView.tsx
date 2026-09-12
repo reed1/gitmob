@@ -84,7 +84,7 @@ export function CommitView({
     if (draft.pending.source) return;
     if (draft.commitTitle.trim() || draft.commitBody.trim()) return;
     async function checkPending() {
-      const res = await fetch(`/api/projects/${projectId}/pending-message`);
+      const res = await fetch(`/api/projects/${projectId}/pending-commit`);
       const data = await res.json();
       if (!data.pending) return;
       const { title, body } = splitMessage(data.pending.message);
@@ -102,7 +102,7 @@ export function CommitView({
   // Dropping the message leaves the session alone: nothing was committed, so there is
   // nothing it is finished with.
   const clearPendingMessage = async () => {
-    await apiFetch(`/api/projects/${projectId}/pending-message`, {
+    await apiFetch(`/api/projects/${projectId}/pending-commit`, {
       method: 'DELETE',
     });
     setCommitTitle('');
@@ -124,7 +124,7 @@ export function CommitView({
       if (pending.source) {
         // The delete hands back the repo's commit lock, so it goes first: a session
         // parked with the lock still held would take it to the grave.
-        await apiFetch(`/api/projects/${projectId}/pending-message`, {
+        await apiFetch(`/api/projects/${projectId}/pending-commit`, {
           method: 'DELETE',
         });
         if (pending.windowId && pending.closeSession) {

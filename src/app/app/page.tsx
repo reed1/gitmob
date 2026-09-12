@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import ProjectCard from './ProjectCard';
 import { PendingHandoffs } from './PendingHandoffs';
+import { PendingCommits } from './PendingCommits';
 import UsagePanel from './UsagePanel';
 import { ClaudeUsage, Project, StaleBuild } from './types';
 import { addToast, apiFetch } from '../../lib/api';
@@ -521,6 +522,8 @@ export default function Home() {
         )}
 
         <PendingHandoffs onLaunched={() => refreshProjects()} />
+
+        <PendingCommits onCommitted={() => refreshProjects()} />
 
         {error && (
           <div className="p-4 rounded-lg border border-red-500/50 bg-red-500/10">

@@ -3,7 +3,7 @@
 ## Layout
 
 - `src/lib` — core logic (`git.ts`, `run.ts`, `projects.ts`, `files.ts`, `cli-jobs.ts`,
-  `notifications.ts`, `recall.ts`, `browser.ts`)
+  `notifications.ts`, `recall.ts`, `browser.ts`, `pending-commits.ts`)
 - `src/app/api` — API routes (projects, cli jobs, pinboard, dooit todos, the agent's browser)
 - `src/app/app` — the GitMob PWA; `src/app/pinboard` — the pinboard PWA
 - `src/components` — UI both PWAs draw (`PinboardNote.tsx`, the note card and its modals)
@@ -65,6 +65,24 @@ waits for the user; this is where they read it when the desktop is not where the
 behind leader+c+h is where they read it when it is. The same trade gg makes when it sends a commit
 message to the Commit tab rather than a review overlay nobody is sitting in front of. Contracts in
 [cli-integrations.md](cli-integrations.md).
+
+## Parked commits with no project
+
+A commit `gg` parked belongs to a repository, not to a project, and the two are not always the
+same thing: a dataset repository, a submodule, anything `gg c` ran in that rworkspaces holds no
+entry for. Where the path matches a project exactly, the commit is announced as that project —
+the card goes blue and the Commit tab loads the message. Where nothing matches, the front page
+announces it in **Pending Commits**, beside the parked handoffs, to accept or reject from there.
+
+The match is exact and never a prefix. `gloss/datasets/oss` sits inside `gloss` and is not it;
+committing one from the other would commit the wrong repository. Being underneath a project is
+worth a line in the row and nothing more.
+
+These rows carry the staged file list and its `+/-`, which the project ones have no need of:
+there is no Changes tab behind a repository with no project, so this is the only look at the
+tree the message is describing. And accepting refuses on an empty index — a parked commit
+outlives its work, the message staying put whether or not those changes were committed some
+other way, and nothing else would notice. Contracts in [cli-integrations.md](cli-integrations.md).
 
 ## The Claude tab holds sessions of both kinds
 
