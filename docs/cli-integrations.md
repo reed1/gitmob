@@ -496,7 +496,7 @@ the page sits at the top of the app rather than on a tab.
 - `claude-in-chrome cdp navigate|back|forward|reload [--target <id>]` — moving it.
 - `claude-in-chrome cdp open|close|activate` — the tabs themselves.
 
-It exists because the desktop's own answer does not travel. `chrome-rdzero-attach` mirrors that
+It exists because the desktop's own answer does not travel. `chrome-attach` mirrors that
 window's pixels to a laptop over x11vnc, and to do it at all it has to **focus** the window
 first: nothing composites on rdzero, so X hands back garbage for a window whose workspace is not
 in front, and the script puts the desktop back where it found it afterwards. A phone has no
@@ -510,4 +510,4 @@ capturing: Chrome composites the visible tab and no other, and a capture aimed a
 one never answers at all. Alone on its own workspace, that costs nothing.
 
 What it reaches is the **page**, not Chrome: no omnibox behind the URL box, no extension popup,
-no file picker, no HTTP-auth dialog. Those are still `chrome-rdzero-attach` and a laptop.
+no file picker, no HTTP-auth dialog. Those are still `chrome-attach` and a laptop.

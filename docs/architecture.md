@@ -107,7 +107,7 @@ on a desktop nobody is sitting at.
 Three things make it work, and each is the reason for the one after it. The frame comes from
 Chrome's own DevTools protocol rather than from a screenshot of the window, because nothing
 composites on rdzero and X answers for an unfocused workspace with garbage — which is why the
-desktop's own answer, `chrome-rdzero-attach`, has to focus that window and put the workspace back
+desktop's own answer, `chrome-attach`, has to focus that window and put the workspace back
 afterwards. Nothing here moves the desktop at all. The frame is captured **sized in CSS pixels**,
 so the coordinate a finger landed on is already the coordinate to send: neither end rescales
 anything, and the page's zoom, the phone's screen and the display's device ratio all drop out.

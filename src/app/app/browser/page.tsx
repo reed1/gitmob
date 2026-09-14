@@ -21,7 +21,7 @@ import {
  * GitMob's own furniture is nowhere on it.
  *
  * It drives the page, not Chrome: there is no omnibox behind the URL box, and a file picker or
- * an HTTP-auth dialog is out of reach. Those need chrome-rdzero-attach and a laptop.
+ * an HTTP-auth dialog is out of reach. Those need chrome-attach and a laptop.
  */
 
 /** Slow enough that a subprocess per frame is not the whole of what this machine does. */
