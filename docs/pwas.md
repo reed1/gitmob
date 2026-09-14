@@ -4,7 +4,7 @@
 
 Two installable PWAs off one server, on **two hostnames**: `gitmob.<front>` serves `/app`,
 `pinboard.<front>` serves `/pinboard`, the read-and-remove overview of every project's notes. Both
-are one portman registration each pointing at the same port (`static.yaml`), so all five fronts
+are one portman registration each pointing at the same port (`static.yaml`), so every front
 follow.
 
 They must not share an origin: Android gives every installed PWA its own app-level notification

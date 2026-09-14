@@ -16,8 +16,8 @@ function splitPort(host: string): [string, string] {
 }
 
 /**
- * Which app a host serves, by the first label — the portman service name, the same on all five
- * fronts. Null means the name does not say: a dev host, localhost, an IP. Those keep serving
+ * Which app a host serves, by the first label — the portman service name, the same on every
+ * front. Null means the name does not say: a dev host, localhost, an IP. Those keep serving
  * both apps, since nothing is installed from them.
  */
 export function appForHost(host: string): AppName | null {

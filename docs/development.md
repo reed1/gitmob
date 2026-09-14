@@ -11,5 +11,10 @@ pnpm build && pnpm start
 
 ## Production
 
-Deployed on my PC as the `gitmob` systemd user service, which runs `run_production.sh`: it builds
+Deployed as the `gitmob` systemd user service, which runs `run_production.sh`: it builds
 `.next-prod` (`GITMOB_DIST_DIR`) when HEAD moved, then serves it with `next start`.
+
+It runs on two machines, each showing its own projects and state: rdzero, my PC, at
+`gitmob.zerotail.r-mulyadi.com`, and rdpav, my laptop, at `gitmob.pavtail.r-mulyadi.com`. Nothing
+is shared between them: `/app/browser` drives the agent Chrome of the machine serving it, and each
+has its own push subscriptions and VAPID keys, the two being separate origins and installs.

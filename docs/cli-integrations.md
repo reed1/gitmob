@@ -498,7 +498,7 @@ the page sits at the top of the app rather than on a tab.
 
 It exists because the desktop's own answer does not travel. `chrome-attach` mirrors that
 window's pixels to a laptop over x11vnc, and to do it at all it has to **focus** the window
-first: nothing composites on rdzero, so X hands back garbage for a window whose workspace is not
+first: nothing composites on the desktop, so X hands back garbage for a window whose workspace is not
 in front, and the script puts the desktop back where it found it afterwards. A phone has no
 vncviewer and no ssh, and the workspace switch is a side effect nobody at the desk asked for.
 CDP renders from inside Chrome instead — the `--disable-backgrounding-occluded-windows` flags
