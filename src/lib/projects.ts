@@ -31,7 +31,6 @@ export interface Project {
     | {
         run: string | string[];
         infrastructure?: boolean;
-        run_in_terminal?: boolean;
       }
   >;
 }

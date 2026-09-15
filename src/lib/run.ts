@@ -242,7 +242,7 @@ export function getRunStatus(
 }
 
 function startArgs(projectId: string, runName: string): string[] {
-  return ['run', 'start', '--mode', 'systemd', '-p', projectId, runName];
+  return ['run', 'start', '-p', projectId, runName];
 }
 
 function runRv(args: string[]): Promise<{ success: boolean; error?: string }> {
