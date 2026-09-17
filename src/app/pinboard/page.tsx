@@ -1,14 +1,14 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { addToast } from '../../lib/api';
 import { useAutoRefresh } from '../../lib/use-auto-refresh';
 import { useCachedState } from '../../lib/use-cached-state';
 import {
   PinboardDeleteConfirm,
   PinboardNoteCard,
   PinboardNoteModal,
-  mutatePinboard,
   type PinboardNote,
 } from '../../components/PinboardNote';
 
@@ -27,72 +27,136 @@ interface Snapshot {
 }
 
 const SNAPSHOT_KEY = 'pinboard:snapshot';
+const CACHE_REFRESH_DELAY_MS = 10_000;
 
 function noteKey(note: RecentNote): string {
   return `${note.projectId}#${note.id}`;
 }
 
+async function fetchSnapshot(): Promise<Snapshot> {
+  const res = await fetch('/api/pinboard');
+  const data = await res.json();
+  return { notes: data.notes, failures: data.failures };
+}
+
+/**
+ * A plain fetch rather than `apiFetch`: writes to one board may overlap, and an offline phone
+ * is just another failed write.
+ */
+async function postPinboard(
+  projectId: string,
+  body: Record<string, unknown>
+): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/projects/${projectId}/pinboard`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The cached snapshot paints on open; edits and deletes wait for the first load and then act
+ * on a list of this page's own. They are optimistic and never reconciled with the server: a
+ * failed one leaves its text on screen to be copied, and only a reload shows the boards as
+ * they are. Successful writes refresh the cache in the background, never the screen.
+ */
 export default function PinboardOverviewPage() {
-  const [snapshot, setSnapshot, restored] =
-    useCachedState<Snapshot>(SNAPSHOT_KEY);
+  const [cached, setCached, restored] = useCachedState<Snapshot>(SNAPSHOT_KEY);
+  const [loaded, setLoaded] = useState<Snapshot | null>(null);
   const [refreshing, setRefreshing] = useState(true);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [editing, setEditing] = useState<RecentNote | null>(null);
   const [deleting, setDeleting] = useState<RecentNote | null>(null);
+  const cacheRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const snapshot = loaded ?? cached;
   const notes = snapshot?.notes ?? [];
   const failures = snapshot?.failures ?? [];
 
   const load = useCallback(async () => {
     setRefreshing(true);
-    const res = await fetch('/api/pinboard');
-    const data = await res.json();
-    setSnapshot({ notes: data.notes, failures: data.failures });
+    const fresh = await fetchSnapshot();
+    setCached(fresh);
+    setLoaded(fresh);
     setRefreshing(false);
-  }, [setSnapshot]);
+  }, [setCached]);
 
   useAutoRefresh(load);
 
-  const editNote = async (note: RecentNote, text: string) => {
-    const board = await mutatePinboard(note.projectId, {
-      action: 'edit',
-      noteId: note.id,
-      text,
-    });
-    if (board === null) return;
+  const scheduleCacheRefresh = () => {
+    if (cacheRefreshTimer.current !== null) {
+      clearTimeout(cacheRefreshTimer.current);
+    }
+    cacheRefreshTimer.current = setTimeout(async () => {
+      cacheRefreshTimer.current = null;
+      setCached(await fetchSnapshot());
+    }, CACHE_REFRESH_DELAY_MS);
+  };
 
-    // The board comes back whole, but only this one row of the overview is about that
-    // project — take the note's new text and stamp from it and leave the rest alone.
-    const saved = board.find((n) => n.id === note.id);
+  useEffect(
+    () => () => {
+      if (cacheRefreshTimer.current !== null) {
+        clearTimeout(cacheRefreshTimer.current);
+      }
+    },
+    []
+  );
+
+  const editNote = async (note: RecentNote, text: string) => {
     setEditing(null);
-    setSnapshot({
-      notes: notes.map((n) =>
-        noteKey(n) === noteKey(note) && saved
-          ? { ...saved, projectId: note.projectId }
-          : n
-      ),
-      failures,
-    });
+    setLoaded((prev) =>
+      prev === null
+        ? prev
+        : {
+            ...prev,
+            notes: prev.notes.map((n) =>
+              noteKey(n) === noteKey(note)
+                ? { ...n, text, editedAt: new Date().toISOString() }
+                : n
+            ),
+          }
+    );
+
+    if (
+      await postPinboard(note.projectId, {
+        action: 'edit',
+        noteId: note.id,
+        text,
+      })
+    ) {
+      scheduleCacheRefresh();
+    } else {
+      addToast('Editing failed');
+    }
   };
 
   const deleteNote = async (note: RecentNote) => {
-    if (
-      (await mutatePinboard(note.projectId, {
-        action: 'delete',
-        noteId: note.id,
-      })) === null
-    ) {
-      return;
-    }
-
     setDeleting(null);
     setExpandedKey(null);
-    // Dropping the row keeps the list honest without re-reading all 39 boards; the next
-    // refresh backfills whatever fell into the 50 this one vacated.
-    setSnapshot({
-      notes: notes.filter((n) => noteKey(n) !== noteKey(note)),
-      failures,
-    });
+    setLoaded((prev) =>
+      prev === null
+        ? prev
+        : {
+            ...prev,
+            notes: prev.notes.filter((n) => noteKey(n) !== noteKey(note)),
+          }
+    );
+
+    if (
+      await postPinboard(note.projectId, {
+        action: 'delete',
+        noteId: note.id,
+      })
+    ) {
+      scheduleCacheRefresh();
+    } else {
+      addToast('Delete failed, please refresh');
+    }
   };
 
   return (
@@ -170,6 +234,7 @@ export default function PinboardOverviewPage() {
               }
               expanded={expandedKey === key}
               onToggle={() => setExpandedKey(expandedKey === key ? null : key)}
+              actionsDisabled={loaded === null}
               onEdit={() => setEditing(note)}
               onDelete={() => setDeleting(note)}
             />

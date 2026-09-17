@@ -18,16 +18,24 @@ identify (`dev.gitmob.loc`, localhost) serves both untouched, since nothing is i
 `/api` is never redirected: both apps call it on their own origin, and the two see the same server
 state.
 
-Adding and editing notes stay on a project's Pinboard tab; the overview reads all boards through
-`/api/pinboard`.
+Adding notes stays on a project's Pinboard tab; the overview reads all boards through
+`/api/pinboard`, and edits and deletes notes.
 
 That call takes a couple of seconds — it runs `rv pinboard list` once per project — so the overview
 does not wait on it to draw anything. Its last response is kept in localStorage through
-`useCachedState` (`src/lib/use-cached-state.ts`), painted on open, and replaced when the fetch
-lands; the spinning refresh icon is the only sign that a fetch is in flight. The full-page
-"Loading..." is now only ever seen before the first successful fetch on a device. The hook keeps the
-value in localStorage rather than in React state, reading it through `useSyncExternalStore` so the
-server-rendered markup, which has no store to read, still hydrates cleanly.
+`useCachedState` (`src/lib/use-cached-state.ts`) and painted on open; the spinning refresh icon is
+the only sign that a fetch is in flight. The full-page "Loading..." is only ever seen before the
+first successful fetch on a device. The hook keeps the value in localStorage rather than in React
+state, reading it through `useSyncExternalStore` so the server-rendered markup, which has no store
+to read, still hydrates cleanly.
+
+Edit and Delete stay disabled until that fetch lands, which gives the page a list of its own to
+change. Both are optimistic: the modal closes and the list changes at once, and the page never
+reconciles with what the server answers. A failed write is only a toast — a failed edit leaves the
+text it sent on screen to copy and retry after a reload, a failed delete asks for a reload. Writes
+go out as plain `fetch` calls, not `apiFetch`, so two to the same board may overlap. Each successful
+write re-reads every board 10 seconds after the last one and stores it in the cache alone; the
+screen changes only on a reload or the refresh button.
 
 ## Routing rules
 

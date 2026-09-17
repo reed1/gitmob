@@ -64,6 +64,7 @@ export function PinboardNoteCard({
   note,
   label,
   expanded,
+  actionsDisabled = false,
   onToggle,
   onEdit,
   onDelete,
@@ -71,6 +72,7 @@ export function PinboardNoteCard({
   note: PinboardNote;
   label: ReactNode;
   expanded: boolean;
+  actionsDisabled?: boolean;
   onToggle: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -118,12 +120,17 @@ export function PinboardNoteCard({
           <button onClick={copy} className={ACTION_CLASS}>
             Copy
           </button>
-          <button onClick={onEdit} className={ACTION_CLASS}>
+          <button
+            onClick={onEdit}
+            disabled={actionsDisabled}
+            className={`${ACTION_CLASS} disabled:opacity-30`}
+          >
             Edit
           </button>
           <button
             onClick={onDelete}
-            className="px-3 py-1 text-xs bg-red-500/10 text-red-500 hover:bg-red-500/20 active:bg-red-500/20 rounded"
+            disabled={actionsDisabled}
+            className="px-3 py-1 text-xs bg-red-500/10 text-red-500 hover:bg-red-500/20 active:bg-red-500/20 rounded disabled:opacity-30"
           >
             Delete
           </button>
