@@ -101,6 +101,7 @@ export async function getProject(id: string): Promise<Project | undefined> {
 
 export interface ProjectList {
   projects: Project[];
+  openIds: string[];
   warnings: ProjectWarnings;
 }
 
@@ -111,12 +112,16 @@ export interface ProjectList {
  * and cover every project rworkspaces holds one for, open on the desktop or not.
  */
 export async function getProjectsWithWorktrees(): Promise<ProjectList> {
-  const { worktrees, warnings } = await getDesktopState();
+  const { openIds, worktrees, warnings } = await getDesktopState();
   const worktreeProjects = worktrees
     .map(asWorktreeProject)
     .filter((project) => project !== undefined);
 
-  return { projects: [...getProjects(), ...worktreeProjects], warnings };
+  return {
+    projects: [...getProjects(), ...worktreeProjects],
+    openIds,
+    warnings,
+  };
 }
 
 export function expandPath(path: string): string {

@@ -6,6 +6,8 @@ export interface Project {
   repo?: string;
   /** Configured, but not on disk: nobody has cloned it here yet. */
   missing: boolean;
+  /** Open on the desktop right now: its IDE and terminals are up. */
+  openOnDesktop: boolean;
   urls?: Record<string, string>;
   push?: Record<string, { ssh: string; path?: string }>;
   githubUrl: string | null;

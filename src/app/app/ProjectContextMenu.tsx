@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { addToast, apiFetch } from '../../lib/api';
 import { useOutsideClick } from '../../lib/use-outside-click';
 import { CloneModal } from './CloneModal';
 import { Modal } from './Modal';
@@ -15,17 +16,20 @@ interface Props {
     path: string;
     repo?: string;
     missing: boolean;
+    openOnDesktop: boolean;
     urls?: Record<string, string>;
     githubUrl: string | null;
   };
-  onCloned: () => void;
+  /** The project's state moved on — cloned, or opened or closed on the desktop. */
+  onChanged: () => void;
 }
 
-export default function ProjectContextMenu({ project, onCloned }: Props) {
+export default function ProjectContextMenu({ project, onChanged }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [urlModalOpen, setUrlModalOpen] = useState(false);
   const [newSessionOpen, setNewSessionOpen] = useState(false);
   const [cloneOpen, setCloneOpen] = useState(false);
+  const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useOutsideClick(menuOpen, menuRef, () => setMenuOpen(false));
@@ -33,6 +37,21 @@ export default function ProjectContextMenu({ project, onCloned }: Props) {
   const urls = project.urls ?? {};
   const urlEntries = Object.entries(urls);
   const hasUrls = urlEntries.length > 0;
+
+  const actOnDesktop = async (action: 'open' | 'close') => {
+    const res = await apiFetch(`/api/projects/${project.id}/desktop`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action }),
+    });
+    if (!res.ok) return;
+
+    addToast(
+      `${action === 'open' ? 'Opened' : 'Closed'} ${project.id} on the desktop`,
+      'success'
+    );
+    onChanged();
+  };
 
   return (
     <>
@@ -74,6 +93,29 @@ export default function ProjectContextMenu({ project, onCloned }: Props) {
               >
                 Clone
               </button>
+            )}
+            {project.openOnDesktop ? (
+              <button
+                onClick={() => {
+                  setMenuOpen(false);
+                  setCloseConfirmOpen(true);
+                }}
+                className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
+              >
+                Close
+              </button>
+            ) : (
+              !project.missing && (
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    actOnDesktop('open');
+                  }}
+                  className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
+                >
+                  Open
+                </button>
+              )
             )}
             <button
               onClick={() => {
@@ -144,7 +186,7 @@ export default function ProjectContextMenu({ project, onCloned }: Props) {
           projectId={project.id}
           repo={project.repo}
           path={project.path}
-          onCloned={onCloned}
+          onCloned={onChanged}
           onClose={() => setCloneOpen(false)}
         />
       )}
@@ -155,6 +197,36 @@ export default function ProjectContextMenu({ project, onCloned }: Props) {
           canonicalId={project.canonicalId}
           onClose={() => setNewSessionOpen(false)}
         />
+      )}
+
+      {closeConfirmOpen && (
+        <Modal
+          heading="Close on the desktop?"
+          subtitle={project.id}
+          onClose={() => setCloseConfirmOpen(false)}
+        >
+          <p className="px-4 py-3 text-sm text-foreground/70">
+            Closes its terminals, IDE and windows, stops its runs, and sends its
+            Claude sessions to purgatory.
+          </p>
+          <div className="px-4 py-3 border-t border-foreground/10 flex justify-end gap-2">
+            <button
+              onClick={() => setCloseConfirmOpen(false)}
+              className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                setCloseConfirmOpen(false);
+                actOnDesktop('close');
+              }}
+              className="px-3 py-1.5 text-sm rounded-lg bg-red-500/15 text-red-500 active:bg-red-500/25"
+            >
+              Close
+            </button>
+          </div>
+        </Modal>
       )}
 
       {urlModalOpen && (

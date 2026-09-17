@@ -55,6 +55,7 @@ export async function GET() {
     );
   }
   const { projects, warnings } = projectList;
+  const openIds = new Set(projectList.openIds);
 
   // One scan of the parked commits, rather than a stat per project: the files are keyed by
   // the repository they belong to, not by a name any one project could look itself up under.
@@ -127,6 +128,7 @@ export async function GET() {
     ...p,
     // Configured, but never cloned. Everything git-shaped below is null for one of these.
     missing: !existsSync(p.path),
+    openOnDesktop: openIds.has(p.id),
     branch: resultMap[p.id]?.branch ?? null,
     editing: resultMap[p.id]?.editing ?? false,
     hasPendingMessage: resultMap[p.id]?.hasPendingMessage ?? false,

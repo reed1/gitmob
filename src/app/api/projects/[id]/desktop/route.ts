@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getProject } from '@/lib/projects';
 import {
   acceptSuggestedPrompt,
+  closeProjectOnDesktop,
   getSessionScreen,
   launchDesktopSession,
   listDesktopSessions,
+  openProjectOnDesktop,
   sendSessionCommand,
   sendSessionToPurgatory,
   typeIntoSession,
@@ -70,6 +72,16 @@ export async function POST(
         prompt: initialPrompt,
       });
       return NextResponse.json({ success: true, name: sessionName });
+    }
+
+    if (action === 'open') {
+      await openProjectOnDesktop(id);
+      return NextResponse.json({ success: true });
+    }
+
+    if (action === 'close') {
+      await closeProjectOnDesktop(id);
+      return NextResponse.json({ success: true });
     }
 
     if (typeof windowId !== 'string' || !windowId) {

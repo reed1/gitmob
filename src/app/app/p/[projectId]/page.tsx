@@ -233,7 +233,7 @@ export default function ProjectPage() {
             project && (
               <ProjectContextMenu
                 project={project}
-                onCloned={() => window.location.reload()}
+                onChanged={() => window.location.reload()}
               />
             )
           )}

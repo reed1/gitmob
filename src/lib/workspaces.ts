@@ -24,6 +24,8 @@ interface WorkspaceState {
 export type ProjectWarnings = Record<string, Record<string, string>>;
 
 export interface DesktopState {
+  /** Every project open on the desktop, a worktree under its `canonical::name` id. */
+  openIds: string[];
   worktrees: OpenWorktree[];
   warnings: ProjectWarnings;
 }
@@ -60,10 +62,12 @@ function rwMsg(args: string[]): Promise<string> {
 export async function getDesktopState(): Promise<DesktopState> {
   const state: WorkspaceState = JSON.parse(await rwMsg(['get_state']));
 
-  const worktrees = Object.values(state.projects)
-    .filter(
-      (project) => project.active && project.worktree_name && project.path
-    )
+  const openProjects = Object.values(state.projects).filter(
+    (project) => project.active
+  );
+
+  const worktrees = openProjects
+    .filter((project) => project.worktree_name && project.path)
     .map((project) => ({
       id: project.id,
       canonicalId: project.canonical_project_id,
@@ -71,5 +75,9 @@ export async function getDesktopState(): Promise<DesktopState> {
       path: project.path as string,
     }));
 
-  return { worktrees, warnings: state.warnings };
+  return {
+    openIds: openProjects.map((project) => project.id),
+    worktrees,
+    warnings: state.warnings,
+  };
 }

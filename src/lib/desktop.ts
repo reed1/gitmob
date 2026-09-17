@@ -45,6 +45,8 @@ interface ClaudexListResult {
 
 /** Opening a project can mean starting an editor and its terminals, so it gets its own budget. */
 const OPEN_TIMEOUT_MS = 120000;
+/** Closing waits for the project's `rv run` units to stop. */
+const CLOSE_TIMEOUT_MS = 60000;
 
 function run(
   command: string,
@@ -122,6 +124,18 @@ export async function launchDesktopSession(
       ? ['--', '--resume', launch.resumeSessionId]
       : []),
   ]);
+}
+
+export async function openProjectOnDesktop(projectId: string): Promise<void> {
+  await run('rv', ['open', projectId], OPEN_TIMEOUT_MS);
+}
+
+/**
+ * `rv close` owns the whole teardown — the project's windows, its IDE, its `rv run` units and
+ * its Claude sessions into purgatory — the same one `<leader> q q` runs at the desktop.
+ */
+export async function closeProjectOnDesktop(projectId: string): Promise<void> {
+  await run('rv', ['close', projectId], CLOSE_TIMEOUT_MS);
 }
 
 function toDesktopSession(row: ClaudexSessionRow): DesktopSession {

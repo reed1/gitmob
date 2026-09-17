@@ -27,6 +27,8 @@ export interface Project {
   urls?: Record<string, string>;
   /** Configured, but not on disk: nobody has cloned it here yet. */
   missing: boolean;
+  /** Open on the desktop right now: its IDE and terminals are up. */
+  openOnDesktop: boolean;
   branch: string | null;
   editing: boolean;
   hasPendingMessage: boolean;

@@ -547,7 +547,7 @@ export default function Home() {
                   key={project.id}
                   project={project}
                   isActive
-                  onCloned={refreshProjects}
+                  onChanged={refreshProjects}
                 />
               ))}
             </div>
@@ -564,7 +564,7 @@ export default function Home() {
                 <ProjectCard
                   key={project.id}
                   project={project}
-                  onCloned={refreshProjects}
+                  onChanged={refreshProjects}
                 />
               ))}
             </div>
@@ -583,7 +583,7 @@ export default function Home() {
                 <ProjectCard
                   key={project.id}
                   project={project}
-                  onCloned={refreshProjects}
+                  onChanged={refreshProjects}
                 />
               ))}
             </div>

@@ -17,11 +17,11 @@ function getDefaultTab(project: Project): string {
 export default function ProjectCard({
   project,
   isActive,
-  onCloned,
+  onChanged,
 }: {
   project: Project;
   isActive?: boolean;
-  onCloned: () => void;
+  onChanged: () => void;
 }) {
   const router = useRouter();
 
@@ -190,7 +190,7 @@ export default function ProjectCard({
           </div>
         )}
       </div>
-      <ProjectContextMenu project={project} onCloned={onCloned} />
+      <ProjectContextMenu project={project} onChanged={onChanged} />
     </div>
   );
 }

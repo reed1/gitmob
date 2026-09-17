@@ -177,6 +177,21 @@ the desktop to the project and opens its workspaces when they were closed. Wheth
 already open is rv's question to answer, so this app calls it unconditionally. `--focus-ide` leaves
 the IDE focused, which is what decides where the window `claudex kitty` spawns next lands.
 
+The project card's menu makes the other two, from `src/lib/desktop.ts` behind the `open` and
+`close` actions of the desktop route. Both take a worktree id as readily as a configured one.
+
+- `rv open <projectId>` — Open, offered on a project that is checked out but not open on the
+  desktop.
+- `rv close <projectId>` — Close, offered on one that is, behind a confirmation. It is the whole
+  teardown `<leader> q q` runs at the desktop, every part at once: the code workspace's
+  terminals, the IDE, the project's `rv run` units, its Claude sessions into purgatory, and every
+  other window on its workspaces, closed as its X button would. It returns within a second or
+  so, and an error from any part is what the toast shows. A window holding unsaved work — a
+  guarded page, Cursor's unsaved files — asks at the desktop, where nobody is to answer it.
+
+Which projects are open comes from `rw-msg get_state`, the same round trip that lists the open
+worktrees, as `openOnDesktop` on every project.
+
 ## Desktop — `claudex`
 
 `src/lib/desktop.ts`, read by the Desktop section of the Claude tab and the project list.
