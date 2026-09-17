@@ -7,9 +7,12 @@ export function CLIView({ projectPath }: { projectPath: string }) {
   const [command, setCommand] = useState('');
   const [output, setOutput] = useState<string | null>(null);
   const [exitCode, setExitCode] = useState<number | null>(null);
+  const [signal, setSignal] = useState<string | null>(null);
   const [duration, setDuration] = useState<number | null>(null);
   const [notify, setNotify] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [stopping, setStopping] = useState(false);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -33,8 +36,11 @@ export function CLIView({ projectPath }: { projectPath: string }) {
         pollIntervalRef.current = null;
       }
       setExitCode(data.exitCode);
+      setSignal(data.signal);
       setDuration(data.duration);
       setLoading(false);
+      setJobId(null);
+      setStopping(false);
     }
   };
 
@@ -43,6 +49,7 @@ export function CLIView({ projectPath }: { projectPath: string }) {
     setLoading(true);
     setOutput(null);
     setExitCode(null);
+    setSignal(null);
     setDuration(null);
 
     const res = await apiFetch('/api/cli', {
@@ -52,8 +59,20 @@ export function CLIView({ projectPath }: { projectPath: string }) {
     });
     const data = await res.json();
 
+    setJobId(data.jobId);
     pollJob(data.jobId);
     pollIntervalRef.current = setInterval(() => pollJob(data.jobId), 500);
+  };
+
+  const stopCommand = async () => {
+    if (jobId === null) return;
+    setStopping(true);
+    const res = await apiFetch('/api/cli/stop', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jobId }),
+    });
+    if (!res.ok) setStopping(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -86,13 +105,24 @@ export function CLIView({ projectPath }: { projectPath: string }) {
           />
           Notify
         </label>
-        <button
-          onClick={runCommand}
-          disabled={loading || !command.trim()}
-          className="px-4 py-2 bg-foreground text-background font-medium rounded-lg active:opacity-80 disabled:opacity-50"
-        >
-          {loading ? 'Running...' : 'Run'}
-        </button>
+        <div className="flex items-center gap-2">
+          {jobId !== null && (
+            <button
+              onClick={stopCommand}
+              disabled={stopping}
+              className="px-4 py-2 bg-red-600 text-white font-medium rounded-lg active:opacity-80 disabled:opacity-50"
+            >
+              {stopping ? 'Stopping...' : 'Stop'}
+            </button>
+          )}
+          <button
+            onClick={runCommand}
+            disabled={loading || !command.trim()}
+            className="px-4 py-2 bg-foreground text-background font-medium rounded-lg active:opacity-80 disabled:opacity-50"
+          >
+            {loading ? 'Running...' : 'Run'}
+          </button>
+        </div>
       </div>
 
       {(loading || output !== null) && (
@@ -101,12 +131,20 @@ export function CLIView({ projectPath }: { projectPath: string }) {
         </pre>
       )}
 
-      {exitCode !== null && (
+      {(exitCode !== null || signal !== null) && (
         <div className="mt-2 text-sm">
-          <span className="font-medium">Return Code: </span>
-          <span className={exitCode === 0 ? 'text-green-600' : 'text-red-600'}>
-            {exitCode}
-          </span>
+          {signal !== null ? (
+            <span className="text-amber-500">Stopped ({signal})</span>
+          ) : (
+            <>
+              <span className="font-medium">Return Code: </span>
+              <span
+                className={exitCode === 0 ? 'text-green-600' : 'text-red-600'}
+              >
+                {exitCode}
+              </span>
+            </>
+          )}
           {duration !== null && (
             <span className="ml-4 text-foreground/60">
               {(duration / 1000).toFixed(2)}s

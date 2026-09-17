@@ -167,6 +167,24 @@ export function readJob(jobId: string): (CliJob & { output: string }) | null {
   return { ...job, status: orphaned ? 'lost' : job.status, output };
 }
 
+/**
+ * Signals the job's whole process group — it was spawned detached, so it leads one — so a
+ * `ping` under the bash wrapper stops along with the wrapper. Returns false when nothing was
+ * left running to signal.
+ */
+export function stopJob(jobId: string): boolean {
+  const job = readJob(jobId);
+  if (!job || job.status !== 'running' || job.pid === undefined) return false;
+
+  try {
+    process.kill(-job.pid, 'SIGTERM');
+    return true;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ESRCH') return false;
+    throw err;
+  }
+}
+
 export function deleteJob(jobId: string) {
   if (existsSync(jobPath(jobId))) unlinkSync(jobPath(jobId));
   if (existsSync(outputPath(jobId))) unlinkSync(outputPath(jobId));
