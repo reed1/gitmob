@@ -346,6 +346,14 @@ Editing the prompt first is what this end is for: the text is the browser's, the
 not, so a launch takes the prompt from the request and everything else from the file. A launch
 that fails leaves the handoff parked, to fix and try again.
 
+Each listed handoff carries whether the tree it would run in is clean, from one `git status` on
+the handoff's **own directory** — the cwd the session gets, which is a worktree's when a worktree
+was handed over, and which a status on the project's checkout would answer for the wrong tree. A
+session started on a dirty one mixes its work with what was already there, so the answer is on the
+row before anything is opened, and again beside Launch, where it links to the Changes tab. It
+refuses nothing: a briefing is sometimes about those very changes. A directory gone since the
+handoff was parked has no answer, and says so rather than claiming either.
+
 The prompt is parked whole: nothing trims it on the way in. claudex-kitty caps initial text at
 100000 bytes, near the kernel's limit on a single argument, and rejects anything over — a
 briefing that long fails the launch and stays parked, where the box that edits it is the way to

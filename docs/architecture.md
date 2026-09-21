@@ -62,8 +62,10 @@ the one the proxy drained.
 page — above the project list, whichever project it names — to read, edit and launch from there. A
 handoff hands a whole workspace to a session acting alone on a prompt nobody has read yet, so it
 waits for the user; this is where they read it when the desktop is not where they are, and rofi
-behind the chord c l h is where they read it when it is. The same trade gg makes when it sends a commit
-message to the Commit tab rather than a review overlay nobody is sitting in front of. Contracts in
+behind the chord c l h is where they read it when it is. Both ends say whether the target tree is
+clean before it is launched, because a session turned loose on uncommitted work leaves changes
+nobody can tell apart afterwards. The same trade gg makes when it sends a commit message to the
+Commit tab rather than a review overlay nobody is sitting in front of. Contracts in
 [cli-integrations.md](cli-integrations.md).
 
 ## Parked commits with no project

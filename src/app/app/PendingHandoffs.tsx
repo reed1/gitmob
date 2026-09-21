@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import { createPortal } from 'react-dom';
+import Link from 'next/link';
 import { addToast, apiFetch } from '../../lib/api';
 import { relativeTime } from '../../lib/relative-time';
 import { useAutoRefresh } from '../../lib/use-auto-refresh';
@@ -17,6 +18,36 @@ interface PendingHandoff {
   directory: string;
   prompt: string;
   createdAt: string;
+  clean: boolean | null;
+}
+
+/**
+ * Whether the tree the briefing would run in is carrying uncommitted work. A session launched on
+ * a dirty one mixes its changes with whatever was already there, which is the difference between
+ * watching what it did and picking it out afterwards — so the answer is on the row, before
+ * anything is opened, and again beside the Launch button.
+ */
+function CleanBadge({ clean }: { clean: boolean | null }) {
+  const base = 'px-1.5 py-0.5 rounded-full text-[10px] font-medium shrink-0';
+  if (clean === true) {
+    return (
+      <span className={`${base} bg-emerald-400/15 text-emerald-400`}>
+        clean
+      </span>
+    );
+  } else if (clean === false) {
+    return (
+      <span className={`${base} bg-yellow-400/20 text-yellow-400`}>dirty</span>
+    );
+  } else if (clean === null) {
+    return (
+      <span className={`${base} bg-foreground/10 text-foreground/50`}>
+        no git
+      </span>
+    );
+  } else {
+    throw new Error(`Unexpected cleanliness: ${clean}`);
+  }
 }
 
 /**
@@ -26,10 +57,15 @@ interface PendingHandoff {
  */
 export function PendingHandoffs({ onLaunched }: { onLaunched: () => void }) {
   const [handoffs, setHandoffs] = useState<PendingHandoff[]>([]);
-  const [open, setOpen] = useState<PendingHandoff | null>(null);
+  // The open handoff is held by id and read back out of the list, so its git status keeps up
+  // with the refresh while the box is up — cleaning the tree up in another tab and coming back
+  // shows clean — and a handoff launched from the desktop closes the box instead of going stale.
+  const [openId, setOpenId] = useState<string | null>(null);
   const [prompt, setPrompt] = useState('');
   const [mode, setMode] = useState<ClaudeMode>(DEFAULT_CLAUDE_MODE);
   const [launching, setLaunching] = useState(false);
+
+  const open = handoffs.find((handoff) => handoff.id === openId) ?? null;
 
   const fetchHandoffs = useCallback(async () => {
     const res = await fetch('/api/handoffs');
@@ -43,7 +79,7 @@ export function PendingHandoffs({ onLaunched }: { onLaunched: () => void }) {
   const openHandoff = (handoff: PendingHandoff) => {
     setPrompt(handoff.prompt);
     setMode(DEFAULT_CLAUDE_MODE);
-    setOpen(handoff);
+    setOpenId(handoff.id);
   };
 
   const launch = async () => {
@@ -59,7 +95,7 @@ export function PendingHandoffs({ onLaunched }: { onLaunched: () => void }) {
       if (!res.ok) return;
       const { name } = await res.json();
       addToast(`Started ${name}`, 'success');
-      setOpen(null);
+      setOpenId(null);
       await fetchHandoffs();
       onLaunched();
     } finally {
@@ -74,7 +110,7 @@ export function PendingHandoffs({ onLaunched }: { onLaunched: () => void }) {
       { method: 'DELETE' }
     );
     if (!res.ok) return;
-    setOpen(null);
+    setOpenId(null);
     addToast('Handoff deleted', 'success');
     fetchHandoffs();
   };
@@ -100,6 +136,7 @@ export function PendingHandoffs({ onLaunched }: { onLaunched: () => void }) {
                   <span className="font-medium text-amber-300">
                     {handoff.projectId}
                   </span>
+                  <CleanBadge clean={handoff.clean} />
                   <span>{relativeTime(handoff.createdAt)}</span>
                 </div>
                 <div className="mt-1 text-sm line-clamp-2">{title}</div>
@@ -113,17 +150,44 @@ export function PendingHandoffs({ onLaunched }: { onLaunched: () => void }) {
         createPortal(
           <div
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
-            onClick={() => setOpen(null)}
+            onClick={() => setOpenId(null)}
           >
             <div
               className="bg-background border border-foreground/20 rounded-lg shadow-xl w-full max-w-lg"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="px-4 py-3 border-b border-foreground/10">
-                <h3 className="font-medium">{open.projectId}</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-medium truncate">{open.projectId}</h3>
+                  <CleanBadge clean={open.clean} />
+                </div>
                 <div className="text-xs text-foreground/50 truncate">
                   {open.directory}
                 </div>
+                {/* Dirty is a warning and not a refusal — the briefing may well be about those
+                    very changes — so the Changes tab is one tap away and Launch stays live. The
+                    handoff waits parked either way; only the edits in the box are lost. */}
+                {open.clean === false && (
+                  <Link
+                    href={`/app/p/${open.projectId}?tab=changes`}
+                    className="mt-2 inline-flex items-center gap-1 text-xs text-yellow-400 active:opacity-80"
+                  >
+                    Uncommitted changes here — open Changes
+                    <svg
+                      className="w-3 h-3"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </Link>
+                )}
               </div>
               <div className="px-4 py-3">
                 <textarea

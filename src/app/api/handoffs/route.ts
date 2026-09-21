@@ -7,13 +7,35 @@ import {
   readPendingHandoff,
 } from '@/lib/handoffs';
 import { launchDesktopSession } from '@/lib/desktop';
+import { getRepoSummary } from '@/lib/git';
 import { isClaudeMode } from '@/lib/desktop-modes';
 
 /** The title a handoff window carries, whichever end launches it. */
 const HANDOFF_TITLE = 'Claude (handoff)';
 
+/**
+ * Whether the tree a briefing would run in has uncommitted work. The question is asked of the
+ * handoff's own directory rather than of its project's checkout: that directory is the cwd the
+ * session gets, whichever worktree it is. Null where git cannot answer, which is a directory
+ * gone since the handoff was parked.
+ */
+async function isClean(directory: string): Promise<boolean | null> {
+  try {
+    const { hasChanges } = await getRepoSummary(directory);
+    return !hasChanges;
+  } catch {
+    return null;
+  }
+}
+
 export async function GET() {
-  return NextResponse.json({ handoffs: listPendingHandoffs() });
+  const handoffs = await Promise.all(
+    listPendingHandoffs().map(async (handoff) => ({
+      ...handoff,
+      clean: await isClean(handoff.directory),
+    }))
+  );
+  return NextResponse.json({ handoffs });
 }
 
 export async function POST(request: NextRequest) {
