@@ -105,13 +105,15 @@ const BOARD_READ_CONCURRENCY = 8;
 
 /**
  * Every board at once, newest notes first. `rv pinboard` answers one project per call, so this
- * fans out over the configured projects — worktrees share the board of the project they are a
- * checkout of, and would only duplicate it.
+ * fans out over the configured projects that own a board — worktrees and projects that share
+ * another's board would only read it again.
  */
 export async function getRecentPinboardNotes(
   limit: number
 ): Promise<RecentPinboardNotes> {
-  const projectIds = getProjects().map((project) => project.id);
+  const projectIds = getProjects()
+    .filter((project) => project.pinboardOwner === project.id)
+    .map((project) => project.id);
   const notes: RecentPinboardNote[] = [];
   const failures: { projectId: string; error: string }[] = [];
 

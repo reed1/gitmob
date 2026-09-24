@@ -18,6 +18,8 @@ export interface Project {
   id: string;
   /** The configured project a worktree belongs to; its own id for everything else. */
   canonicalId: string;
+  /** The project whose board this one files its notes on; its own id unless it shares. */
+  pinboardOwner: string;
   worktreeName?: string;
   path: string;
   pinned?: boolean;
@@ -36,13 +38,15 @@ export interface Project {
 }
 
 export function getProjects(): Project[] {
-  const data: Record<string, Omit<Project, 'id'>> = JSON.parse(
-    readFileSync(PROJECTS_FILE, 'utf-8')
-  );
+  const data: Record<
+    string,
+    Omit<Project, 'id' | 'pinboardOwner'> & { owner: { pinboard: string } }
+  > = JSON.parse(readFileSync(PROJECTS_FILE, 'utf-8'));
 
   return Object.entries(data).map(([id, raw]) => ({
     id,
     canonicalId: id,
+    pinboardOwner: raw.owner.pinboard,
     path: raw.path?.replace(/^~/, homedir()) || '',
     pinned: raw.pinned,
     repo: raw.repo,
