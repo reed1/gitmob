@@ -33,6 +33,7 @@ export function ChangesView({
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const diffScrollRef = useRef<HTMLDivElement>(null);
 
   const openFile = (
     file: string,
@@ -64,6 +65,10 @@ export function ChangesView({
   }, [projectId, selectedFile, isStaged, isUntracked, isFullDiff]);
 
   useAutoRefresh(loadDiff);
+
+  useEffect(() => {
+    diffScrollRef.current?.scrollTo(0, 0);
+  }, [diffKey]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -223,7 +228,10 @@ export function ChangesView({
             </div>
           </div>
         </div>
-        <div className="flex-1 min-h-0 overflow-auto p-4 text-xs font-mono">
+        <div
+          ref={diffScrollRef}
+          className="flex-1 min-h-0 overflow-auto p-4 text-xs font-mono"
+        >
           <div
             className={
               wordWrap
