@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { addToast } from '../../lib/api';
 import { useAutoRefresh } from '../../lib/use-auto-refresh';
@@ -72,11 +72,13 @@ export default function PinboardOverviewPage() {
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [editing, setEditing] = useState<RecentNote | null>(null);
   const [deleting, setDeleting] = useState<RecentNote | null>(null);
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
   const cacheRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const snapshot = loaded ?? cached;
-  const notes = snapshot?.notes ?? [];
+  const notes = useMemo(() => snapshot?.notes ?? [], [snapshot]);
   const failures = snapshot?.failures ?? [];
+  const highlighted = Math.min(highlightedIndex, notes.length - 1);
 
   const load = useCallback(async () => {
     setRefreshing(true);
@@ -106,6 +108,41 @@ export default function PinboardOverviewPage() {
     },
     []
   );
+
+  const modalOpen = editing !== null || deleting !== null;
+  const actionsReady = loaded !== null;
+
+  useEffect(() => {
+    if (modalOpen) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (
+        e.target instanceof HTMLElement &&
+        e.target.closest('input, textarea')
+      )
+        return;
+
+      if (e.key === 'j') {
+        setHighlightedIndex((i) => Math.min(i + 1, notes.length - 1));
+      } else if (e.key === 'k') {
+        setHighlightedIndex((i) =>
+          Math.max(Math.min(i, notes.length - 1) - 1, 0)
+        );
+      } else if (e.key === 'e') {
+        if (actionsReady && highlighted >= 0) {
+          e.preventDefault();
+          setEditing(notes[highlighted]);
+        }
+      } else if (e.key === 'x') {
+        if (actionsReady && highlighted >= 0) setDeleting(notes[highlighted]);
+      } else if (e.key === 'q') {
+        window.close();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [modalOpen, actionsReady, highlighted, notes]);
 
   const editNote = async (note: RecentNote, text: string) => {
     setEditing(null);
@@ -217,7 +254,7 @@ export default function PinboardOverviewPage() {
           </div>
         )}
 
-        {notes.map((note) => {
+        {notes.map((note, index) => {
           const key = noteKey(note);
           return (
             <PinboardNoteCard
@@ -233,8 +270,12 @@ export default function PinboardOverviewPage() {
                 </Link>
               }
               expanded={expandedKey === key}
-              onToggle={() => setExpandedKey(expandedKey === key ? null : key)}
-              actionsDisabled={loaded === null}
+              highlighted={index === highlighted}
+              onToggle={() => {
+                setHighlightedIndex(index);
+                setExpandedKey(expandedKey === key ? null : key);
+              }}
+              actionsDisabled={!actionsReady}
               onEdit={() => setEditing(note)}
               onDelete={() => setDeleting(note)}
             />

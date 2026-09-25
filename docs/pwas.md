@@ -37,6 +37,10 @@ go out as plain `fetch` calls, not `apiFetch`, so two to the same board may over
 write re-reads every board 10 seconds after the last one and stores it in the cache alone; the
 screen changes only on a reload or the refresh button.
 
+On a keyboard the overview is driven like a list: one note is always highlighted (the first on
+open), `j`/`k` move the highlight and scroll it into view, `e` opens it in the edit box, `x` asks
+to delete it — Enter confirms, Escape cancels — and `q` closes the app window.
+
 ## Routing rules
 
 - Keep every GitMob page under `/app`: a page left at the root would fall outside the manifest scope

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { addToast, apiFetch } from '../lib/api';
 import { copyText } from '../lib/clipboard';
 import { SpeakButton, appendSpoken } from '../app/app/SpeakButton';
@@ -64,6 +64,7 @@ export function PinboardNoteCard({
   note,
   label,
   expanded,
+  highlighted = false,
   actionsDisabled = false,
   onToggle,
   onEdit,
@@ -72,18 +73,30 @@ export function PinboardNoteCard({
   note: PinboardNote;
   label: ReactNode;
   expanded: boolean;
+  highlighted?: boolean;
   actionsDisabled?: boolean;
   onToggle: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (highlighted) cardRef.current?.scrollIntoView({ block: 'nearest' });
+  }, [highlighted]);
+
   const copy = async () => {
     if (await copyText(note.text)) addToast('Copied the note', 'success');
     else addToast('Could not copy to the clipboard');
   };
 
   return (
-    <div className="bg-foreground/5 border border-foreground/10 rounded-lg overflow-hidden">
+    <div
+      ref={cardRef}
+      className={`bg-foreground/5 border rounded-lg overflow-hidden scroll-mt-20 ${
+        highlighted ? 'border-blue-400/70' : 'border-foreground/10'
+      }`}
+    >
       <div className="cursor-pointer" onClick={onToggle}>
         <div className="flex items-center gap-2 px-3 pt-2 text-xs">
           <div className="min-w-0 truncate">{label}</div>
@@ -163,10 +176,18 @@ export function PinboardNoteModal({
   onClose: () => void;
 }) {
   const [text, setText] = useState(initialText);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const textarea = textareaRef.current!;
+    textarea.focus();
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+  }, []);
 
   return (
     <Overlay>
       <textarea
+        ref={textareaRef}
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {
@@ -214,6 +235,19 @@ export function PinboardDeleteConfirm({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        onConfirm();
+      } else if (e.key === 'Escape') {
+        onCancel();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onCancel, onConfirm]);
+
   return (
     <Overlay>
       <p className="text-sm mb-1">
