@@ -38,8 +38,9 @@ write re-reads every board 10 seconds after the last one and stores it in the ca
 screen changes only on a reload or the refresh button.
 
 On a keyboard the overview is driven like a list: one note is always highlighted (the first on
-open), `j`/`k` move the highlight and scroll it into view, `e` opens it in the edit box, `x` asks
-to delete it — Enter confirms, Escape cancels — and `q` closes the app window.
+open), `j`/`k` move the highlight and scroll it into view, Space expands or collapses it as a tap
+would, `e` opens it in the edit box, `x` asks to delete it — Enter confirms, Escape cancels — and
+`q` closes the app window.
 
 ## Routing rules
 

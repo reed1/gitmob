@@ -129,6 +129,12 @@ export default function PinboardOverviewPage() {
         setHighlightedIndex((i) =>
           Math.max(Math.min(i, notes.length - 1) - 1, 0)
         );
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        if (highlighted >= 0) {
+          const key = noteKey(notes[highlighted]);
+          setExpandedKey((expanded) => (expanded === key ? null : key));
+        }
       } else if (e.key === 'e') {
         if (actionsReady && highlighted >= 0) {
           e.preventDefault();
