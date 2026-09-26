@@ -47,6 +47,11 @@ function formatAge(note: PinboardNote): string {
   return `${Math.floor(age / YEAR)}y ago`;
 }
 
+export async function copyNote(note: PinboardNote) {
+  if (await copyText(note.text)) addToast('Copied the note', 'success');
+  else addToast('Could not copy to the clipboard');
+}
+
 const COLLAPSED_LINES = 'line-clamp-3';
 
 const ACTION_CLASS =
@@ -83,12 +88,7 @@ export function PinboardNoteCard({
 
   useEffect(() => {
     if (highlighted) cardRef.current?.scrollIntoView({ block: 'nearest' });
-  }, [highlighted]);
-
-  const copy = async () => {
-    if (await copyText(note.text)) addToast('Copied the note', 'success');
-    else addToast('Could not copy to the clipboard');
-  };
+  }, [highlighted, expanded]);
 
   return (
     <div
@@ -130,7 +130,7 @@ export function PinboardNoteCard({
 
       {expanded && (
         <div className="flex justify-end gap-2 px-3 py-2 border-t border-foreground/10">
-          <button onClick={copy} className={ACTION_CLASS}>
+          <button onClick={() => copyNote(note)} className={ACTION_CLASS}>
             Copy
           </button>
           <button
@@ -191,7 +191,12 @@ export function PinboardNoteModal({
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === 'Escape') onClose();
+          if (e.key === 'Escape') {
+            onClose();
+          } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            if (text.trim()) onSave(text.trim());
+          }
         }}
         placeholder="Note text..."
         rows={5}
@@ -237,10 +242,10 @@ export function PinboardDeleteConfirm({
 }) {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Enter') {
+      if (e.key === 'Enter' || e.key === 'y') {
         e.preventDefault();
         onConfirm();
-      } else if (e.key === 'Escape') {
+      } else if (e.key === 'Escape' || e.key === 'n') {
         onCancel();
       }
     };

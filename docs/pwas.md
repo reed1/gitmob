@@ -39,8 +39,11 @@ screen changes only on a reload or the refresh button.
 
 On a keyboard the overview is driven like a list: one note is always highlighted (the first on
 open), `j`/`k` move the highlight and scroll it into view, Space expands or collapses it as a tap
-would, `e` opens it in the edit box, `x` asks to delete it — Enter confirms, Escape cancels — and
-`q` closes the app window.
+would and keeps it in view, `y` copies it, `o` opens its project's Pinboard tab, `e` opens it in the
+edit box — Ctrl+Enter saves, Escape cancels — `x` asks to delete it — Enter or `y` confirms, Escape
+or `n` cancels — and `q` closes the app window. The highlight follows the note, not its place in the
+list: a refresh keeps it on the same note and falls back to the first when that note is gone, and a
+delete passes it to the next note.
 
 ## Routing rules
 

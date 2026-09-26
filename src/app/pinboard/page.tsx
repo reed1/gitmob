@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { addToast } from '../../lib/api';
 import { useAutoRefresh } from '../../lib/use-auto-refresh';
 import { useCachedState } from '../../lib/use-cached-state';
@@ -9,6 +10,7 @@ import {
   PinboardDeleteConfirm,
   PinboardNoteCard,
   PinboardNoteModal,
+  copyNote,
   type PinboardNote,
 } from '../../components/PinboardNote';
 
@@ -72,13 +74,20 @@ export default function PinboardOverviewPage() {
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [editing, setEditing] = useState<RecentNote | null>(null);
   const [deleting, setDeleting] = useState<RecentNote | null>(null);
-  const [highlightedIndex, setHighlightedIndex] = useState(0);
+  const [highlightedKey, setHighlightedKey] = useState<string | null>(null);
   const cacheRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const snapshot = loaded ?? cached;
   const notes = useMemo(() => snapshot?.notes ?? [], [snapshot]);
   const failures = snapshot?.failures ?? [];
-  const highlighted = Math.min(highlightedIndex, notes.length - 1);
+  const highlighted = Math.min(
+    Math.max(
+      notes.findIndex((n) => noteKey(n) === highlightedKey),
+      0
+    ),
+    notes.length - 1
+  );
+  const router = useRouter();
 
   const load = useCallback(async () => {
     setRefreshing(true);
@@ -123,32 +132,35 @@ export default function PinboardOverviewPage() {
       )
         return;
 
+      if (highlighted < 0) return;
+
       if (e.key === 'j') {
-        setHighlightedIndex((i) => Math.min(i + 1, notes.length - 1));
+        const next = notes[Math.min(highlighted + 1, notes.length - 1)];
+        setHighlightedKey(noteKey(next));
       } else if (e.key === 'k') {
-        setHighlightedIndex((i) =>
-          Math.max(Math.min(i, notes.length - 1) - 1, 0)
-        );
+        setHighlightedKey(noteKey(notes[Math.max(highlighted - 1, 0)]));
       } else if (e.key === ' ') {
         e.preventDefault();
-        if (highlighted >= 0) {
-          const key = noteKey(notes[highlighted]);
-          setExpandedKey((expanded) => (expanded === key ? null : key));
-        }
+        const key = noteKey(notes[highlighted]);
+        setExpandedKey((expanded) => (expanded === key ? null : key));
+      } else if (e.key === 'y') {
+        copyNote(notes[highlighted]);
+      } else if (e.key === 'o') {
+        router.push(`/app/p/${notes[highlighted].projectId}?tab=pinboard`);
       } else if (e.key === 'e') {
-        if (actionsReady && highlighted >= 0) {
+        if (actionsReady) {
           e.preventDefault();
           setEditing(notes[highlighted]);
         }
       } else if (e.key === 'x') {
-        if (actionsReady && highlighted >= 0) setDeleting(notes[highlighted]);
+        if (actionsReady) setDeleting(notes[highlighted]);
       } else if (e.key === 'q') {
         window.close();
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [modalOpen, actionsReady, highlighted, notes]);
+  }, [modalOpen, actionsReady, highlighted, notes, router]);
 
   const editNote = async (note: RecentNote, text: string) => {
     setEditing(null);
@@ -181,6 +193,11 @@ export default function PinboardOverviewPage() {
   const deleteNote = async (note: RecentNote) => {
     setDeleting(null);
     setExpandedKey(null);
+    if (noteKey(note) === highlightedKey) {
+      const index = notes.findIndex((n) => noteKey(n) === highlightedKey);
+      const successor = notes[index + 1] ?? notes[index - 1];
+      setHighlightedKey(successor ? noteKey(successor) : null);
+    }
     setLoaded((prev) =>
       prev === null
         ? prev
@@ -278,7 +295,7 @@ export default function PinboardOverviewPage() {
               expanded={expandedKey === key}
               highlighted={index === highlighted}
               onToggle={() => {
-                setHighlightedIndex(index);
+                setHighlightedKey(key);
                 setExpandedKey(expandedKey === key ? null : key);
               }}
               actionsDisabled={!actionsReady}
