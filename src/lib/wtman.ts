@@ -17,7 +17,21 @@ export interface ProjectWorktree {
   projectId: string;
   /** Open on the desktop right now, so this app already has a page for it. */
   open: boolean;
+  /** Uncommitted changes in the checkout. */
+  dirty: boolean;
+  /** What the main checkout is on, which is what `wtman merge` merges into. */
+  into: string | null;
+  /** Commits on the branch that `into` does not have. */
+  ahead: number;
+  /** wtman menu's tag, before it hides it for a dirty checkout. Null with nothing to compare. */
+  state: MergeState | null;
 }
+
+/**
+ * `merged` has every commit in `into` already; `no-commits` sits on the very commit `into`
+ * does, so it never got one of its own. Both are what the wtman menu tags a worktree with.
+ */
+export type MergeState = 'merged' | 'no-commits' | 'unmerged';
 
 interface WtmanRow {
   branch: string;
@@ -29,10 +43,11 @@ interface WtmanRow {
 function run(
   command: string,
   args: string[],
-  timeout = 30000
+  timeout = 30000,
+  input?: string
 ): Promise<string> {
   return new Promise((resolve, reject) => {
-    execFile(
+    const child = execFile(
       command,
       args,
       { timeout, maxBuffer: 4 * 1024 * 1024 },
@@ -44,6 +59,7 @@ function run(
         resolve(stdout);
       }
     );
+    child.stdin?.end(input ?? '');
   });
 }
 
@@ -91,6 +107,51 @@ async function branchesByPath(
   return branches;
 }
 
+async function currentBranch(path: string): Promise<string | null> {
+  const branch = (
+    await run('git', ['-C', path, 'branch', '--show-current'])
+  ).trim();
+  return branch === '' ? null : branch;
+}
+
+async function revParse(repo: string, ref: string): Promise<string> {
+  return (await run('git', ['-C', repo, 'rev-parse', ref])).trim();
+}
+
+/**
+ * The same judgement as `removable_worktree_branches` in wtman, which tags the menu rows:
+ * against whatever the main checkout is on, since that is the branch `wtman merge` merges into.
+ */
+async function mergeStatus(
+  repo: string,
+  into: string | null,
+  path: string,
+  branch: string | null
+): Promise<Pick<ProjectWorktree, 'dirty' | 'ahead' | 'state'>> {
+  const dirty =
+    (await run('git', ['-C', path, 'status', '--porcelain'])).trim() !== '';
+
+  if (into === null || branch === null || branch === into) {
+    return { dirty, ahead: 0, state: null };
+  }
+
+  const [ahead, head, target] = await Promise.all([
+    run('git', [
+      '-C',
+      repo,
+      'rev-list',
+      '--count',
+      `refs/heads/${into}..refs/heads/${branch}`,
+    ]).then((count) => Number(count.trim())),
+    revParse(repo, `refs/heads/${branch}`),
+    revParse(repo, `refs/heads/${into}`),
+  ]);
+
+  const state: MergeState =
+    ahead > 0 ? 'unmerged' : head === target ? 'no-commits' : 'merged';
+  return { dirty, ahead, state };
+}
+
 /**
  * The worktrees of one project, most recently touched first.
  *
@@ -104,26 +165,35 @@ export async function listWorktrees(
   project: Project
 ): Promise<ProjectWorktree[]> {
   const repo = repoPath(project);
-  const [rows, branches, desktop] = await Promise.all([
+  const [rows, branches, desktop, into] = await Promise.all([
     run('wtman', ['list', '--json']).then(
       (stdout) => JSON.parse(stdout) as WtmanRow[]
     ),
     branchesByPath(repo),
     getDesktopState(),
+    currentBranch(repo),
   ]);
 
   const openIds = new Set(desktop.worktrees.map((worktree) => worktree.id));
 
-  return rows
-    .filter((row) => row.project === basename(repo) && branches.has(row.path))
-    .map((row) => ({
-      name: row.branch,
-      branch: branches.get(row.path) ?? null,
-      path: row.path,
-      touchedAt: new Date(row.mtime * 1000).toISOString(),
-      projectId: `${project.canonicalId}${WORKTREE_SEP}${row.branch}`,
-      open: openIds.has(`${project.canonicalId}${WORKTREE_SEP}${row.branch}`),
-    }));
+  return Promise.all(
+    rows
+      .filter((row) => row.project === basename(repo) && branches.has(row.path))
+      .map(async (row) => {
+        const branch = branches.get(row.path) ?? null;
+        const projectId = `${project.canonicalId}${WORKTREE_SEP}${row.branch}`;
+        return {
+          name: row.branch,
+          branch,
+          path: row.path,
+          touchedAt: new Date(row.mtime * 1000).toISOString(),
+          projectId,
+          open: openIds.has(projectId),
+          into,
+          ...(await mergeStatus(repo, into, row.path, branch)),
+        };
+      })
+  );
 }
 
 /** Opening a worktree can mean starting an editor and its terminals, as `rv open` does. */
@@ -135,12 +205,10 @@ const OPEN_TIMEOUT_MS = 120000;
  * hand-off to `rofi-vscode open`. Either way that hand-off is what announces the worktree
  * project to rworkspaces, and so what gives it a page in this app.
  *
- * No `--interactive`, which is the whole contract with wtman from here. Without it wtman
- * declines every offer — the uncommitted changes in the main checkout stay where they are,
- * rather than being carried into a branch nobody at this end can see — and refuses every
- * confirmation, which is why `remove` and `merge` are not on this tab. It also forks a new
- * branch off main rather than off whatever the checkout is parked on, since that is not a base
- * anybody chose from here.
+ * No `--interactive`: without it wtman declines every offer — the uncommitted changes in the
+ * main checkout stay where they are, rather than being carried into a branch nobody at this
+ * end can see. It also forks a new branch off main rather than off whatever the checkout is
+ * parked on, since that is not a base anybody chose from here.
  *
  * This waits for the whole open, which is a few seconds of workspace switching and window
  * launching — but only for the launching. Cursor and the project terminal are started through
@@ -162,11 +230,7 @@ export async function openWorktree(
   project: Project,
   worktree: ProjectWorktree
 ): Promise<void> {
-  if (worktree.branch === null) {
-    throw new Error(`${worktree.name} is on a detached HEAD`);
-  }
-
-  await openBranch(project, worktree.branch);
+  await openBranch(project, requireBranch(worktree));
 }
 
 /**
@@ -188,3 +252,87 @@ export async function createWorktree(
   }
   return created;
 }
+
+/** A merge can push the branch to its upstream first, which is the network's time to take. */
+const MERGE_TIMEOUT_MS = 120000;
+
+function requireBranch(worktree: ProjectWorktree): string {
+  if (worktree.branch === null) {
+    throw new Error(`${worktree.name} is on a detached HEAD`);
+  }
+  return worktree.branch;
+}
+
+/**
+ * `merge` and `remove` only run under `--interactive`, and every question they put is answered
+ * on stdin with what the person already said yes to in the dialog here — one line per prompt,
+ * in the order wtman asks them. A prompt nobody answered for reads end of input, which wtman
+ * turns into a refusal of its own rather than a guess.
+ */
+function runAnswered(
+  args: string[],
+  answers: string[],
+  timeout = 30000
+): Promise<string> {
+  return run(
+    'wtman',
+    ['--interactive', ...args],
+    timeout,
+    answers.map((answer) => `${answer}\n`).join('')
+  );
+}
+
+/**
+ * Merges the branch into whatever the main checkout is on, then removes its worktree and the
+ * branch, as `wtman merge` does. The one question it may ask is whether to copy the branch's
+ * box directories into the main checkout first, and yes is its default at the terminal too.
+ * wtman refuses a worktree still open on the desktop, since Cursor goes down with its folder.
+ */
+export async function mergeWorktree(
+  project: Project,
+  worktree: ProjectWorktree,
+  squash: boolean
+): Promise<string> {
+  return runAnswered(
+    [
+      'merge',
+      repoPath(project),
+      requireBranch(worktree),
+      ...(squash ? ['--squash'] : []),
+    ],
+    ['y'],
+    MERGE_TIMEOUT_MS
+  );
+}
+
+/**
+ * Removes the worktree, and with `removeBranch` the branch too, which wtman bundles into a
+ * backup first. Deleting a branch git does not consider merged is a second question, and
+ * `force` is the answer to it; without it the worktree is kept rather than removed halfway.
+ */
+export async function removeWorktree(
+  project: Project,
+  worktree: ProjectWorktree,
+  removeBranch: boolean,
+  force: boolean
+): Promise<string> {
+  const unmerged =
+    worktree.state !== 'merged' && worktree.state !== 'no-commits';
+  if (removeBranch && unmerged && !force) {
+    throw new UnmergedBranch(
+      `${worktree.name} has commits ${worktree.into ?? 'the main checkout'} does not`
+    );
+  }
+
+  return runAnswered(
+    [
+      'remove',
+      ...(removeBranch ? ['--remove-branch'] : []),
+      repoPath(project),
+      requireBranch(worktree),
+    ],
+    removeBranch && unmerged ? ['y', 'y'] : ['y']
+  );
+}
+
+export class UnmergedBranch extends Error {}

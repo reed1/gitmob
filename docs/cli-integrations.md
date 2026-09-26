@@ -37,8 +37,8 @@ and its servers, so the project list reads them under `canonicalId`, as do the d
 
 ## Worktrees on disk — `wtman`
 
-`src/lib/wtman.ts`, read by the Wtman tab: every worktree of the project, the button that opens
-one, and the box that creates one.
+`src/lib/wtman.ts`, read by the Wtman tab: every worktree of the project with whether it is
+merged, a menu on each to open, merge or remove it, and the box that creates one.
 
 - `wtman list --json` — every worktree on this machine, each with its `~/wtman` directory name,
   the repo directory under it, and when it was last touched. There is no per-project call: the
@@ -46,8 +46,12 @@ one, and the box that creates one.
   name. Two projects checked out under the same folder name share worktrees as far as wtman is
   concerned, and nothing here holds a second opinion about that.
 - `wtman open <repoPath> --branch <branch>` — opens one, and creates the branch and the
-  checkout first when they are not there. Both buttons on the tab are this one command. For a
+  checkout first when they are not there. Open and Create on the tab are this one command. For a
   worktree that already exists it is nothing but wtman's hand-off to `rofi-vscode open`.
+- `wtman --interactive merge <repoPath> <branch> [--squash]` — merges into whatever the main
+  checkout is on, then removes the worktree and the branch.
+- `wtman --interactive remove [--remove-branch] <repoPath> <branch>` — removes the worktree, and
+  the branch with it on the flag.
 
 The branch that goes out is the repo's answer, never the directory name. `wtman list` reports the
 directory, which is the branch with everything git allows and a path does not folded away —
@@ -60,13 +64,26 @@ left behind by a worktree git no longer knows about is dropped, and a branch wit
 never appears at all — including one Create makes a worktree for, which stops being invisible
 by acquiring one.
 
-No `--interactive`, which is the whole contract with wtman from here. wtman tells its prompts
-apart by what it may assume of somebody who is not there: an **offer** — carrying the main
-checkout's uncommitted changes into the new branch — is declined, and a **confirmation** —
-everything `remove` and `merge` ask — is refused outright, which is why neither is on the tab
-and why nothing here has to pass a flag saying so. `--yes` used to mean "take every default",
-which read like consent to whatever wtman felt like doing; the offers were what it was actually
-answering, so they say no for themselves now.
+Each row carries the tag the wtman menu puts on it, judged the same way against the branch the
+main checkout is on — the one `merge` merges into: `merged` when every commit is already there,
+`no commits` when it sits on that very commit, otherwise how many commits it has that the main
+checkout does not; and separately, whether the checkout has uncommitted changes.
+
+wtman tells its prompts apart by what it may assume of somebody who is not there: an **offer** —
+carrying the main checkout's uncommitted changes into the new branch — is declined without
+`--interactive`, and a **confirmation** — everything `remove` and `merge` ask — is refused. So
+`open` runs without the flag, and `merge` and `remove` run with it, their confirmations answered
+on stdin with what the person said yes to in the tab's dialog, one line per prompt in wtman's
+order. `remove` asks to continue, and asks again before force deleting a branch git does not
+consider merged; the second answer is only sent when the row said unmerged and the dialog said
+so, and the request is refused up front when it did not, rather than letting wtman remove the
+worktree and then stop at the branch. `merge` may ask whether to copy the branch's box
+directories into the main checkout, answered yes as at the terminal. A prompt nobody answered for
+reads end of input, which wtman turns into a refusal rather than a guess.
+
+wtman itself refuses to merge or remove a worktree still open on the desktop, since Cursor goes
+down with the folder it has open; the menu greys both out for an open one instead of letting that
+refusal be the message.
 
 The one thing that is not simply an offer declined is which branch a new one forks off. wtman
 forks off main here, not off whatever the main checkout is parked on: declining the offer would
