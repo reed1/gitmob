@@ -175,7 +175,7 @@ export default function ProjectPage() {
         <div className="px-4 py-3 flex items-center gap-3">
           <button
             onClick={() => goHome(router)}
-            className="text-foreground/50 hover:text-foreground transition-colors"
+            className="text-foreground/50 hover:text-foreground transition-colors cursor-pointer"
           >
             <svg
               className="w-5 h-5"
