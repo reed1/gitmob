@@ -28,6 +28,11 @@ export async function mutatePinboard(
   return data.notes;
 }
 
+/** A short confirmation for a write the screen already shows. */
+export function toastNoteWritten(message: string) {
+  addToast(message, 'success', 2000);
+}
+
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;

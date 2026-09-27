@@ -11,6 +11,7 @@ import {
   PinboardNoteCard,
   PinboardNoteModal,
   copyNote,
+  toastNoteWritten,
   type PinboardNote,
 } from '../../components/PinboardNote';
 
@@ -184,6 +185,7 @@ export default function PinboardOverviewPage() {
         text,
       })
     ) {
+      toastNoteWritten('Note edited');
       scheduleCacheRefresh();
     } else {
       addToast('Editing failed');
@@ -213,6 +215,7 @@ export default function PinboardOverviewPage() {
         noteId: note.id,
       })
     ) {
+      toastNoteWritten('Note deleted');
       scheduleCacheRefresh();
     } else {
       addToast('Delete failed, please refresh');

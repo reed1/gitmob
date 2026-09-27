@@ -7,6 +7,7 @@ import {
   PinboardNoteCard,
   PinboardNoteModal,
   mutatePinboard,
+  toastNoteWritten,
   type PinboardNote,
 } from '../../../../../components/PinboardNote';
 
@@ -56,6 +57,7 @@ export function PinboardView({ projectId }: { projectId: string }) {
     }
 
     if (board === null) return;
+    toastNoteWritten(modalMode === 'add' ? 'Note added' : 'Note edited');
     setNotes(board);
     closeModal();
   };
@@ -67,6 +69,7 @@ export function PinboardView({ projectId }: { projectId: string }) {
     });
     if (board === null) return;
 
+    toastNoteWritten('Note deleted');
     setNotes(board);
     setDeleting(null);
     setExpandedId(null);

@@ -32,11 +32,15 @@ export function dismissToast(id: number) {
   notify();
 }
 
-export function addToast(message: string, variant: ToastVariant = 'error') {
+export function addToast(
+  message: string,
+  variant: ToastVariant = 'error',
+  durationMs = 5000
+) {
   const id = nextToastId++;
   toasts = [...toasts, { id, message, variant }];
   notify();
-  setTimeout(() => dismissToast(id), 5000);
+  setTimeout(() => dismissToast(id), durationMs);
 }
 
 function mutationKey(url: string, method: string) {
