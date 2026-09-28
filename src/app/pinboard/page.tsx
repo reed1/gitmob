@@ -36,6 +36,14 @@ function noteKey(note: RecentNote): string {
   return `${note.projectId}#${note.id}`;
 }
 
+function matchesQuery(note: RecentNote, query: string): boolean {
+  const haystack = `${note.projectId} ${note.text}`.toLowerCase();
+  return query
+    .toLowerCase()
+    .split(/\s+/)
+    .every((term) => haystack.includes(term));
+}
+
 async function fetchSnapshot(): Promise<Snapshot> {
   const res = await fetch('/api/pinboard');
   const data = await res.json();
@@ -76,10 +84,20 @@ export default function PinboardOverviewPage() {
   const [editing, setEditing] = useState<RecentNote | null>(null);
   const [deleting, setDeleting] = useState<RecentNote | null>(null);
   const [highlightedKey, setHighlightedKey] = useState<string | null>(null);
+  const [searchText, setSearchText] = useState('');
+  const [appliedQuery, setAppliedQuery] = useState('');
+  const searchInput = useRef<HTMLInputElement>(null);
   const cacheRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const snapshot = loaded ?? cached;
-  const notes = useMemo(() => snapshot?.notes ?? [], [snapshot]);
+  const allNotes = useMemo(() => snapshot?.notes ?? [], [snapshot]);
+  const notes = useMemo(
+    () =>
+      appliedQuery.trim() === ''
+        ? allNotes
+        : allNotes.filter((note) => matchesQuery(note, appliedQuery.trim())),
+    [allNotes, appliedQuery]
+  );
   const failures = snapshot?.failures ?? [];
   const highlighted = Math.min(
     Math.max(
@@ -133,6 +151,13 @@ export default function PinboardOverviewPage() {
       )
         return;
 
+      if (e.key === '/') {
+        e.preventDefault();
+        setSearchText('');
+        searchInput.current?.focus();
+        return;
+      }
+
       if (highlighted < 0) return;
 
       if (e.key === 'j') {
@@ -162,6 +187,14 @@ export default function PinboardOverviewPage() {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [modalOpen, actionsReady, highlighted, notes, router]);
+
+  const applySearch = () => {
+    setAppliedQuery(searchText);
+    setHighlightedKey(null);
+    setExpandedKey(null);
+    searchInput.current?.blur();
+    window.scrollTo({ top: 0 });
+  };
 
   const editNote = async (note: RecentNote, text: string) => {
     setEditing(null);
@@ -226,14 +259,35 @@ export default function PinboardOverviewPage() {
     <div className="min-h-dvh">
       <header className="sticky top-0 z-10 bg-background border-b border-foreground/10 px-4 py-3">
         <div className="flex items-center gap-3">
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0 max-w-[45%]">
             <h1 className="text-lg font-semibold">Pinboard</h1>
             <div className="text-xs text-foreground/50 truncate">
               {snapshot === null
                 ? 'Reading every board...'
-                : `${notes.length} most recent notes, all projects`}
+                : appliedQuery.trim() === ''
+                  ? `${notes.length} most recent notes, all projects`
+                  : `${notes.length} of ${allNotes.length} notes match`}
             </div>
           </div>
+          <input
+            ref={searchInput}
+            type="text"
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                applySearch();
+              } else if (e.key === 'Escape') {
+                setSearchText(appliedQuery);
+                e.currentTarget.blur();
+              }
+            }}
+            enterKeyHint="search"
+            placeholder="Search  /"
+            aria-label="Search notes"
+            className="flex-1 min-w-0 rounded-lg border border-foreground/15 bg-foreground/5 px-3 py-1.5 text-sm placeholder:text-foreground/40 focus:outline-none focus:border-blue-400/70"
+          />
           <button
             onClick={load}
             className="p-2 rounded-lg hover:bg-foreground/10 active:opacity-80"

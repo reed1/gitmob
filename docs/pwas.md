@@ -45,6 +45,10 @@ or `n` cancels — and `q` closes the app window. The highlight follows the note
 list: a refresh keeps it on the same note and falls back to the first when that note is gone, and a
 delete passes it to the next note.
 
+`/` empties the search box beside the title and focuses it; Enter applies its words as the filter —
+every word must appear in a note's text or project id — and highlights the first match, so `/` then
+Enter shows every note again. Escape leaves the box without applying it.
+
 ## Routing rules
 
 - Keep every GitMob page under `/app`: a page left at the root would fall outside the manifest scope
