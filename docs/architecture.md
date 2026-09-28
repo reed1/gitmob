@@ -132,6 +132,13 @@ launcher that fired on its own click had nowhere to dictate into. There is exact
 front page, sharing the dialog shell in `src/app/app/Modal.tsx`. A second copy of it on the front
 page is what left half the app without a Speak button.
 
+Its Worktree toggle opens the session in a new worktree instead, on a branch forked off main,
+which is why it lives in the modal and not on either button: both ways in get it. The box beside
+the branch name fills it from the opening prompt — `src/lib/branch-name.ts`, one call to OpenAI's
+`gpt-5.4-mini` with reasoning off, on `OPENAI_API_KEY` from `.env.local`. Not Claude, because it
+is waited on by a tap: `claude -p` spends about twelve seconds starting up before Haiku says a word,
+where this answers in about one. The name is only a suggestion — the box stays editable.
+
 ## Dictation
 
 The Speak button in the Claude tab's modals dictates into the textarea, POSTing Opus straight to

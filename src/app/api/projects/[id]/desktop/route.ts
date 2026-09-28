@@ -13,6 +13,7 @@ import {
 } from '@/lib/desktop';
 import { isCommonCommand } from '@/lib/desktop-keys';
 import { isClaudeMode } from '@/lib/desktop-modes';
+import { createWorktree } from '@/lib/wtman';
 
 export async function GET(
   request: NextRequest,
@@ -51,7 +52,7 @@ export async function POST(
     return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   }
 
-  const { windowId, action, text, command, pressEnter, mode, prompt } =
+  const { windowId, action, text, command, pressEnter, mode, prompt, branch } =
     await request.json();
 
   try {
@@ -63,15 +64,24 @@ export async function POST(
         );
       }
       const initialPrompt = typeof prompt === 'string' ? prompt.trim() : '';
-      const sessionName = project.path.split('/').pop() || id;
+      const newBranch = typeof branch === 'string' ? branch.trim() : '';
+      // A branch means the session gets a worktree of its own, created off main first.
+      const target = newBranch
+        ? await createWorktree(project, newBranch)
+        : { projectId: id, path: project.path };
+      const sessionName = target.path.split('/').pop() || target.projectId;
       await launchDesktopSession({
-        projectId: id,
-        directory: project.path,
+        projectId: target.projectId,
+        directory: target.path,
         mode,
         name: sessionName,
         prompt: initialPrompt,
       });
-      return NextResponse.json({ success: true, name: sessionName });
+      return NextResponse.json({
+        success: true,
+        name: sessionName,
+        projectId: target.projectId,
+      });
     }
 
     if (action === 'open') {

@@ -244,6 +244,12 @@ is `claudex`'s own — `auto`, `edit`, `yolo` — not a `claude --permission-mod
 is named after the project folder, which `--remote-control <name>` passes to `claude` itself; this
 app never sees the URL that publishes, because the Claude app lists the session by that name.
 
+With the modal's Worktree toggle on, a launch is one request: `createWorktree` from
+`src/lib/wtman.ts` runs `wtman open --branch` first — the Wtman tab's Create, forking off main —
+and the two commands above then go to the worktree's id and checkout instead of the project's.
+Nothing opens a session in a worktree that failed to appear, since the launch waits on that open.
+The modal then moves to the worktree's own page, which is where its session is listed.
+
 Both session menus — the list's, and the screen view's where they sit below Send Keys behind a
 separator — end in the common commands from `src/lib/desktop-keys.ts`, each typed into the
 session with `--press-enter`. It is a plain array, so the list grows by editing it. There is no
