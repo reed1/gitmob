@@ -6,6 +6,9 @@ import { apiFetch, addToast } from '../../../lib/api';
 import { copyText } from '../../../lib/clipboard';
 import { useOutsideClick } from '../../../lib/use-outside-click';
 import { goHome } from '../../../lib/app-depth';
+import { imageTypeFor } from '../../../lib/image-types';
+import { useBackToDismiss } from '../../../lib/use-back-to-dismiss';
+import { ImagePreview } from '../../../components/ImagePreview';
 
 interface SharedFile {
   name: string;
@@ -33,6 +36,35 @@ function formatModified(ms: number): string {
     dateStyle: 'medium',
     timeStyle: 'short',
   });
+}
+
+function ImageIcon() {
+  return (
+    <svg
+      className="w-5 h-5 shrink-0 text-emerald-400"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+      />
+    </svg>
+  );
+}
+
+function FileDetails({ entry }: { entry: SharedFile }) {
+  return (
+    <div className="flex-1 min-w-0">
+      <div className="truncate">{entry.name}</div>
+      <div className="text-xs text-foreground/50">
+        {formatSize(entry.size)} · {formatModified(entry.modified)}
+      </div>
+    </div>
+  );
 }
 
 function EntryMenu({
@@ -114,6 +146,64 @@ function EntryMenu({
   );
 }
 
+function ImageOverlay({
+  entry,
+  onClose,
+}: {
+  entry: SharedFile;
+  onClose: () => void;
+}) {
+  const [size, setSize] = useState<{ width: number; height: number } | null>(
+    null
+  );
+
+  return (
+    <div className="fixed inset-0 z-40 flex flex-col bg-background">
+      <header className="border-b border-foreground/10 px-4 py-3 flex items-center gap-3">
+        <button
+          onClick={onClose}
+          className="text-foreground/50 hover:text-foreground transition-colors"
+        >
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
+        </button>
+        <div className="flex-1 min-w-0">
+          <h2 className="text-base font-medium truncate">{entry.name}</h2>
+          <div className="text-xs text-foreground/50">
+            {formatSize(entry.size)}
+            {size && ` · ${size.width} × ${size.height}`}
+          </div>
+        </div>
+        <a
+          href={`/api/files/download?path=${encodeURIComponent(entry.path)}`}
+          download={entry.name}
+          className="px-3 py-1.5 text-sm bg-foreground/10 hover:bg-foreground/20 rounded-lg"
+        >
+          Download
+        </a>
+      </header>
+      <div className="flex-1 min-h-0">
+        <ImagePreview
+          src={`/api/files/image?path=${encodeURIComponent(entry.path)}`}
+          alt={entry.name}
+          onSize={setSize}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function FilesPage() {
   const router = useRouter();
   const [path, setPath] = useState('');
@@ -122,6 +212,7 @@ export default function FilesPage() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<SharedFile | null>(null);
+  const [preview, setPreview] = useState<SharedFile | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
@@ -175,6 +266,8 @@ export default function FilesPage() {
     addToast(`Deleted ${entry.name}`, 'success');
     await load();
   };
+
+  useBackToDismiss(preview !== null, () => setPreview(null));
 
   const goUp = () => {
     const parts = path.split('/').filter(Boolean);
@@ -310,6 +403,14 @@ export default function FilesPage() {
                     />
                   </svg>
                 </button>
+              ) : imageTypeFor(entry.name) ? (
+                <button
+                  onClick={() => setPreview(entry)}
+                  className="flex-1 min-w-0 px-4 py-3 text-left flex items-center gap-3 active:bg-foreground/5"
+                >
+                  <ImageIcon />
+                  <FileDetails entry={entry} />
+                </button>
               ) : (
                 <div className="flex-1 min-w-0 px-4 py-3 flex items-center gap-3">
                   <svg
@@ -325,13 +426,7 @@ export default function FilesPage() {
                       d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                     />
                   </svg>
-                  <div className="flex-1 min-w-0">
-                    <div className="truncate">{entry.name}</div>
-                    <div className="text-xs text-foreground/50">
-                      {formatSize(entry.size)} ·{' '}
-                      {formatModified(entry.modified)}
-                    </div>
-                  </div>
+                  <FileDetails entry={entry} />
                 </div>
               )}
               <EntryMenu
@@ -343,6 +438,10 @@ export default function FilesPage() {
           ))
         )}
       </main>
+
+      {preview && (
+        <ImageOverlay entry={preview} onClose={() => setPreview(null)} />
+      )}
 
       {deleteTarget && (
         <div
