@@ -24,7 +24,7 @@ interface PendingCommit {
   message: string;
   createdAt: string;
   source: string;
-  windowId: string | null;
+  session: { windowId: string; claudePid: string } | null;
   closeSession: boolean;
   staged: StagedSummary | null;
   insideProject: string | null;

@@ -2,6 +2,7 @@ import { readdirSync, readFileSync, unlinkSync, existsSync } from 'fs';
 import { execFileSync } from 'child_process';
 import { join } from 'path';
 import { homedir } from 'os';
+import type { SessionHandle } from './desktop';
 
 /**
  * Commits `gg kitty-commit` parked instead of reviewing, which is what it does whenever the
@@ -24,8 +25,8 @@ export interface PendingCommit {
   message: string;
   createdAt: string;
   source: string;
-  /** The kitty window of the session that parked it, null when it had none. */
-  windowId: string | null;
+  /** The session that parked it, null when it had none. */
+  session: SessionHandle | null;
   /** Whether accepting should also send that session to purgatory — only the default. */
   closeSession: boolean;
 }
@@ -77,6 +78,13 @@ function parsePendingCommit(id: string, text: string): PendingCommit {
   };
 
   const closeSession = headers.get('Close-Session');
+  const windowId = headers.get('Window');
+  const claudePid = headers.get('Pid');
+  if ((windowId === undefined) !== (claudePid === undefined)) {
+    throw new Error(
+      `Pending commit ${id} has one of Window and Pid without the other`
+    );
+  }
 
   return {
     id,
@@ -85,7 +93,10 @@ function parsePendingCommit(id: string, text: string): PendingCommit {
     message: text.slice(separator + 2).trim(),
     createdAt: required('Time'),
     source: required('Source'),
-    windowId: headers.get('Window') ?? null,
+    session:
+      windowId !== undefined && claudePid !== undefined
+        ? { windowId, claudePid }
+        : null,
     closeSession:
       closeSession === undefined ? false : parseBoolean(id, closeSession),
   };

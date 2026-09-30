@@ -27,7 +27,7 @@ export async function GET(
       message: pending.message,
       timestamp: pending.createdAt,
       source: pending.source,
-      windowId: pending.windowId,
+      session: pending.session,
       closeSession: pending.closeSession,
     },
   });

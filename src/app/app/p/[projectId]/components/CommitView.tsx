@@ -37,15 +37,15 @@ function joinMessage(title: string, body: string): string {
  */
 export interface PendingMessage {
   source: string | null;
-  /** The kitty window of the session that sent the message, null when it had none. */
-  windowId: string | null;
+  /** The window and pid of the session that sent the message, null when it had none. */
+  session: { windowId: string; claudePid: string } | null;
   /** Whether committing also sends that session to purgatory. */
   closeSession: boolean;
 }
 
 export const NO_PENDING_MESSAGE: PendingMessage = {
   source: null,
-  windowId: null,
+  session: null,
   closeSession: false,
 };
 
@@ -92,7 +92,7 @@ export function CommitView({
       setCommitBody(body);
       setPending({
         source: data.pending.source,
-        windowId: data.pending.windowId,
+        session: data.pending.session,
         closeSession: data.pending.closeSession,
       });
     }
@@ -127,13 +127,14 @@ export function CommitView({
         await apiFetch(`/api/projects/${projectId}/pending-commit`, {
           method: 'DELETE',
         });
-        if (pending.windowId && pending.closeSession) {
+        if (pending.session && pending.closeSession) {
           await apiFetch(`/api/projects/${projectId}/desktop`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               action: 'purgatory',
-              windowId: pending.windowId,
+              windowId: pending.session.windowId,
+              claudePid: pending.session.claudePid,
             }),
           });
         }
@@ -216,7 +217,7 @@ export function CommitView({
           placeholder="Body (optional)..."
           className="mt-2 w-full p-3 bg-foreground/5 border border-foreground/10 rounded-lg text-sm resize-none h-32"
         />
-        {pending.windowId && (
+        {pending.session && (
           <label className="mt-2 flex items-start gap-2.5 p-3 bg-foreground/5 border border-foreground/10 rounded-lg">
             <input
               type="checkbox"

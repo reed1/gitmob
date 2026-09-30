@@ -227,12 +227,12 @@ worktrees, as `openOnDesktop` on every project.
 - `claudex desktop keys <windowId> <key>` — presses one named key in it, whatever is on screen.
 - `claudex kitty --detach --submit --mode <mode> --directory <path>
 --remote-control <name> "<prompt>"` — opens a new session.
-- `claudex purgatory send --window <windowId>` — ends a session the recoverable way: the
-  window is parked on claudex's own workspace and SIGTERMed 30s later, until `claudex
+- `claudex purgatory send --window <windowId> --pid <pid>` — ends a session the recoverable
+  way: the window is parked on claudex's own workspace and SIGTERMed 30s later, until `claudex
 purgatory cancel` takes it back. The only call here that closes a session rather than
-  reading or typing into one, and the only one outside `claudex desktop`. No pid is passed:
-  claudex finds the process behind the window when it acts, which beats a pid noted hours
-  earlier. Made by the Commit tab, below, not the Desktop section.
+  reading or typing into one, and the only one outside `claudex desktop`. The window and pid
+  were noted together, possibly hours earlier, and claudex closes nothing unless the pid is
+  still Claude in that window. Made by the Commit tab, below, not the Desktop section.
 
 claudex owns the session registry, the kitty remote sockets and the i3 lookup, so this app only
 ever handles window ids and never talks to X itself.
@@ -427,6 +427,7 @@ Cwd: /home/reed/proj/gloss/datasets/oss/entries
 Time: 2026-09-12T13:44:26.040354+00:00
 Source: remote
 Window: 155189262
+Pid: 48213
 Close-Session: false
 
 Add external links to entries and update KBLI to the 2025 edition
@@ -440,14 +441,16 @@ neither of which is true of a subject and a body escaped onto one JSON line. Its
 the subject by git's rule, so no header says so. Both ends split once at the first blank line,
 which is what leaves the body free to contain a `Fix: whatever` line or a `---` fence.
 
-`Cwd:` appears only where `gg c` ran below the toplevel, and `Window:` only where a session
-asked: a `gg c` typed into a plain terminal parks a commit like any other. The uuid carries no
+`Cwd:` appears only where `gg c` ran below the toplevel, and `Window:` and `Pid:` only where a
+session asked: a `gg c` typed into a plain terminal parks a commit like any other. The uuid carries no
 meaning — `Repo:` says which repository this is for, and the reading side matches on it. One
 repository can hold only one parked commit anyway, since the session that parked it holds that
 repository's commit lock until the commit lands.
 
-`Window:` is the kitty window of the Claude Code session that asked, and the whole of what this
-app needs to end it: `claudex purgatory send --window` above. It is what turns the overlay's
+`Window:` and `Pid:` are the kitty window and process of the Claude Code session that asked, and
+the whole of what this app needs to end it: `claudex purgatory send --window --pid` above. They
+are a pair because the answer can come hours later, when X may have handed the window id to
+another terminal; claudex closes nothing unless the pid is still Claude in that window. It is what turns the overlay's
 `t` toggle into a checkbox here — "Close the Claude Code session after committing", defaulting
 to `Close-Session:`, which gg sets from the same ctrl+n no-close flag that sets the toggle's
 default at the desktop.

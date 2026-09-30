@@ -52,8 +52,17 @@ export async function POST(
     return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   }
 
-  const { windowId, action, text, command, pressEnter, mode, prompt, branch } =
-    await request.json();
+  const {
+    windowId,
+    claudePid,
+    action,
+    text,
+    command,
+    pressEnter,
+    mode,
+    prompt,
+    branch,
+  } = await request.json();
 
   try {
     if (action === 'launch') {
@@ -111,7 +120,10 @@ export async function POST(
       await acceptSuggestedPrompt(windowId);
       return NextResponse.json({ success: true });
     } else if (action === 'purgatory') {
-      await sendSessionToPurgatory(windowId);
+      if (typeof claudePid !== 'string' || !claudePid) {
+        return NextResponse.json({ error: 'Missing pid' }, { status: 400 });
+      }
+      await sendSessionToPurgatory({ windowId, claudePid });
       return NextResponse.json({ success: true });
     } else if (action === 'type') {
       if (typeof text !== 'string' || !text) {

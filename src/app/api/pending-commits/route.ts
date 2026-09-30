@@ -95,8 +95,8 @@ export async function POST(request: NextRequest) {
   deletePendingCommit(id);
   releaseCommitLock(pending.repo);
 
-  if (pending.windowId && pending.closeSession) {
-    await sendSessionToPurgatory(pending.windowId);
+  if (pending.session && pending.closeSession) {
+    await sendSessionToPurgatory(pending.session);
   }
 
   return NextResponse.json({ success: true, result });

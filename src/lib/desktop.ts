@@ -9,6 +9,16 @@ export interface SessionContext {
   usedPercentage: number;
 }
 
+/**
+ * A session named for closing later: the window to park and the pid that was drawing in it.
+ * Either alone can move on to another session while the close waits, so they only travel as
+ * a pair, and claudex closes nothing unless the pair still holds.
+ */
+export interface SessionHandle {
+  windowId: string;
+  claudePid: string;
+}
+
 export interface DesktopSession {
   windowId: string;
   title: string;
@@ -200,14 +210,23 @@ export function getSessionScreen(windowId: string): Promise<string> {
 /**
  * The deferred close the commit overlay's `t` toggle makes at the desktop: claudex parks the
  * window on its own workspace and SIGTERMs it 30s later, so `claudex purgatory cancel` takes
- * the session back if the commit was not the end of the work. The window is the whole handle
- * — claudex looks up the process behind it now, rather than trusting a pid noted hours ago.
+ * the session back if the commit was not the end of the work. The handle was noted hours ago,
+ * so claudex checks the pid is still Claude in that window and otherwise closes nothing.
  *
  * Not `claudex desktop`: purgatory is its own command, and this is the one call here that
  * ends a session rather than reading or typing into one.
  */
-export async function sendSessionToPurgatory(windowId: string): Promise<void> {
-  await run('claudex', ['purgatory', 'send', '--window', windowId]);
+export async function sendSessionToPurgatory(
+  session: SessionHandle
+): Promise<void> {
+  await run('claudex', [
+    'purgatory',
+    'send',
+    '--window',
+    session.windowId,
+    '--pid',
+    session.claudePid,
+  ]);
 }
 
 export async function sendSessionCommand(
