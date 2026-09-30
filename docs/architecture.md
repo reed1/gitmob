@@ -69,6 +69,10 @@ nobody can tell apart afterwards. The same trade gg makes when it sends a commit
 Commit tab rather than a review overlay nobody is sitting in front of. Contracts in
 [cli-integrations.md](cli-integrations.md).
 
+Handoffs and pending commits each show their oldest two, with the rest behind a toggle, so a pile of
+parked work never pushes the project list off the screen. Both step aside while the search box has
+text: a search is a look for one project.
+
 ## Parked commits with no project
 
 A commit `gg` parked belongs to a repository, not to a project, and the two are not always the

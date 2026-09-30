@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { addToast, apiFetch } from '../../lib/api';
 import { relativeTime } from '../../lib/relative-time';
 import { useAutoRefresh } from '../../lib/use-auto-refresh';
+import { CollapsedRows } from './CollapsedRows';
 import {
   CLAUDE_MODES,
   ClaudeMode,
@@ -55,7 +56,13 @@ function CleanBadge({ clean }: { clean: boolean | null }) {
  * lead the front page rather than sitting on one project's tab: a briefing waiting for a session
  * to be started is an announcement, and nothing announces it if it has to be gone looking for.
  */
-export function PendingHandoffs({ onLaunched }: { onLaunched: () => void }) {
+export function PendingHandoffs({
+  hidden,
+  onLaunched,
+}: {
+  hidden: boolean;
+  onLaunched: () => void;
+}) {
   const [handoffs, setHandoffs] = useState<PendingHandoff[]>([]);
   // The open handoff is held by id and read back out of the list, so its git status keeps up
   // with the refresh while the box is up — cleaning the tree up in another tab and coming back
@@ -115,16 +122,19 @@ export function PendingHandoffs({ onLaunched }: { onLaunched: () => void }) {
     fetchHandoffs();
   };
 
-  if (handoffs.length === 0) return null;
+  if (handoffs.length === 0 || hidden) return null;
 
   return (
     <>
       <section>
         <h2 className="text-sm font-medium text-amber-300 mb-2">
           Claude Handoff
+          <span className="ml-1.5 text-amber-300/60">{handoffs.length}</span>
         </h2>
-        <div className="space-y-2">
-          {handoffs.map((handoff) => {
+        <CollapsedRows
+          items={handoffs}
+          toggleClassName="text-amber-300/80"
+          renderItem={(handoff) => {
             const [title] = handoff.prompt.split('\n');
             return (
               <button
@@ -142,8 +152,8 @@ export function PendingHandoffs({ onLaunched }: { onLaunched: () => void }) {
                 <div className="mt-1 text-sm line-clamp-2">{title}</div>
               </button>
             );
-          })}
-        </div>
+          }}
+        />
       </section>
 
       {open &&

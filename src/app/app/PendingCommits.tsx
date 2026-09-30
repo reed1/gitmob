@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { addToast, apiFetch } from '../../lib/api';
 import { relativeTime } from '../../lib/relative-time';
 import { useAutoRefresh } from '../../lib/use-auto-refresh';
+import { CollapsedRows } from './CollapsedRows';
 
 interface StagedFile {
   path: string;
@@ -44,7 +45,13 @@ function shortPath(repoPath: string): string {
  * is announced on that project's card instead, which is why nothing here needs a name for
  * the difference: what has a card is on it, and what has none is here.
  */
-export function PendingCommits({ onCommitted }: { onCommitted: () => void }) {
+export function PendingCommits({
+  hidden,
+  onCommitted,
+}: {
+  hidden: boolean;
+  onCommitted: () => void;
+}) {
   const [commits, setCommits] = useState<PendingCommit[]>([]);
   const [open, setOpen] = useState<PendingCommit | null>(null);
   const [message, setMessage] = useState('');
@@ -97,7 +104,7 @@ export function PendingCommits({ onCommitted }: { onCommitted: () => void }) {
     fetchCommits();
   };
 
-  if (commits.length === 0) return null;
+  if (commits.length === 0 || hidden) return null;
 
   const nothingStaged = open?.staged?.files.length === 0;
 
@@ -106,9 +113,12 @@ export function PendingCommits({ onCommitted }: { onCommitted: () => void }) {
       <section>
         <h2 className="text-sm font-medium text-blue-400 mb-2">
           Pending Commits
+          <span className="ml-1.5 text-blue-400/60">{commits.length}</span>
         </h2>
-        <div className="space-y-2">
-          {commits.map((pending) => {
+        <CollapsedRows
+          items={commits}
+          toggleClassName="text-blue-400/80"
+          renderItem={(pending) => {
             const [title] = pending.message.split('\n');
             return (
               <button
@@ -131,8 +141,8 @@ export function PendingCommits({ onCommitted }: { onCommitted: () => void }) {
                 </div>
               </button>
             );
-          })}
-        </div>
+          }}
+        />
       </section>
 
       {open &&

@@ -521,9 +521,17 @@ export default function Home() {
           </Link>
         )}
 
-        <PendingHandoffs onLaunched={() => refreshProjects()} />
+        {/* A search is a look for one project, so parked work steps aside rather than being
+            filtered — it stays mounted, and is back the moment the box is cleared. */}
+        <PendingHandoffs
+          hidden={search !== ''}
+          onLaunched={() => refreshProjects()}
+        />
 
-        <PendingCommits onCommitted={() => refreshProjects()} />
+        <PendingCommits
+          hidden={search !== ''}
+          onCommitted={() => refreshProjects()}
+        />
 
         {error && (
           <div className="p-4 rounded-lg border border-red-500/50 bg-red-500/10">
