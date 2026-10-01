@@ -1,11 +1,11 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { addToast, apiFetch } from '../../../../../lib/api';
 import { relativeTime } from '../../../../../lib/relative-time';
 import { useAutoRefresh } from '../../../../../lib/use-auto-refresh';
-import { useOutsideClick } from '../../../../../lib/use-outside-click';
+import { KebabMenu, KebabMenuItem } from '../../../KebabMenu';
 import { Modal } from '../../../Modal';
 
 interface Worktree {
@@ -72,7 +72,7 @@ function MergeBadge({ worktree }: { worktree: Worktree }) {
   );
 }
 
-function WorktreeMenu({
+function WorktreeKebabMenu({
   worktree,
   isCurrent,
   disabled,
@@ -87,10 +87,6 @@ function WorktreeMenu({
   onOpen: () => void;
   onPick: (pending: Pending) => void;
 }) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-  useOutsideClick(menuOpen, menuRef, () => setMenuOpen(false));
-
   // wtman refuses to delete a folder Cursor has open, since the window goes down with it.
   const blocked =
     worktree.branch === null
@@ -101,86 +97,53 @@ function WorktreeMenu({
   const into = worktree.into ?? 'main checkout';
   const canMerge = blocked === null && worktree.into !== null;
 
-  const item = (
-    label: string,
-    onClick: () => void,
-    enabled = true,
-    danger = false
-  ) => (
-    <button
-      key={label}
-      onClick={() => {
-        setMenuOpen(false);
-        onClick();
-      }}
-      disabled={!enabled}
-      className={`block w-full px-4 py-2 text-sm text-left whitespace-nowrap ${
-        enabled
-          ? `hover:bg-foreground/10 ${danger ? 'text-red-500' : ''}`
-          : 'text-foreground/30 cursor-not-allowed'
-      }`}
-    >
-      {label}
-    </button>
-  );
-
   return (
-    <div className="relative shrink-0" ref={menuRef}>
-      <button
-        onClick={() => setMenuOpen(!menuOpen)}
-        disabled={disabled}
-        className="p-2 rounded-lg bg-foreground/10 active:bg-foreground/20 disabled:opacity-40"
-        aria-label={`Actions for ${worktree.name}`}
+    <KebabMenu label={`Actions for ${worktree.name}`} disabled={disabled}>
+      {worktree.open ? (
+        <KebabMenuItem onSelect={onGoTo} disabled={isCurrent}>
+          {isCurrent ? 'You are here' : 'Go to'}
+        </KebabMenuItem>
+      ) : (
+        <KebabMenuItem onSelect={onOpen} disabled={worktree.branch === null}>
+          Open
+        </KebabMenuItem>
+      )}
+      <KebabMenuItem
+        onSelect={() => onPick({ kind: 'merge', worktree, squash: false })}
+        disabled={!canMerge}
       >
-        <svg
-          className="w-5 h-5 text-foreground/60"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M12 5v.01M12 12v.01M12 19v.01"
-          />
-        </svg>
-      </button>
-      {menuOpen && (
-        <div className="absolute right-0 top-full mt-1 z-20 bg-background border border-foreground/20 rounded-lg shadow-lg py-1 min-w-[200px]">
-          {worktree.open
-            ? item(isCurrent ? 'You are here' : 'Go to', onGoTo, !isCurrent)
-            : item('Open', onOpen, worktree.branch !== null)}
-          {item(
-            `Merge into ${into}`,
-            () => onPick({ kind: 'merge', worktree, squash: false }),
-            canMerge
-          )}
-          {item(
-            `Squash merge into ${into}`,
-            () => onPick({ kind: 'merge', worktree, squash: true }),
-            canMerge
-          )}
-          {item(
-            'Remove worktree',
-            () => onPick({ kind: 'remove', worktree, removeBranch: false }),
-            blocked === null,
-            true
-          )}
-          {item(
-            'Remove worktree and branch',
-            () => onPick({ kind: 'remove', worktree, removeBranch: true }),
-            blocked === null,
-            true
-          )}
-          {blocked && (
-            <div className="px-4 pt-1 pb-2 text-xs text-foreground/40">
-              Merge and remove: {blocked}
-            </div>
-          )}
+        Merge into {into}
+      </KebabMenuItem>
+      <KebabMenuItem
+        onSelect={() => onPick({ kind: 'merge', worktree, squash: true })}
+        disabled={!canMerge}
+      >
+        Squash merge into {into}
+      </KebabMenuItem>
+      <KebabMenuItem
+        onSelect={() =>
+          onPick({ kind: 'remove', worktree, removeBranch: false })
+        }
+        disabled={blocked !== null}
+        danger
+      >
+        Remove worktree
+      </KebabMenuItem>
+      <KebabMenuItem
+        onSelect={() =>
+          onPick({ kind: 'remove', worktree, removeBranch: true })
+        }
+        disabled={blocked !== null}
+        danger
+      >
+        Remove worktree and branch
+      </KebabMenuItem>
+      {blocked && (
+        <div className="px-4 pt-1 pb-2 text-xs text-foreground/40">
+          Merge and remove: {blocked}
         </div>
       )}
-    </div>
+    </KebabMenu>
   );
 }
 
@@ -462,7 +425,7 @@ export function WtmanView({
                   {working.label}
                 </span>
               ) : (
-                <WorktreeMenu
+                <WorktreeKebabMenu
                   worktree={worktree}
                   isCurrent={isCurrent}
                   disabled={busy}

@@ -67,7 +67,7 @@ behind the chord c l h is where they read it when it is. Both ends say whether t
 clean before it is launched, because a session turned loose on uncommitted work leaves changes
 nobody can tell apart afterwards. The same trade gg makes when it sends a commit message to the
 Commit tab rather than a review overlay nobody is sitting in front of. A handoff that can wait goes to its project's pinboard instead,
-from the ⋮ menu on its row. Contracts in [cli-integrations.md](cli-integrations.md).
+from the kebab menu on its row. Contracts in [cli-integrations.md](cli-integrations.md).
 
 Handoffs and pending commits each show their oldest two, with the rest behind a toggle, so a pile of
 parked work never pushes the project list off the screen. Both step aside while the search box has

@@ -1,14 +1,14 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { addToast, apiFetch } from '../../lib/api';
 import { copyText } from '../../lib/clipboard';
-import { useOutsideClick } from '../../lib/use-outside-click';
 import { relativeTime } from '../../lib/relative-time';
 import { useAutoRefresh } from '../../lib/use-auto-refresh';
 import { CollapsedRows } from './CollapsedRows';
+import { KebabMenu, KebabMenuItem } from './KebabMenu';
 import {
   CLAUDE_MODES,
   ClaudeMode,
@@ -54,18 +54,13 @@ function CleanBadge({ clean }: { clean: boolean | null }) {
   }
 }
 
-/** The row's own actions, beside the tap that opens the briefing. */
-function HandoffMenu({
+function HandoffKebabMenu({
   handoff,
   onPinned,
 }: {
   handoff: PendingHandoff;
   onPinned: () => void;
 }) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-  useOutsideClick(menuOpen, menuRef, () => setMenuOpen(false));
-
   const moveToPinboard = async () => {
     const res = await apiFetch('/api/handoffs/pinboard', {
       method: 'POST',
@@ -82,46 +77,11 @@ function HandoffMenu({
     else addToast('Could not copy to the clipboard');
   };
 
-  const item = (label: string, onClick: () => void) => (
-    <button
-      onClick={() => {
-        setMenuOpen(false);
-        onClick();
-      }}
-      className="block w-full px-4 py-2 text-sm text-left whitespace-nowrap hover:bg-foreground/10"
-    >
-      {label}
-    </button>
-  );
-
   return (
-    <div className="relative shrink-0" ref={menuRef}>
-      <button
-        onClick={() => setMenuOpen(!menuOpen)}
-        className="p-2 rounded-lg active:bg-amber-500/20"
-        aria-label={`Actions for the ${handoff.projectId} handoff`}
-      >
-        <svg
-          className="w-5 h-5 text-foreground/60"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M12 5v.01M12 12v.01M12 19v.01"
-          />
-        </svg>
-      </button>
-      {menuOpen && (
-        <div className="absolute right-0 top-full mt-1 z-20 bg-background border border-foreground/20 rounded-lg shadow-lg py-1">
-          {item('Move to pinboard', moveToPinboard)}
-          {item('Copy path', copyPath)}
-        </div>
-      )}
-    </div>
+    <KebabMenu label={`Actions for the ${handoff.projectId} handoff`}>
+      <KebabMenuItem onSelect={moveToPinboard}>Move to pinboard</KebabMenuItem>
+      <KebabMenuItem onSelect={copyPath}>Copy path</KebabMenuItem>
+    </KebabMenu>
   );
 }
 
@@ -229,7 +189,10 @@ export function PendingHandoffs({
                   <div className="mt-1 text-sm line-clamp-2">{title}</div>
                 </button>
                 <div className="pt-1.5">
-                  <HandoffMenu handoff={handoff} onPinned={fetchHandoffs} />
+                  <HandoffKebabMenu
+                    handoff={handoff}
+                    onPinned={fetchHandoffs}
+                  />
                 </div>
               </div>
             );

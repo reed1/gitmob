@@ -18,7 +18,7 @@ import { ClaudeView } from './components/ClaudeView';
 import { PushView } from './components/PushView';
 import { SudoView } from './components/SudoView';
 import { WtmanView } from './components/WtmanView';
-import ProjectContextMenu from '../../ProjectContextMenu';
+import ProjectKebabMenu from '../../ProjectKebabMenu';
 import { useAutoRefresh } from '../../../../lib/use-auto-refresh';
 import { goHome } from '../../../../lib/app-depth';
 
@@ -231,7 +231,7 @@ export default function ProjectPage() {
             </label>
           ) : (
             project && (
-              <ProjectContextMenu
+              <ProjectKebabMenu
                 project={project}
                 onChanged={() => window.location.reload()}
               />

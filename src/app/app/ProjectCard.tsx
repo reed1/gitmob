@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Project } from './types';
-import ProjectContextMenu from './ProjectContextMenu';
+import ProjectKebabMenu from './ProjectKebabMenu';
 
 // 'reed' is the trunk on forks of other people's repositories.
 const DEFAULT_BRANCHES = new Set(['main', 'master', 'reed']);
@@ -190,7 +190,7 @@ export default function ProjectCard({
           </div>
         )}
       </div>
-      <ProjectContextMenu project={project} onChanged={onChanged} />
+      <ProjectKebabMenu project={project} onChanged={onChanged} />
     </div>
   );
 }

@@ -383,7 +383,7 @@ The prompt is parked whole: nothing trims it on the way in. claudex-kitty caps i
 briefing that long fails the launch and stays parked, where the box that edits it is the way to
 cut it down.
 
-A handoff that is not for now goes to its project's pinboard from the ⋮ menu on its row, and stops
+A handoff that is not for now goes to its project's pinboard from the kebab menu on its row, and stops
 being parked once the note has landed. The note reads `Claudex Handoff: <prompt>`; the file's other
 fields ride on the note's metadata rather than its text, through `rv pinboard add --project-id
 <project_id> --metadata <json>`:
