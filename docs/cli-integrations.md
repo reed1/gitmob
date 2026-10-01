@@ -107,7 +107,8 @@ same round trip: a stale "not open" would invite opening a worktree twice.
 overview.
 
 - `rv pinboard list --project-id <projectId> --json` — the notes on that project's board.
-- `rv pinboard add --project-id <projectId> <text>` — adds one.
+- `rv pinboard add --project-id <projectId> [--metadata <json>] <text>` — adds one, with a JSON
+  object on its metadata where the caller has keys to find it by later.
 - `rv pinboard edit --project-id <projectId> <noteId> <text>` — replaces its text.
 - `rv pinboard delete --project-id <projectId> <noteId>` — removes it.
 
@@ -381,6 +382,26 @@ The prompt is parked whole: nothing trims it on the way in. claudex-kitty caps i
 100000 bytes, near the kernel's limit on a single argument, and rejects anything over — a
 briefing that long fails the launch and stays parked, where the box that edits it is the way to
 cut it down.
+
+A handoff that is not for now goes to its project's pinboard from the ⋮ menu on its row, and stops
+being parked once the note has landed. The note reads `Claudex Handoff: <prompt>`; the file's other
+fields ride on the note's metadata rather than its text, through `rv pinboard add --project-id
+<project_id> --metadata <json>`:
+
+```json
+{
+  "claudex_handoff": {
+    "id": "…",
+    "project_id": "gitmob",
+    "directory": "/home/reed/proj/gitmob",
+    "timestamp": "…"
+  }
+}
+```
+
+so `rv pinboard list --json | jq '.[] | select(.metadata.claudex_handoff)'` finds every one put
+off, with enough to park it again. The same menu copies the handoff file's absolute path, for a
+session at the desktop to read it from.
 
 ## Cloning a missing checkout — `gh`
 

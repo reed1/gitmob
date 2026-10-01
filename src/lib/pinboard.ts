@@ -57,11 +57,20 @@ export async function getPinboardNotes(
   }));
 }
 
+/** `metadata` hangs off the note out of its text, for a tool to find the note by later. */
 export async function addPinboardNote(
   projectId: string,
-  text: string
+  text: string,
+  metadata?: Record<string, unknown>
 ): Promise<void> {
-  await runRvPinboard(['add', '--project-id', projectId, text]);
+  const metadataArgs = metadata ? ['--metadata', JSON.stringify(metadata)] : [];
+  await runRvPinboard([
+    'add',
+    '--project-id',
+    projectId,
+    ...metadataArgs,
+    text,
+  ]);
 }
 
 export async function editPinboardNote(

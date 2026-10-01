@@ -1,9 +1,11 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { addToast, apiFetch } from '../../lib/api';
+import { copyText } from '../../lib/clipboard';
+import { useOutsideClick } from '../../lib/use-outside-click';
 import { relativeTime } from '../../lib/relative-time';
 import { useAutoRefresh } from '../../lib/use-auto-refresh';
 import { CollapsedRows } from './CollapsedRows';
@@ -19,6 +21,7 @@ interface PendingHandoff {
   directory: string;
   prompt: string;
   createdAt: string;
+  path: string;
   clean: boolean | null;
 }
 
@@ -49,6 +52,77 @@ function CleanBadge({ clean }: { clean: boolean | null }) {
   } else {
     throw new Error(`Unexpected cleanliness: ${clean}`);
   }
+}
+
+/** The row's own actions, beside the tap that opens the briefing. */
+function HandoffMenu({
+  handoff,
+  onPinned,
+}: {
+  handoff: PendingHandoff;
+  onPinned: () => void;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  useOutsideClick(menuOpen, menuRef, () => setMenuOpen(false));
+
+  const moveToPinboard = async () => {
+    const res = await apiFetch('/api/handoffs/pinboard', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ handoffId: handoff.id }),
+    });
+    if (!res.ok) return;
+    addToast(`Moved to ${handoff.projectId}'s pinboard`, 'success');
+    onPinned();
+  };
+
+  const copyPath = async () => {
+    if (await copyText(handoff.path)) addToast('Copied the path', 'success');
+    else addToast('Could not copy to the clipboard');
+  };
+
+  const item = (label: string, onClick: () => void) => (
+    <button
+      onClick={() => {
+        setMenuOpen(false);
+        onClick();
+      }}
+      className="block w-full px-4 py-2 text-sm text-left whitespace-nowrap hover:bg-foreground/10"
+    >
+      {label}
+    </button>
+  );
+
+  return (
+    <div className="relative shrink-0" ref={menuRef}>
+      <button
+        onClick={() => setMenuOpen(!menuOpen)}
+        className="p-2 rounded-lg active:bg-amber-500/20"
+        aria-label={`Actions for the ${handoff.projectId} handoff`}
+      >
+        <svg
+          className="w-5 h-5 text-foreground/60"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 5v.01M12 12v.01M12 19v.01"
+          />
+        </svg>
+      </button>
+      {menuOpen && (
+        <div className="absolute right-0 top-full mt-1 z-20 bg-background border border-foreground/20 rounded-lg shadow-lg py-1">
+          {item('Move to pinboard', moveToPinboard)}
+          {item('Copy path', copyPath)}
+        </div>
+      )}
+    </div>
+  );
 }
 
 /**
@@ -137,20 +211,27 @@ export function PendingHandoffs({
           renderItem={(handoff) => {
             const [title] = handoff.prompt.split('\n');
             return (
-              <button
+              <div
                 key={handoff.id}
-                onClick={() => openHandoff(handoff)}
-                className="w-full text-left p-3 rounded-lg border border-amber-500/40 bg-amber-500/10 active:opacity-80"
+                className="flex items-start gap-1 pr-1 rounded-lg border border-amber-500/40 bg-amber-500/10"
               >
-                <div className="flex items-center gap-2 text-xs text-foreground/50">
-                  <span className="font-medium text-amber-300">
-                    {handoff.projectId}
-                  </span>
-                  <CleanBadge clean={handoff.clean} />
-                  <span>{relativeTime(handoff.createdAt)}</span>
+                <button
+                  onClick={() => openHandoff(handoff)}
+                  className="flex-1 min-w-0 text-left p-3 active:opacity-80"
+                >
+                  <div className="flex items-center gap-2 text-xs text-foreground/50">
+                    <span className="font-medium text-amber-300">
+                      {handoff.projectId}
+                    </span>
+                    <CleanBadge clean={handoff.clean} />
+                    <span>{relativeTime(handoff.createdAt)}</span>
+                  </div>
+                  <div className="mt-1 text-sm line-clamp-2">{title}</div>
+                </button>
+                <div className="pt-1.5">
+                  <HandoffMenu handoff={handoff} onPinned={fetchHandoffs} />
                 </div>
-                <div className="mt-1 text-sm line-clamp-2">{title}</div>
-              </button>
+              </div>
             );
           }}
         />

@@ -20,6 +20,8 @@ export interface PendingHandoff {
   directory: string;
   prompt: string;
   createdAt: string;
+  /** Where claudex parked it on this machine, for a desktop session to read it from. */
+  path: string;
 }
 
 interface HandoffFile {
@@ -49,6 +51,7 @@ function readHandoffFile(id: string): PendingHandoff {
     directory: data.directory,
     prompt: data.prompt,
     createdAt: data.timestamp,
+    path: handoffPath(id),
   };
 }
 
@@ -77,4 +80,26 @@ export function readPendingHandoff(id: string): PendingHandoff | null {
 export function deletePendingHandoff(id: string): void {
   const path = handoffPath(id);
   if (existsSync(path)) unlinkSync(path);
+}
+
+/**
+ * A handoff put off onto its project's pinboard: the note reads as the briefing, and its metadata
+ * carries the handoff file's other fields, so `metadata.claudex_handoff` finds every one put off
+ * with enough to park it again.
+ */
+export function handoffPinboardNote(handoff: PendingHandoff): {
+  text: string;
+  metadata: Record<string, unknown>;
+} {
+  return {
+    text: `Claudex Handoff: ${handoff.prompt.trim()}`,
+    metadata: {
+      claudex_handoff: {
+        id: handoff.id,
+        project_id: handoff.projectId,
+        directory: handoff.directory,
+        timestamp: handoff.createdAt,
+      },
+    },
+  };
 }
