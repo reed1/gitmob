@@ -72,8 +72,9 @@ async function postPinboard(
 
 /**
  * The cached snapshot paints on open; edits and deletes wait for the first load and then act
- * on a list of this page's own. They are optimistic and never reconciled with the server: a
- * failed one leaves its text on screen to be copied, and only a reload shows the boards as
+ * on a list of this page's own. They are optimistic and never reconciled with the server: the
+ * success toast comes with the change on screen, the server only speaks up when it fails, and
+ * a failed write leaves its text on screen to be copied — only a reload shows the boards as
  * they are. Successful writes refresh the cache in the background, never the screen.
  */
 export default function PinboardOverviewPage() {
@@ -210,6 +211,7 @@ export default function PinboardOverviewPage() {
             ),
           }
     );
+    toastNoteWritten('Note edited');
 
     if (
       await postPinboard(note.projectId, {
@@ -218,7 +220,6 @@ export default function PinboardOverviewPage() {
         text,
       })
     ) {
-      toastNoteWritten('Note edited');
       scheduleCacheRefresh();
     } else {
       addToast('Editing failed');
@@ -241,6 +242,7 @@ export default function PinboardOverviewPage() {
             notes: prev.notes.filter((n) => noteKey(n) !== noteKey(note)),
           }
     );
+    toastNoteWritten('Note deleted');
 
     if (
       await postPinboard(note.projectId, {
@@ -248,7 +250,6 @@ export default function PinboardOverviewPage() {
         noteId: note.id,
       })
     ) {
-      toastNoteWritten('Note deleted');
       scheduleCacheRefresh();
     } else {
       addToast('Delete failed, please refresh');

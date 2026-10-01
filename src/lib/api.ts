@@ -6,7 +6,12 @@ export interface Toast {
   id: number;
   message: string;
   variant: ToastVariant;
+  durationMs: number;
+  leaving: boolean;
 }
+
+/** How long a dismissed toast stays mounted to play its exit animation. */
+export const TOAST_EXIT_MS = 180;
 
 let activeRequests = 0;
 let toasts: Toast[] = [];
@@ -28,8 +33,15 @@ export function getSnapshot() {
 }
 
 export function dismissToast(id: number) {
-  toasts = toasts.filter((t) => t.id !== id);
+  const toast = toasts.find((t) => t.id === id);
+  if (toast === undefined || toast.leaving) return;
+
+  toasts = toasts.map((t) => (t.id === id ? { ...t, leaving: true } : t));
   notify();
+  setTimeout(() => {
+    toasts = toasts.filter((t) => t.id !== id);
+    notify();
+  }, TOAST_EXIT_MS);
 }
 
 export function addToast(
@@ -38,7 +50,7 @@ export function addToast(
   durationMs = 5000
 ) {
   const id = nextToastId++;
-  toasts = [...toasts, { id, message, variant }];
+  toasts = [...toasts, { id, message, variant, durationMs, leaving: false }];
   notify();
   setTimeout(() => dismissToast(id), durationMs);
 }
