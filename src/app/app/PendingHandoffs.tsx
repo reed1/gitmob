@@ -173,7 +173,7 @@ export function PendingHandoffs({
             return (
               <div
                 key={handoff.id}
-                className="flex items-start gap-1 pr-1 rounded-lg border border-amber-500/40 bg-amber-500/10"
+                className="flex items-center gap-1 pr-4 rounded-lg border border-amber-500/40 bg-amber-500/10"
               >
                 <button
                   onClick={() => openHandoff(handoff)}
@@ -188,12 +188,7 @@ export function PendingHandoffs({
                   </div>
                   <div className="mt-1 text-sm line-clamp-2">{title}</div>
                 </button>
-                <div className="pt-1.5">
-                  <HandoffKebabMenu
-                    handoff={handoff}
-                    onPinned={fetchHandoffs}
-                  />
-                </div>
+                <HandoffKebabMenu handoff={handoff} onPinned={fetchHandoffs} />
               </div>
             );
           }}
