@@ -207,11 +207,16 @@ export function PendingHandoffs({
             >
               <div className="px-4 py-3 border-b border-foreground/10">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-medium truncate">{open.projectId}</h3>
-                  <CleanBadge clean={open.clean} />
-                </div>
-                <div className="text-xs text-foreground/50 truncate">
-                  {open.directory}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium truncate">{open.projectId}</h3>
+                      <CleanBadge clean={open.clean} />
+                    </div>
+                    <div className="text-xs text-foreground/50 truncate">
+                      {open.directory}
+                    </div>
+                  </div>
+                  <HandoffKebabMenu handoff={open} onPinned={fetchHandoffs} />
                 </div>
                 {/* Dirty is a warning and not a refusal — the briefing may well be about those
                     very changes — so the Changes tab is one tap away and Launch stays live. The
