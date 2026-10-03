@@ -128,6 +128,19 @@ export async function getProjectsWithWorktrees(): Promise<ProjectList> {
   };
 }
 
+/**
+ * The configured projects with anything open on the desktop — themselves or a worktree of
+ * theirs. What belongs to the repo rather than to one checkout of it is asked of these.
+ */
+export function openRepos({ projects, openIds }: ProjectList): Project[] {
+  const openCanonicalIds = new Set(
+    projects.filter((p) => openIds.includes(p.id)).map((p) => p.canonicalId)
+  );
+  return projects.filter(
+    (p) => p.id === p.canonicalId && openCanonicalIds.has(p.id)
+  );
+}
+
 export function expandPath(path: string): string {
   return path.replace(/^~/, homedir());
 }

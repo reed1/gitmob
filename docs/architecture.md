@@ -47,6 +47,15 @@ process covering every project. The branch and the GitHub link are read off the 
 for every project. What still costs a spawn per project is asked only of the projects open on the
 desktop: `git status`, which turns a card green, and the env check.
 
+Nor does it wait on the network. The list is reopened all day, going back and forth between
+tabs, and sudo (`pt` asking abubot), monitored sites (upmon) and env checks (`rpass`, which
+decrypts) are slow to answer and slow to change. `src/lib/background-cache.ts` answers them from
+memory and, once an answer is past its age — an hour for sudo and env checks, five minutes for
+sites — fetches the next one behind the request that found it stale. A fetch that fails keeps the
+last answer. Toggling sudo from the Sudo tab refreshes the sudo answer at once, and **Refresh sudo,
+sites and env checks** in the front page's menu refreshes all three and says which could not be.
+The Sudo tab and the Run tab's sites still ask live.
+
 A project is closed once its work is committed, so a closed one is listed as clean. **Scan for
 uncommitted changes**, in the front page's menu, asks `git status` of every closed checkout and
 lists the dirty ones above the project list to open and commit; their cards go green as an open

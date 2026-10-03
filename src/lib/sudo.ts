@@ -1,5 +1,6 @@
 import { execFile, spawn } from 'child_process';
 import { Project } from './projects';
+import { backgroundCache } from './background-cache';
 
 export type SudoAction = 'on' | 'off' | 'status';
 
@@ -52,22 +53,28 @@ export async function getSudoTargets(project: Project): Promise<SudoTarget[]> {
   }));
 }
 
-export async function getSudoEnabledProjects(): Promise<
-  Record<string, boolean>
-> {
-  let rows: PtSudoRow[];
-  try {
-    rows = await listSudo(['--all-projects']);
-  } catch {
-    // The project list still has to render without pt; the Sudo tab reports the failure.
-    return {};
+// abubot is a network round trip on top of pt's own start-up, and the project list is
+// reopened all day; the Sudo tab still asks pt live.
+const sudoEnabled = backgroundCache(
+  'sudo.enabled',
+  60 * 60 * 1000,
+  async () => {
+    const enabled: Record<string, boolean> = {};
+    for (const row of await listSudo(['--all-projects'])) {
+      if (row.enabled) enabled[row.project] = true;
+    }
+    return enabled;
   }
+);
 
-  const enabled: Record<string, boolean> = {};
-  for (const row of rows) {
-    if (row.enabled) enabled[row.project] = true;
-  }
-  return enabled;
+/** Projects with passwordless sudo on — from memory, refreshed hourly and on every toggle. */
+export function getSudoEnabledProjects(): Promise<Record<string, boolean>> {
+  // The project list still has to render without pt; the Sudo tab reports the failure.
+  return sudoEnabled.get().catch(() => ({}));
+}
+
+export function refreshSudoEnabledProjects(): Promise<Record<string, boolean>> {
+  return sudoEnabled.refresh();
 }
 
 const ANSI_COLOR = new RegExp('\\u001b\\[[0-9;]*m', 'g');

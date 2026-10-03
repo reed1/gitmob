@@ -49,39 +49,64 @@ function runCheck(cwd: string): Promise<EnvStatus | null> {
   });
 }
 
+// Route handlers can each get their own copy of a module; a check already running is one
+// to wait for, not to start again.
+const IN_FLIGHT = Symbol.for('gitmob.envChecksInFlight');
+const globalChecks = globalThis as unknown as {
+  [IN_FLIGHT]?: Map<string, Promise<void>>;
+};
+const inFlight = (globalChecks[IN_FLIGHT] ??= new Map());
+
+function check(project: { id: string; path: string }): Promise<void> {
+  let running = inFlight.get(project.id);
+  if (running === undefined) {
+    running = runCheck(project.path)
+      .then((status) => {
+        // A failed check must not be cached as "no findings" for an hour: keep the stale
+        // status and retry on the next request.
+        if (status === null) {
+          throw new Error(`rpass env check failed for ${project.id}`);
+        }
+        writeCache({
+          ...readCache(),
+          [project.id]: { status, checkedAt: Date.now() },
+        });
+      })
+      .finally(() => inFlight.delete(project.id));
+    inFlight.set(project.id, running);
+  }
+  return running;
+}
+
 /**
  * `rpass env check` from a project's checkout checks that one project. It decrypts saved env
- * files, so each result is cached on disk and only rechecked once it is older than an hour,
- * and only the projects asked about — the ones open on the desktop — are checked at all.
- * Keyed by project id.
+ * files, so each result is kept on disk, and the project list answers from that alone: an
+ * answer older than an hour is still the one it gets, with a new check started behind it. Only
+ * the projects asked about — the ones open on the desktop — are checked at all. Keyed by
+ * project id.
  */
-export async function getEnvCheckFailures(
+export function getEnvCheckFailures(
   projects: { id: string; path: string }[],
   now: number = Date.now()
-): Promise<Record<string, boolean>> {
+): Record<string, boolean> {
   const cache = readCache();
-  const due = projects.filter(
-    (project) =>
-      !cache[project.id] || now - cache[project.id].checkedAt >= CACHE_TTL_MS
-  );
-
-  const fresh = await Promise.all(
-    due.map(async (project) => ({
-      id: project.id,
-      status: await runCheck(project.path),
-    }))
-  );
-  // A failed check must not be cached as "no findings" for an hour: keep serving the stale
-  // status and retry on the next request.
-  const checked = fresh.filter((check) => check.status !== null);
-  for (const { id, status } of checked) {
-    cache[id] = { status: status as EnvStatus, checkedAt: now };
+  for (const project of projects) {
+    const cached = cache[project.id];
+    if (!cached || now - cached.checkedAt >= CACHE_TTL_MS) {
+      check(project).catch(() => {});
+    }
   }
-  if (checked.length > 0) writeCache(cache);
 
   const failures: Record<string, boolean> = {};
   for (const { id } of projects) {
     if (cache[id]) failures[id] = cache[id].status !== 'ok';
   }
   return failures;
+}
+
+/** Checks every one of `projects` now, and resolves once their answers are on disk. */
+export async function refreshEnvChecks(
+  projects: { id: string; path: string }[]
+): Promise<void> {
+  await Promise.all(projects.map(check));
 }

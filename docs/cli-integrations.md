@@ -170,7 +170,8 @@ server chips only suggested a prerequisite that is not one.
 `src/lib/sudo.ts`, read by the Sudo tab and the project list.
 
 - `pt sudo list --json`, with cwd set to the project — the targets of one project.
-- `pt sudo list --all-projects --json` — the project-list sweep, one call to abubot for all of them.
+- `pt sudo list --all-projects --json` — the project-list sweep, one call to abubot for all of them,
+  kept in memory and refreshed behind the list — see [architecture.md](architecture.md).
 - `pt sudo <target> on|off|status` — does the SSH work.
 
 `pt` owns the target-to-server mapping; the flags themselves are abubot's, which pt reads over
@@ -186,8 +187,9 @@ a lie about a security setting.
 
 Asked only of the projects open on the desktop, under `canonicalId`, and run in the configured
 project's checkout. rpass decrypts the saved env files to answer, so each result is kept in
-`~/.local/share/gitmob/env-checks.json` for an hour; a check that fails keeps the last answer
-rather than caching a clean one.
+`~/.local/share/gitmob/env-checks.json`, and one older than an hour is rechecked behind the list
+rather than in front of it; a check that fails keeps the last answer rather than caching a clean
+one.
 
 ## Run — `rv`
 

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getProjectsWithWorktrees } from '@/lib/projects';
+import { getProjectsWithWorktrees, openRepos } from '@/lib/projects';
 import { getRepoSummary } from '@/lib/git';
 import { getAllRunning } from '@/lib/run';
 import { getDownSites } from '@/lib/upmon';
@@ -45,17 +45,11 @@ export async function GET() {
   const openCheckouts = projects.filter(
     (p) => openIds.has(p.id) && checkouts.get(p.id)
   );
-  // Env checks belong to the repo, so a worktree is checked as the project it came from.
-  const openCanonical = projects.filter(
-    (p) =>
-      p.id === p.canonicalId &&
-      projects.some((open) => openIds.has(open.id) && open.canonicalId === p.id)
-  );
+  const envCheckFailures = getEnvCheckFailures(openRepos(projectList));
 
   const [
     allRunningProcesses,
     downSites,
-    envCheckFailures,
     sudoEnabled,
     desktopSessions,
     claudeUsage,
@@ -65,7 +59,6 @@ export async function GET() {
   ] = await Promise.all([
     getAllRunning(),
     getDownSites(),
-    getEnvCheckFailures(openCanonical),
     getSudoEnabledProjects(),
     getClaudeSessionCounts(),
     getClaudeUsage(),

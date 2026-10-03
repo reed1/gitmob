@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getProject } from '@/lib/projects';
-import { getSudoTargets, runPtSudo, SudoAction } from '@/lib/sudo';
+import {
+  getSudoTargets,
+  refreshSudoEnabledProjects,
+  runPtSudo,
+  SudoAction,
+} from '@/lib/sudo';
 
 export async function GET(
   _request: NextRequest,
@@ -53,6 +58,8 @@ export async function POST(
   }
 
   const result = await runPtSudo(project, target, action as SudoAction);
+  // Even a failed action may have moved abubot's flag, so the project list asks again.
+  refreshSudoEnabledProjects().catch(() => {});
   // A failed refresh must not mask the action's own result; the client keeps its last state.
   const targets = await getSudoTargets(project).catch(() => undefined);
 
