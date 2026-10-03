@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { apiFetch } from '../../../../../lib/api';
 import { imageTypeFor } from '../../../../../lib/image-types';
 import { ImagePreview } from '../../../../../components/ImagePreview';
+import { HighlightedCode } from './HighlightedCode';
 
 interface FileContent {
   content: string;
@@ -200,14 +201,7 @@ function FileViewer({
           content.lineCount === 0 ? (
             <div className="p-4 text-center text-foreground/30">Empty file</div>
           ) : (
-            <div
-              className={`text-xs font-mono [&_pre]:!bg-transparent [&_pre]:p-4 [&_code]:!bg-transparent ${
-                wordWrap
-                  ? '[&_pre]:whitespace-pre-wrap'
-                  : '[&_pre]:overflow-x-auto'
-              }`}
-              dangerouslySetInnerHTML={{ __html: content.highlighted }}
-            />
+            <HighlightedCode html={content.highlighted} wordWrap={wordWrap} />
           )
         ) : error ? (
           <div className="p-4 text-center text-foreground/50">{error}</div>

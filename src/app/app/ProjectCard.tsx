@@ -190,7 +190,11 @@ export default function ProjectCard({
           </div>
         )}
       </div>
-      <ProjectKebabMenu project={project} onChanged={onChanged} />
+      <ProjectKebabMenu
+        project={project}
+        hasChanges={project.editing}
+        onChanged={onChanged}
+      />
     </div>
   );
 }

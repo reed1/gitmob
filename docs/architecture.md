@@ -3,7 +3,7 @@
 ## Layout
 
 - `src/lib` — core logic (`git.ts`, `run.ts`, `projects.ts`, `files.ts`, `cli-jobs.ts`,
-  `notifications.ts`, `recall.ts`, `browser.ts`, `pending-commits.ts`)
+  `notifications.ts`, `recall.ts`, `browser.ts`, `pending-commits.ts`, `review.ts`)
 - `src/app/api` — API routes (projects, cli jobs, pinboard, dooit todos, the agent's browser)
 - `src/app/app` — the GitMob PWA; `src/app/pinboard` — the pinboard PWA
 - `src/components` — UI shared across pages (`PinboardNote.tsx`, the note card and its modals;
@@ -11,6 +11,25 @@
 - `src/app/app/p/[projectId]/components` — project views (FileBrowser, ChangesView, CommitView,
   RunView, CLIView, DooitView, ClaudeView, PushView, SudoView, WtmanView)
 - `src/proxy.ts` — host-based routing between the two PWAs, see [pwas.md](pwas.md)
+
+## Review
+
+`/app/p/<projectId>/review` is every change on one page to scroll through, instead of opening each
+diff on the Changes tab in turn. It is reached from the project's kebab menu — on its card and in
+its header, whichever tab is open — which offers it only while the tree is dirty. What it shows
+is what the next commit would be: the staged files when anything is staged, otherwise the whole
+dirty tree, untracked files included. A conflicted file is not staged: its markers are in the
+working tree, and that is where they are read from.
+
+A new file is shown as itself, highlighted as the Files tab would, not as a column of `+` lines;
+a deleted one stays a diff. Files on the shared exclude list — see
+[cli-integrations.md](cli-integrations.md) — and binaries keep a row naming them and nothing more,
+so a change nobody reads is still a change nobody misses.
+
+Changed lines are counted from `--numstat` before a single diff is read, and past 2,000 the page
+asks first: that is about where one page of diffs starts to stall a phone. The count stops at the
+first file that crosses the line, so a tree with a stray generated file costs no more to refuse
+than a small one.
 
 ## Projects
 

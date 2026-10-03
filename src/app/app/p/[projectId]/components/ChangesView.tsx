@@ -5,6 +5,7 @@ import { useAutoRefresh } from '../../../../../lib/use-auto-refresh';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { GitStatus } from '../types';
 import { apiFetch } from '../../../../../lib/api';
+import { DiffLines } from './DiffLines';
 
 export function ChangesView({
   projectId,
@@ -232,29 +233,7 @@ export function ChangesView({
           ref={diffScrollRef}
           className="flex-1 min-h-0 overflow-auto p-4 text-xs font-mono"
         >
-          <div
-            className={
-              wordWrap
-                ? 'whitespace-pre-wrap'
-                : 'whitespace-pre w-max min-w-full'
-            }
-          >
-            {diff.split('\n').map((line, i) => {
-              let className = 'text-foreground/70';
-              if (line.startsWith('+') && !line.startsWith('+++')) {
-                className = 'text-green-400 bg-green-400/10';
-              } else if (line.startsWith('-') && !line.startsWith('---')) {
-                className = 'text-red-400 bg-red-400/10';
-              } else if (line.startsWith('@@')) {
-                className = 'text-blue-400';
-              }
-              return (
-                <div key={i} className={className}>
-                  {line}
-                </div>
-              );
-            })}
-          </div>
+          <DiffLines diff={diff} wordWrap={wordWrap} />
         </div>
         {confirmDiscard && (
           <div

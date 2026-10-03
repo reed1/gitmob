@@ -581,3 +581,15 @@ one never answers at all. Alone on its own workspace, that costs nothing.
 
 What it reaches is the **page**, not Chrome: no omnibox behind the URL box, no extension popup,
 no file picker, no HTTP-auth dialog. Those are still `chrome-attach` and a laptop.
+
+## Diff exclusions — `~/.config/git/diff-exclude.yaml`
+
+`src/lib/diff-exclude.ts`, read by the review page.
+
+The files whose changes nobody reads line by line — lockfiles, notebooks, vaults — listed once in
+the dotfiles and read by everything that shows or acts on a diff: gg leaves them out of the AI
+commit message, the powerts formatter leaves them alone, and the review page shows each as a
+row with no diff. A flat YAML list of globs as in `.gitignore`: a pattern without a slash matches
+the file name in any directory, `*` stays within one, `**` crosses them, and both match names
+starting with a dot. picomatch here and in powerts, git's `glob` pathspec magic in gg — so a
+pattern means the same thing to all three.

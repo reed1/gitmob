@@ -18,6 +18,7 @@ import { ClaudeView } from './components/ClaudeView';
 import { PushView } from './components/PushView';
 import { SudoView } from './components/SudoView';
 import { WtmanView } from './components/WtmanView';
+import { WrapToggle } from './components/WrapToggle';
 import ProjectKebabMenu from '../../ProjectKebabMenu';
 import { useAutoRefresh } from '../../../../lib/use-auto-refresh';
 import { goHome } from '../../../../lib/app-depth';
@@ -165,6 +166,10 @@ export default function ProjectPage() {
     );
   }
 
+  const changeCount =
+    status === null
+      ? 0
+      : status.staged.length + status.unstaged.length + status.untracked.length;
   const hasPushTargets = Object.keys(project?.push ?? {}).length > 0;
   const pushTabs = new Set<string>(['push', 'sudo']);
   const visibleTabs = tabs.filter((t) => !pushTabs.has(t.id) || hasPushTargets);
@@ -207,32 +212,12 @@ export default function ProjectPage() {
           </div>
           {(tab === 'changes' && showingDiff) ||
           (tab === 'files' && showingFile) ? (
-            <label className="flex items-center gap-2 text-sm text-foreground/60 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={wordWrap}
-                onChange={(e) => setWordWrap(e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-5 h-5 rounded border-2 border-foreground/30 peer-checked:bg-foreground peer-checked:border-foreground flex items-center justify-center">
-                {wordWrap && (
-                  <svg
-                    className="w-3 h-3 text-background"
-                    viewBox="0 0 12 12"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <path d="M2 6l3 3 5-5" />
-                  </svg>
-                )}
-              </div>
-              Wrap
-            </label>
+            <WrapToggle wordWrap={wordWrap} setWordWrap={setWordWrap} />
           ) : (
             project && (
               <ProjectKebabMenu
                 project={project}
+                hasChanges={changeCount > 0}
                 onChanged={() => window.location.reload()}
               />
             )
@@ -253,13 +238,7 @@ export default function ProjectPage() {
               >
                 {label}
                 {id === 'changes' && status && (
-                  <span className="ml-1 text-xs">
-                    (
-                    {status.staged.length +
-                      status.unstaged.length +
-                      status.untracked.length}
-                    )
-                  </span>
+                  <span className="ml-1 text-xs">({changeCount})</span>
                 )}
               </button>
             ))}

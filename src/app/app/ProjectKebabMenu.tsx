@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { addToast, apiFetch } from '../../lib/api';
 import { CloneModal } from './CloneModal';
 import { KebabMenu, KebabMenuItem } from './KebabMenu';
@@ -20,11 +21,18 @@ interface Props {
     urls?: Record<string, string>;
     githubUrl: string | null;
   };
+  /** The tree is dirty: there is something to review. */
+  hasChanges: boolean;
   /** The project's state moved on — cloned, or opened or closed on the desktop. */
   onChanged: () => void;
 }
 
-export default function ProjectKebabMenu({ project, onChanged }: Props) {
+export default function ProjectKebabMenu({
+  project,
+  hasChanges,
+  onChanged,
+}: Props) {
+  const router = useRouter();
   const [urlModalOpen, setUrlModalOpen] = useState(false);
   const [newSessionOpen, setNewSessionOpen] = useState(false);
   const [cloneOpen, setCloneOpen] = useState(false);
@@ -69,6 +77,13 @@ export default function ProjectKebabMenu({ project, onChanged }: Props) {
               Open
             </KebabMenuItem>
           )
+        )}
+        {hasChanges && (
+          <KebabMenuItem
+            onSelect={() => router.push(`/app/p/${project.id}/review`)}
+          >
+            Review
+          </KebabMenuItem>
         )}
         <KebabMenuItem
           onSelect={() => setUrlModalOpen(true)}
