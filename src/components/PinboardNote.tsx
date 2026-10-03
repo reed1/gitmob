@@ -65,7 +65,8 @@ const ACTION_CLASS =
 /**
  * Three lines and a tap target. Expanding is what un-clamps the text *and* uncovers the
  * actions, so every note has a chevron whether or not it overflows — a one-line note is
- * still one that gets copied, edited or thrown away.
+ * still one that gets handed to Claude, edited or thrown away. Copying needs no button: a
+ * long tap on the text selects it.
  *
  * `label` is what the card is filed under: the project on the overview, the note id on a
  * project's own board. It sits inside the toggle, so a link in it stops its own click.
@@ -77,6 +78,7 @@ export function PinboardNoteCard({
   highlighted = false,
   actionsDisabled = false,
   onToggle,
+  onClaude,
   onEdit,
   onDelete,
 }: {
@@ -86,6 +88,7 @@ export function PinboardNoteCard({
   highlighted?: boolean;
   actionsDisabled?: boolean;
   onToggle: () => void;
+  onClaude: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -135,8 +138,8 @@ export function PinboardNoteCard({
 
       {expanded && (
         <div className="flex justify-end gap-2 px-3 py-2 border-t border-foreground/10">
-          <button onClick={() => copyNote(note)} className={ACTION_CLASS}>
-            Copy
+          <button onClick={onClaude} className={ACTION_CLASS}>
+            Claude
           </button>
           <button
             onClick={onEdit}

@@ -10,6 +10,7 @@ import {
   toastNoteWritten,
   type PinboardNote,
 } from '../../../../../components/PinboardNote';
+import { NewSessionModal } from '../../../NewSessionModal';
 
 export function PinboardView({ projectId }: { projectId: string }) {
   const [notes, setNotes] = useState<PinboardNote[]>([]);
@@ -20,6 +21,7 @@ export function PinboardView({ projectId }: { projectId: string }) {
   const [modalMode, setModalMode] = useState<'add' | 'edit' | null>(null);
   const [editingNote, setEditingNote] = useState<PinboardNote | null>(null);
   const [deleting, setDeleting] = useState<PinboardNote | null>(null);
+  const [claudeNote, setClaudeNote] = useState<PinboardNote | null>(null);
 
   const fetchNotes = useCallback(async () => {
     const res = await fetch(`/api/projects/${projectId}/pinboard`);
@@ -122,6 +124,7 @@ export function PinboardView({ projectId }: { projectId: string }) {
             onToggle={() =>
               setExpandedId(expandedId === note.id ? null : note.id)
             }
+            onClaude={() => setClaudeNote(note)}
             onEdit={() => {
               setModalMode('edit');
               setEditingNote(note);
@@ -142,6 +145,15 @@ export function PinboardView({ projectId }: { projectId: string }) {
           initialText={editingNote?.text ?? ''}
           onSave={handleModalSave}
           onClose={closeModal}
+        />
+      )}
+
+      {claudeNote !== null && (
+        <NewSessionModal
+          projectId={projectId}
+          canonicalId={projectId}
+          initialPrompt={claudeNote.text}
+          onClose={() => setClaudeNote(null)}
         />
       )}
 

@@ -14,6 +14,7 @@ import {
   toastNoteWritten,
   type PinboardNote,
 } from '../../components/PinboardNote';
+import { NewSessionModal } from '../app/NewSessionModal';
 
 interface RecentNote extends PinboardNote {
   projectId: string;
@@ -84,6 +85,7 @@ export default function PinboardOverviewPage() {
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [editing, setEditing] = useState<RecentNote | null>(null);
   const [deleting, setDeleting] = useState<RecentNote | null>(null);
+  const [claudeNote, setClaudeNote] = useState<RecentNote | null>(null);
   const [highlightedKey, setHighlightedKey] = useState<string | null>(null);
   const [searchText, setSearchText] = useState('');
   const [appliedQuery, setAppliedQuery] = useState('');
@@ -138,7 +140,8 @@ export default function PinboardOverviewPage() {
     []
   );
 
-  const modalOpen = editing !== null || deleting !== null;
+  const modalOpen =
+    editing !== null || deleting !== null || claudeNote !== null;
   const actionsReady = loaded !== null;
 
   useEffect(() => {
@@ -357,6 +360,7 @@ export default function PinboardOverviewPage() {
                 setExpandedKey(expandedKey === key ? null : key);
               }}
               actionsDisabled={!actionsReady}
+              onClaude={() => setClaudeNote(note)}
               onEdit={() => setEditing(note)}
               onDelete={() => setDeleting(note)}
             />
@@ -370,6 +374,15 @@ export default function PinboardOverviewPage() {
           initialText={editing.text}
           onSave={(text) => editNote(editing, text)}
           onClose={() => setEditing(null)}
+        />
+      )}
+
+      {claudeNote !== null && (
+        <NewSessionModal
+          projectId={claudeNote.projectId}
+          canonicalId={claudeNote.projectId}
+          initialPrompt={claudeNote.text}
+          onClose={() => setClaudeNote(null)}
         />
       )}
 

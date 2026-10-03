@@ -14,10 +14,10 @@ import { SpeakButton, appendSpoken } from './SpeakButton';
 
 /**
  * The one way a Claude session is started from this app — the project card's menu on the front
- * page and the Claude tab both open this. Mode, opening prompt and dictation sit behind the one
- * button, the same trade every other thing sent to a session already makes. A second composer
- * only means the two drift: the front page kept its own for a while, and it was the one without
- * a Speak button.
+ * page, the Claude tab and a pinboard note (its text as the opening prompt) all open this. Mode,
+ * opening prompt and dictation sit behind the one button, the same trade every other thing sent
+ * to a session already makes. A second composer only means the two drift: the front page kept
+ * its own for a while, and it was the one without a Speak button.
  *
  * Worktree opens the session in a new worktree instead, on a branch forked off main — named by
  * hand, or suggested from the opening prompt. A worktree is a project of its own, so the page
@@ -26,11 +26,13 @@ import { SpeakButton, appendSpoken } from './SpeakButton';
 export function NewSessionModal({
   projectId,
   canonicalId,
+  initialPrompt = '',
   onClose,
   onLaunched,
 }: {
   projectId: string;
   canonicalId: string;
+  initialPrompt?: string;
   onClose: () => void;
   onLaunched?: () => void;
 }) {
@@ -39,7 +41,7 @@ export function NewSessionModal({
   const [inWorktree, setInWorktree] = useState(false);
   const [branch, setBranch] = useState('');
   const [suggesting, setSuggesting] = useState(false);
-  const [prompt, setPrompt] = useState('');
+  const [prompt, setPrompt] = useState(initialPrompt);
   const [launching, setLaunching] = useState(false);
 
   const missingBranch = inWorktree && branch.trim() === '';

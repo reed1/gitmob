@@ -133,9 +133,11 @@ picker, no HTTP-auth dialog. Contract in [cli-integrations.md](cli-integrations.
 Starting a Claude session goes through the same modal as everything else sent to one: mode, opening
 prompt and dictation are composed together, then launched. The tab's button only opens it. A
 launcher that fired on its own click had nowhere to dictate into. There is exactly one such modal —
-`src/app/app/NewSessionModal.tsx`, opened by both the Claude tab and the project card's menu on the
-front page, sharing the dialog shell in `src/app/app/Modal.tsx`. A second copy of it on the front
-page is what left half the app without a Speak button.
+`src/app/app/NewSessionModal.tsx`, opened by the Claude tab, the project card's menu on the front
+page and a pinboard note's Claude button, sharing the dialog shell in `src/app/app/Modal.tsx`. A
+note opens it on the project whose board it sits on — the owning project on the overview, the
+project being browsed on its Pinboard tab — with the note's text as the opening prompt. A second
+copy of it on the front page is what left half the app without a Speak button.
 
 Its Worktree toggle opens the session in a new worktree instead, on a branch forked off main,
 which is why it lives in the modal and not on either button: both ways in get it. The box beside
