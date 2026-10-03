@@ -207,6 +207,7 @@ export default function Home() {
     });
 
   const isActive = (p: Project) =>
+    p.openOnDesktop ||
     p.editing ||
     p.hasRunningProcess ||
     p.hasPendingMessage ||

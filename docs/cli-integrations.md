@@ -222,7 +222,8 @@ The project card's menu makes the other two, from `src/lib/desktop.ts` behind th
   guarded page, Cursor's unsaved files — asks at the desktop, where nobody is to answer it.
 
 Which projects are open comes from `rw-msg get_state`, the same round trip that lists the open
-worktrees, as `openOnDesktop` on every project.
+worktrees, as `openOnDesktop` on every project. Every open project is listed under Active on the
+front page, a worktree as much as a main checkout.
 
 ## Desktop — `claudex`
 
@@ -236,7 +237,7 @@ worktrees, as `openOnDesktop` on every project.
 - `claudex desktop list --all` — the same, for every project open on the desktop. Asked once,
   before a resume: see the recall section below.
 - `claudex desktop count` — session counts per project, the project-list sweep (~120ms) behind
-  the sparkle icon that promotes a project with a live session to Active.
+  the sparkle icon on a project's card.
 - `claudex desktop screen <windowId>` — that window's current terminal content.
 - `claudex desktop send <windowId> <text> --press-enter` — types into that window.
 - `claudex desktop keys <windowId> <key>` — presses one named key in it, whatever is on screen.
