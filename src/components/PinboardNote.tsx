@@ -30,7 +30,7 @@ export async function mutatePinboard(
 
 /** A short confirmation for a write the screen already shows. */
 export function toastNoteWritten(message: string) {
-  addToast(message, 'success', 2000);
+  addToast(message, 'success');
 }
 
 const MINUTE = 60_000;

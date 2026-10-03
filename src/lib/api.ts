@@ -6,7 +6,6 @@ export interface Toast {
   id: number;
   message: string;
   variant: ToastVariant;
-  durationMs: number;
   leaving: boolean;
 }
 
@@ -47,10 +46,10 @@ export function dismissToast(id: number) {
 export function addToast(
   message: string,
   variant: ToastVariant = 'error',
-  durationMs = 5000
+  durationMs = 2000
 ) {
   const id = nextToastId++;
-  toasts = [...toasts, { id, message, variant, durationMs, leaving: false }];
+  toasts = [...toasts, { id, message, variant, leaving: false }];
   notify();
   setTimeout(() => dismissToast(id), durationMs);
 }
