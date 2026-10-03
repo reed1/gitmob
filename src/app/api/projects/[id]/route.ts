@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { existsSync } from 'fs';
 import { getProject } from '@/lib/projects';
-import { getGithubRepoUrl } from '@/lib/github';
+import { readCheckout } from '@/lib/checkout';
 import { getDesktopState } from '@/lib/workspaces';
 
 export async function GET(
@@ -15,15 +15,12 @@ export async function GET(
     return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   }
 
-  const [githubUrl, { openIds }] = await Promise.all([
-    getGithubRepoUrl(project.path),
-    getDesktopState(),
-  ]);
+  const { openIds } = await getDesktopState();
 
   return NextResponse.json({
     ...project,
     missing: !existsSync(project.path),
     openOnDesktop: openIds.includes(id),
-    githubUrl,
+    githubUrl: readCheckout(project.path)?.githubUrl ?? null,
   });
 }

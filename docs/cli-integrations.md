@@ -177,6 +177,18 @@ server chips only suggested a prerequisite that is not one.
 HTTP. When it fails, the Sudo tab shows the error: reporting every target as disabled would be
 a lie about a security setting.
 
+## Env checks — `rpass`
+
+`src/lib/env-check.ts`, read by the project list.
+
+- `rpass env check --json`, with cwd set to the project — that one project's status, `ok`,
+  `warning` or `error`. Anything but `ok` is the orange key on the card.
+
+Asked only of the projects open on the desktop, under `canonicalId`, and run in the configured
+project's checkout. rpass decrypts the saved env files to answer, so each result is kept in
+`~/.local/share/gitmob/env-checks.json` for an hour; a check that fails keeps the last answer
+rather than caching a clean one.
+
 ## Run — `rv`
 
 `src/lib/run.ts`, read by the Run tab.

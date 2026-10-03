@@ -5,6 +5,7 @@ import Link from 'next/link';
 import ProjectCard from './ProjectCard';
 import { PendingHandoffs } from './PendingHandoffs';
 import { PendingCommits } from './PendingCommits';
+import { UncommittedProjects } from './UncommittedProjects';
 import UsagePanel from './UsagePanel';
 import { ClaudeUsage, Project, StaleBuild } from './types';
 import { addToast, apiFetch } from '../../lib/api';
@@ -60,6 +61,9 @@ export default function Home() {
   const [restarting, setRestarting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The closed projects the last scan found dirty, for as long as this page is up.
+  const [uncommittedIds, setUncommittedIds] = useState<Set<string>>(new Set());
+  const [scanning, setScanning] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useOutsideClick(menuOpen, menuRef, () => setMenuOpen(false));
@@ -120,6 +124,21 @@ export default function Home() {
     }
   };
 
+  const scanUncommitted = async () => {
+    setScanning(true);
+    try {
+      const res = await apiFetch('/api/uncommitted');
+      if (!res.ok) return;
+      const { ids }: { ids: string[] } = await res.json();
+      setUncommittedIds(new Set(ids));
+      if (ids.length === 0) {
+        addToast('No closed project has uncommitted changes', 'success');
+      }
+    } finally {
+      setScanning(false);
+    }
+  };
+
   // Starts hidden so a phone that is already subscribed never flashes the prompt.
   const [notificationsOff, setNotificationsOff] = useState(false);
   const checkNotifications = useCallback(async () => {
@@ -150,7 +169,16 @@ export default function Home() {
     };
   }, [refreshProjects]);
 
-  const filtered = projects
+  // The list only knows whether an open project is dirty. Once one the scan found is opened,
+  // that answer is the live one and the scan's stands aside.
+  const withScan = projects.map((p) =>
+    !p.openOnDesktop && uncommittedIds.has(p.id) ? { ...p, editing: true } : p
+  );
+  const uncommitted = withScan
+    .filter((p) => !p.openOnDesktop && uncommittedIds.has(p.id))
+    .sort((a, b) => a.id.localeCompare(b.id));
+
+  const filtered = withScan
     .filter(
       (p) => search === '' || p.id.toLowerCase().includes(search.toLowerCase())
     )
@@ -372,6 +400,29 @@ export default function Home() {
                   <button
                     onClick={() => {
                       setMenuOpen(false);
+                      scanUncommitted();
+                    }}
+                    disabled={scanning}
+                    className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 flex items-center gap-2 disabled:opacity-50"
+                  >
+                    <svg
+                      className="w-4 h-4 text-foreground/60"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                      />
+                    </svg>
+                    Scan for uncommitted changes
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
                       restart();
                     }}
                     className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 flex items-center gap-2"
@@ -531,6 +582,14 @@ export default function Home() {
         <PendingCommits
           hidden={search !== ''}
           onCommitted={() => refreshProjects()}
+        />
+
+        <UncommittedProjects
+          projects={uncommitted}
+          scanning={scanning}
+          hidden={search !== ''}
+          onDismiss={() => setUncommittedIds(new Set())}
+          onOpened={() => refreshProjects()}
         />
 
         {error && (

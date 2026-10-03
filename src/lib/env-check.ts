@@ -3,22 +3,23 @@ import { mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { homedir } from 'os';
 
-const CACHE_FILE = join(homedir(), '.local/share/gitmob/env-check-cache.json');
+const CACHE_FILE = join(homedir(), '.local/share/gitmob/env-checks.json');
 const CACHE_TTL_MS = 60 * 60 * 1000;
 
 type EnvStatus = 'ok' | 'warning' | 'error';
 
-interface Cache {
+interface CachedCheck {
+  status: EnvStatus;
   checkedAt: number;
-  statuses: Record<string, EnvStatus>;
 }
 
-function readCache(): Cache | null {
+type Cache = Record<string, CachedCheck>;
+
+function readCache(): Cache {
   try {
-    const cache = JSON.parse(readFileSync(CACHE_FILE, 'utf-8'));
-    return typeof cache.checkedAt === 'number' && cache.statuses ? cache : null;
+    return JSON.parse(readFileSync(CACHE_FILE, 'utf-8'));
   } catch {
-    return null;
+    return {};
   }
 }
 
@@ -31,51 +32,56 @@ function writeCache(cache: Cache): void {
   }
 }
 
-function runCheckAll(): Promise<Record<string, EnvStatus> | null> {
+function runCheck(cwd: string): Promise<EnvStatus | null> {
   return new Promise((resolve) => {
     execFile(
       'rpass',
-      ['env', 'check', '--all-projects', '--json'],
-      { timeout: 120000, maxBuffer: 4 * 1024 * 1024 },
+      ['env', 'check', '--json'],
+      { cwd, timeout: 30000 },
       (error, stdout) => {
         if (error) {
           resolve(null);
           return;
         }
-        const entries = JSON.parse(stdout) as Array<{
-          id: string;
-          status: EnvStatus;
-        }>;
-        resolve(Object.fromEntries(entries.map((e) => [e.id, e.status])));
+        resolve((JSON.parse(stdout) as { status: EnvStatus }).status);
       }
     );
   });
 }
 
 /**
- * `rpass env check --all-projects` sweeps every project in one process, so this is a single
- * exec regardless of project count. It still decrypts saved env files, so the
- * result is cached on disk and only refreshed once it is older than an hour.
+ * `rpass env check` from a project's checkout checks that one project. It decrypts saved env
+ * files, so each result is cached on disk and only rechecked once it is older than an hour,
+ * and only the projects asked about — the ones open on the desktop — are checked at all.
+ * Keyed by project id.
  */
 export async function getEnvCheckFailures(
+  projects: { id: string; path: string }[],
   now: number = Date.now()
 ): Promise<Record<string, boolean>> {
-  const cached = readCache();
-  let statuses: Record<string, EnvStatus>;
+  const cache = readCache();
+  const due = projects.filter(
+    (project) =>
+      !cache[project.id] || now - cache[project.id].checkedAt >= CACHE_TTL_MS
+  );
 
-  if (cached && now - cached.checkedAt < CACHE_TTL_MS) {
-    statuses = cached.statuses;
-  } else {
-    const fresh = await runCheckAll();
-    // A failed sweep must not be cached as "no findings" for an hour: keep
-    // serving the stale statuses and retry on the next request.
-    if (fresh) writeCache({ checkedAt: now, statuses: fresh });
-    statuses = fresh ?? cached?.statuses ?? {};
+  const fresh = await Promise.all(
+    due.map(async (project) => ({
+      id: project.id,
+      status: await runCheck(project.path),
+    }))
+  );
+  // A failed check must not be cached as "no findings" for an hour: keep serving the stale
+  // status and retry on the next request.
+  const checked = fresh.filter((check) => check.status !== null);
+  for (const { id, status } of checked) {
+    cache[id] = { status: status as EnvStatus, checkedAt: now };
   }
+  if (checked.length > 0) writeCache(cache);
 
   const failures: Record<string, boolean> = {};
-  for (const [id, status] of Object.entries(statuses)) {
-    failures[id] = status !== 'ok';
+  for (const { id } of projects) {
+    if (cache[id]) failures[id] = cache[id].status !== 'ok';
   }
   return failures;
 }

@@ -38,6 +38,21 @@ open on the desktop — see [cli-integrations.md](cli-integrations.md). A worktr
 `canonicalId` and `worktreeName` as fields, published by rworkspaces: how an id encodes them is
 rworkspaces' business, and nothing here parses one.
 
+## The project list spawns for open projects only
+
+Spawning a process from the server costs far more than the command it runs — tens to hundreds of
+milliseconds each from the dev server, against a few from a shell — so `GET /api/projects` keeps
+spawns off the per-project path. Every sweep — runs, sudo, sessions, monitored sites — is one
+process covering every project. The branch and the GitHub link are read off the git dir on disk,
+for every project. What still costs a spawn per project is asked only of the projects open on the
+desktop: `git status`, which turns a card green, and the env check.
+
+A project is closed once its work is committed, so a closed one is listed as clean. **Scan for
+uncommitted changes**, in the front page's menu, asks `git status` of every closed checkout and
+lists the dirty ones above the project list to open and commit; their cards go green as an open
+one's would. The answer lives in the page and nowhere else — a reload forgets it, and a project
+opened on the desktop is answered live again.
+
 ## Per-project state belongs to its CLI
 
 Sudo, runs and desktop sessions belong to the CLI that owns them — `pt`, `rv`, `claudex`. Shell out
