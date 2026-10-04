@@ -12,7 +12,13 @@ import {
 } from '../../../../../components/PinboardNote';
 import { NewSessionModal } from '../../../NewSessionModal';
 
-export function PinboardView({ projectId }: { projectId: string }) {
+export function PinboardView({
+  projectId,
+  canonicalId,
+}: {
+  projectId: string;
+  canonicalId: string;
+}) {
   const [notes, setNotes] = useState<PinboardNote[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +30,7 @@ export function PinboardView({ projectId }: { projectId: string }) {
   const [claudeNote, setClaudeNote] = useState<PinboardNote | null>(null);
 
   const fetchNotes = useCallback(async () => {
-    const res = await fetch(`/api/projects/${projectId}/pinboard`);
+    const res = await fetch(`/api/projects/${canonicalId}/pinboard`);
     const data = await res.json();
     if (!res.ok) {
       setError(data.error || 'Failed to load the pinboard');
@@ -33,7 +39,7 @@ export function PinboardView({ projectId }: { projectId: string }) {
       setNotes(data.notes);
     }
     setLoading(false);
-  }, [projectId]);
+  }, [canonicalId]);
 
   useAutoRefresh(fetchNotes);
 
@@ -47,9 +53,9 @@ export function PinboardView({ projectId }: { projectId: string }) {
 
     let board: PinboardNote[] | null;
     if (modalMode === 'add') {
-      board = await mutatePinboard(projectId, { action: 'add', text });
+      board = await mutatePinboard(canonicalId, { action: 'add', text });
     } else if (modalMode === 'edit' && editingNote !== null) {
-      board = await mutatePinboard(projectId, {
+      board = await mutatePinboard(canonicalId, {
         action: 'edit',
         noteId: editingNote.id,
         text,
@@ -65,7 +71,7 @@ export function PinboardView({ projectId }: { projectId: string }) {
   };
 
   const deleteNote = async (note: PinboardNote) => {
-    const board = await mutatePinboard(projectId, {
+    const board = await mutatePinboard(canonicalId, {
       action: 'delete',
       noteId: note.id,
     });
@@ -141,7 +147,7 @@ export function PinboardView({ projectId }: { projectId: string }) {
 
       {modalMode !== null && (
         <PinboardNoteModal
-          projectId={projectId}
+          projectId={canonicalId}
           initialText={editingNote?.text ?? ''}
           onSave={handleModalSave}
           onClose={closeModal}
@@ -151,7 +157,7 @@ export function PinboardView({ projectId }: { projectId: string }) {
       {claudeNote !== null && (
         <NewSessionModal
           projectId={projectId}
-          canonicalId={projectId}
+          canonicalId={canonicalId}
           initialPrompt={claudeNote.text}
           onClose={() => setClaudeNote(null)}
         />
@@ -159,7 +165,7 @@ export function PinboardView({ projectId }: { projectId: string }) {
 
       {deleting !== null && (
         <PinboardDeleteConfirm
-          projectId={projectId}
+          projectId={canonicalId}
           text={deleting.text}
           onCancel={() => setDeleting(null)}
           onConfirm={() => deleteNote(deleting)}

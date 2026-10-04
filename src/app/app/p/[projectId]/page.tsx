@@ -282,9 +282,13 @@ export default function ProjectPage() {
 
       <main className="flex-1 min-h-0 overflow-auto">
         {/* Notes are pinned to the repo, not to one checkout of it: pinboard keys its
-            files by the canonical id. */}
+            files by the canonical id. A session started from a note still opens in this
+            checkout. */}
         {tab === 'pinboard' && project && (
-          <PinboardView projectId={project.canonicalId} />
+          <PinboardView
+            projectId={projectId}
+            canonicalId={project.canonicalId}
+          />
         )}
         {tab === 'files' && (
           <FileBrowser
