@@ -25,13 +25,13 @@ import { goHome } from '../../../../lib/app-depth';
 
 const tabs = [
   { id: 'pinboard', label: 'Pinboard' },
-  { id: 'dooit', label: 'Dooit' },
+  { id: 'claude', label: 'Claude' },
   { id: 'files', label: 'Files' },
   { id: 'changes', label: 'Changes' },
   { id: 'commit', label: 'Commit' },
   { id: 'cli', label: 'CLI' },
   { id: 'run', label: 'Run' },
-  { id: 'claude', label: 'Claude' },
+  { id: 'dooit', label: 'Dooit' },
   { id: 'push', label: 'Push' },
   { id: 'sudo', label: 'Sudo' },
   { id: 'wtman', label: 'Wtman' },

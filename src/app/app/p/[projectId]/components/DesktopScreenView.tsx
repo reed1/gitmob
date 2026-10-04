@@ -146,18 +146,52 @@ export function DesktopScreenView({
                     setMenuOpen(false);
                     setTextOpen(true);
                   }}
-                  className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 whitespace-nowrap"
+                  aria-label="Send text"
+                  className="flex w-full items-center gap-1.5 px-4 py-2 text-sm hover:bg-foreground/10 whitespace-nowrap"
                 >
-                  Send Text
+                  Send
+                  <svg
+                    className="w-5 h-5 text-foreground/70"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 7V5h14v2M12 5v14M9 19h6"
+                    />
+                  </svg>
                 </button>
                 <button
                   onClick={() => {
                     setMenuOpen(false);
                     setKeysOpen(true);
                   }}
-                  className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 whitespace-nowrap"
+                  aria-label="Send keys"
+                  className="flex w-full items-center gap-1.5 px-4 py-2 text-sm hover:bg-foreground/10 whitespace-nowrap"
                 >
-                  Send Keys
+                  Send
+                  <svg
+                    className="w-5 h-5 text-foreground/70"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 6h16a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h.01M18 14h.01M10 14h4"
+                    />
+                  </svg>
                 </button>
                 <div className="my-1 border-t border-foreground/10" />
                 {COMMON_COMMANDS.map((command) => (
