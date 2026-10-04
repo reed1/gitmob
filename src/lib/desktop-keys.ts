@@ -1,9 +1,9 @@
 /**
  * What a session can be sent from the client: the keys `claudex desktop keys` accepts, grouped
- * the way the Send Keys modal shows them, and the slash commands both session menus list. Its
+ * the way the Send Keys modal shows them, and the preset prompts both session menus list. Its
  * own module because those are client components and `desktop.ts` reaches for child_process.
  */
-export const COMMON_COMMANDS = ['/commit', '/exit'] as const;
+export const COMMON_COMMANDS = ['proceed', '/commit', '/exit'] as const;
 
 export type CommonCommand = (typeof COMMON_COMMANDS)[number];
 
