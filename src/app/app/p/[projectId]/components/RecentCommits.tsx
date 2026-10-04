@@ -1,6 +1,8 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { KebabMenu, KebabMenuItem } from '../../../KebabMenu';
 import { useAutoRefresh } from '../../../../../lib/use-auto-refresh';
 import { relativeTime } from '../../../../../lib/relative-time';
 
@@ -19,27 +21,45 @@ interface CommitEntry {
   files: CommitFileStat[];
 }
 
-function CommitCard({ commit }: { commit: CommitEntry }) {
+function CommitCard({
+  projectId,
+  commit,
+}: {
+  projectId: string;
+  commit: CommitEntry;
+}) {
+  const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const insertions = commit.files.reduce((sum, f) => sum + f.insertions, 0);
   const deletions = commit.files.reduce((sum, f) => sum + f.deletions, 0);
 
   return (
     <div className="bg-foreground/5 border border-foreground/10 rounded-lg">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full px-3 py-2.5 text-left active:opacity-80"
-      >
-        <div className="flex items-center gap-2 text-xs text-foreground/50">
-          <span>{relativeTime(commit.date)}</span>
-          <span className="font-mono">{commit.hash.slice(0, 7)}</span>
-          <span className="ml-auto flex items-center gap-1.5">
-            <span className="text-green-400">+{insertions}</span>
-            <span className="text-red-400">-{deletions}</span>
-          </span>
-        </div>
-        <div className="mt-1 text-sm break-words">{commit.title}</div>
-      </button>
+      <div className="flex items-start gap-2 pr-2 pt-1.5">
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="flex-1 min-w-0 pl-3 pt-1 pb-2.5 text-left active:opacity-80"
+        >
+          <div className="flex items-center gap-2 text-xs text-foreground/50">
+            <span>{relativeTime(commit.date)}</span>
+            <span className="font-mono">{commit.hash.slice(0, 7)}</span>
+            <span className="ml-auto flex items-center gap-1.5">
+              <span className="text-green-400">+{insertions}</span>
+              <span className="text-red-400">-{deletions}</span>
+            </span>
+          </div>
+          <div className="mt-1 text-sm break-words">{commit.title}</div>
+        </button>
+        <KebabMenu label={`Actions for ${commit.hash.slice(0, 7)}`}>
+          <KebabMenuItem
+            onSelect={() =>
+              router.push(`/app/p/${projectId}/review?commit=${commit.hash}`)
+            }
+          >
+            Review
+          </KebabMenuItem>
+        </KebabMenu>
+      </div>
 
       {expanded && (
         <div className="px-3 pb-3 space-y-3">
@@ -93,7 +113,7 @@ export function RecentCommits({ projectId }: { projectId: string }) {
       <h3 className="text-sm font-medium text-foreground/60 mb-3">Recent</h3>
       <div className="space-y-2">
         {commits.map((commit) => (
-          <CommitCard key={commit.hash} commit={commit} />
+          <CommitCard key={commit.hash} projectId={projectId} commit={commit} />
         ))}
         {commits.length === 0 && (
           <div className="text-sm text-foreground/40">No commits yet</div>

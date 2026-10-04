@@ -8,7 +8,7 @@ import { loadDiffExclude } from './diff-exclude';
 /** Past this many changed lines, one page of diffs is slow enough to ask first. */
 export const REVIEW_LINE_LIMIT = 2000;
 
-export type ReviewScope = 'staged' | 'all';
+export type ReviewScope = 'staged' | 'all' | 'commit';
 
 export type SkipReason = 'excluded' | 'binary' | 'symlink' | 'repository';
 
@@ -107,23 +107,76 @@ async function added(path: string, content: string): Promise<ReviewFile> {
 const STAGED_DIFF = ['diff', '--cached', '-M', '--no-color', '--no-ext-diff'];
 const WORKTREE_DIFF = ['diff', '-M', '--no-color', '--no-ext-diff'];
 
+/** What a review diffs, and where a file it adds is read from. */
+interface Source {
+  scope: ReviewScope;
+  diffArgs: string[];
+  tracked: Change[];
+  untracked: string[];
+  readAdded: (path: string) => Promise<string>;
+}
+
+/** What the next commit would be: what is staged when anything is, otherwise the dirty tree. */
+async function nextCommit(git: SimpleGit, cwd: string): Promise<Source> {
+  const staged = parseNameStatus(
+    await git.raw([...STAGED_DIFF, '--name-status', '-z'])
+  );
+  // An unmerged file sits in the index without being staged.
+  if (staged.some((change) => change.status !== 'U')) {
+    return {
+      scope: 'staged',
+      diffArgs: STAGED_DIFF,
+      tracked: staged,
+      untracked: [],
+      readAdded: (path) => git.show([`:${path}`]),
+    };
+  }
+  return {
+    scope: 'all',
+    diffArgs: WORKTREE_DIFF,
+    tracked: parseNameStatus(
+      await git.raw([...WORKTREE_DIFF, '--name-status', '-z'])
+    ),
+    untracked: (
+      await git.raw(['ls-files', '--others', '--exclude-standard', '-z'])
+    )
+      .split('\0')
+      .filter(Boolean),
+    readAdded: (path) => readFile(join(cwd, path), 'utf-8'),
+  };
+}
+
+/** A merge is diffed against its first parent, a root commit against the empty tree. */
+async function pastCommit(git: SimpleGit, hash: string): Promise<Source> {
+  const [commit, firstParent] = (
+    await git.raw(['rev-list', '--parents', '-n1', hash, '--'])
+  )
+    .trim()
+    .split(' ');
+  const base =
+    firstParent ??
+    (await git.raw(['hash-object', '-t', 'tree', '/dev/null'])).trim();
+  const diffArgs = [...WORKTREE_DIFF, base, commit];
+  return {
+    scope: 'commit',
+    diffArgs,
+    tracked: parseNameStatus(
+      await git.raw([...diffArgs, '--name-status', '-z'])
+    ),
+    untracked: [],
+    readAdded: (path) => git.show([`${commit}:${path}`]),
+  };
+}
+
 async function renderTracked(
   git: SimpleGit,
-  cwd: string,
-  scope: ReviewScope,
+  source: Source,
   { status, path, from }: Change
 ): Promise<ReviewFile> {
-  if (status === 'A') {
-    const content =
-      scope === 'staged'
-        ? await git.show([`:${path}`])
-        : await readFile(join(cwd, path), 'utf-8');
-    return added(path, content);
-  }
+  if (status === 'A') return added(path, await source.readAdded(path));
 
   // A conflicted file's markers are only in the working tree, whatever the scope.
-  const diffArgs =
-    scope === 'staged' && status !== 'U' ? STAGED_DIFF : WORKTREE_DIFF;
+  const diffArgs = status === 'U' ? WORKTREE_DIFF : source.diffArgs;
   const paths = from === undefined ? [path] : [from, path];
   const diff = hunks(await git.raw([...diffArgs, '--', ...paths]));
   if (status === 'M' || status === 'T' || status === 'U') {
@@ -138,34 +191,23 @@ async function renderTracked(
 }
 
 /**
- * Every change on one page: what is staged when anything is, otherwise the whole dirty tree,
- * untracked files included. Changed lines are counted before any diff is read, and past
+ * Every change on one page: the commit `hash` when given, otherwise what the next commit would
+ * be, untracked files included. Changed lines are counted before any diff is read, and past
  * REVIEW_LINE_LIMIT the answer is only that — unless `force`.
  */
-export async function getReview(cwd: string, force: boolean): Promise<Review> {
+export async function getReview(
+  cwd: string,
+  force: boolean,
+  hash: string | null
+): Promise<Review> {
   const git = simpleGit(cwd);
   const isExcluded = await loadDiffExclude();
 
-  const staged = parseNameStatus(
-    await git.raw([...STAGED_DIFF, '--name-status', '-z'])
-  );
-  // An unmerged file sits in the index without being staged.
-  const scope: ReviewScope = staged.some((change) => change.status !== 'U')
-    ? 'staged'
-    : 'all';
-  const diffArgs = scope === 'staged' ? STAGED_DIFF : WORKTREE_DIFF;
-  const tracked =
-    scope === 'staged'
-      ? staged
-      : parseNameStatus(await git.raw([...diffArgs, '--name-status', '-z']));
-  const untracked =
-    scope === 'staged'
-      ? []
-      : (await git.raw(['ls-files', '--others', '--exclude-standard', '-z']))
-          .split('\0')
-          .filter(Boolean);
+  const source =
+    hash === null ? await nextCommit(git, cwd) : await pastCommit(git, hash);
+  const { scope } = source;
   const lineCounts = parseNumstat(
-    await git.raw([...diffArgs, '--numstat', '-z'])
+    await git.raw([...source.diffArgs, '--numstat', '-z'])
   );
 
   let lineCount = 0;
@@ -178,7 +220,7 @@ export async function getReview(cwd: string, force: boolean): Promise<Review> {
   const skip = (path: string, reason: SkipReason) =>
     renders.push(async () => ({ kind: 'skipped', path, reason }));
 
-  for (const change of tracked) {
+  for (const change of source.tracked) {
     if (isExcluded(change.path)) {
       skip(change.path, 'excluded');
       continue;
@@ -193,10 +235,10 @@ export async function getReview(cwd: string, force: boolean): Promise<Review> {
     }
     if (overLimit(lines))
       return { scope, tooLarge: true, limit: REVIEW_LINE_LIMIT };
-    renders.push(() => renderTracked(git, cwd, scope, change));
+    renders.push(() => renderTracked(git, source, change));
   }
 
-  for (const path of untracked) {
+  for (const path of source.untracked) {
     if (isExcluded(path)) {
       skip(path, 'excluded');
       continue;

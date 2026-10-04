@@ -21,6 +21,10 @@ is what the next commit would be: the staged files when anything is staged, othe
 dirty tree, untracked files included. A conflicted file is not staged: its markers are in the
 working tree, and that is where they are read from.
 
+The same page reviews a commit already made, from the kebab menu on each of the Commit tab's
+recent commits: `?commit=<hash>` diffs it against its first parent — a merge shows what it brought
+in — and a root commit against the empty tree.
+
 A new file is shown as itself, highlighted as the Files tab would, not as a column of `+` lines;
 a deleted one stays a diff. Files on the shared exclude list — see
 [cli-integrations.md](cli-integrations.md) — and binaries keep a row naming them and nothing more,

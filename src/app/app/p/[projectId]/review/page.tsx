@@ -1,10 +1,15 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useState } from 'react';
 import { apiFetch } from '../../../../../lib/api';
 import { useAutoRefresh } from '../../../../../lib/use-auto-refresh';
-import type { Review, ReviewFile, SkipReason } from '../../../../../lib/review';
+import type {
+  Review,
+  ReviewFile,
+  ReviewScope,
+  SkipReason,
+} from '../../../../../lib/review';
 import { Modal } from '../../../Modal';
 import { DiffLines } from '../components/DiffLines';
 import { HighlightedCode } from '../components/HighlightedCode';
@@ -78,9 +83,17 @@ function FileSection({
   );
 }
 
+function scopeLabel(scope: ReviewScope, commit: string | null): string {
+  if (scope === 'staged') return 'staged';
+  else if (scope === 'all') return 'all changes';
+  else if (scope === 'commit' && commit !== null) return commit.slice(0, 7);
+  else throw new Error(`Unexpected review scope: ${scope}`);
+}
+
 export default function ReviewPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const router = useRouter();
+  const commit = useSearchParams().get('commit');
   const [review, setReview] = useState<Review | null>(null);
   const [failed, setFailed] = useState(false);
   const [wordWrap, setWordWrap] = useState(true);
@@ -89,19 +102,23 @@ export default function ReviewPage() {
   const [force, setForce] = useState(false);
 
   const load = useCallback(async () => {
-    const res = await apiFetch(
-      `/api/projects/${projectId}/review${force ? '?force=1' : ''}`
-    );
+    const query = new URLSearchParams();
+    if (commit !== null) query.set('commit', commit);
+    if (force) query.set('force', '1');
+    const res = await apiFetch(`/api/projects/${projectId}/review?${query}`);
     if (!res.ok) {
       setFailed(true);
       return;
     }
     setReview(await res.json());
-  }, [projectId, force]);
+  }, [projectId, commit, force]);
 
   useAutoRefresh(load);
 
-  const backToChanges = () => router.replace(`/app/p/${projectId}?tab=changes`);
+  const goBack = () =>
+    router.replace(
+      `/app/p/${projectId}?tab=${commit === null ? 'changes' : 'commit'}`
+    );
 
   const fileCount = review && !review.tooLarge ? review.files.length : null;
 
@@ -110,8 +127,8 @@ export default function ReviewPage() {
       <header className="border-b border-foreground/10 bg-background/95 backdrop-blur">
         <div className="px-4 py-3 flex items-center gap-3">
           <button
-            onClick={backToChanges}
-            aria-label="Back to Changes"
+            onClick={goBack}
+            aria-label={commit === null ? 'Back to Changes' : 'Back to Commit'}
             className="text-foreground/50 hover:text-foreground transition-colors cursor-pointer"
           >
             <svg
@@ -132,8 +149,7 @@ export default function ReviewPage() {
             <h1 className="text-lg font-semibold truncate">Review</h1>
             <div className="text-sm text-foreground/50 truncate">
               {projectId}
-              {review &&
-                ` · ${review.scope === 'staged' ? 'staged' : 'all changes'}`}
+              {review && ` · ${scopeLabel(review.scope, commit)}`}
               {fileCount !== null &&
                 ` · ${fileCount} file${fileCount === 1 ? '' : 's'}`}
             </div>
@@ -151,7 +167,7 @@ export default function ReviewPage() {
           <div className="p-8 text-center text-foreground/50">Loading...</div>
         ) : review.tooLarge ? null : review.files.length === 0 ? (
           <div className="p-8 text-center text-foreground/50">
-            Working tree clean
+            {commit === null ? 'Working tree clean' : 'No file changes'}
           </div>
         ) : (
           review.files.map((file) =>
@@ -169,18 +185,14 @@ export default function ReviewPage() {
       </main>
 
       {review?.tooLarge && (
-        <Modal
-          heading="Large diff"
-          subtitle={projectId}
-          onClose={backToChanges}
-        >
+        <Modal heading="Large diff" subtitle={projectId} onClose={goBack}>
           <p className="px-4 py-3 text-sm text-foreground/70">
             These changes run past {review.limit.toLocaleString('en-US')} lines.
             Showing them all on one page may slow the browser down or hang it.
           </p>
           <div className="px-4 py-3 border-t border-foreground/10 flex justify-end gap-2">
             <button
-              onClick={backToChanges}
+              onClick={goBack}
               className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
             >
               Back

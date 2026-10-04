@@ -13,6 +13,12 @@ export async function GET(
     return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   }
 
-  const force = request.nextUrl.searchParams.get('force') === '1';
-  return NextResponse.json(await getReview(project.path, force));
+  const { searchParams } = request.nextUrl;
+  const commit = searchParams.get('commit');
+  if (commit !== null && !/^[0-9a-f]{4,64}$/.test(commit)) {
+    return NextResponse.json({ error: 'Invalid commit' }, { status: 400 });
+  }
+
+  const force = searchParams.get('force') === '1';
+  return NextResponse.json(await getReview(project.path, force, commit));
 }
