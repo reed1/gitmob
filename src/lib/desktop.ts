@@ -92,7 +92,6 @@ export interface DesktopLaunch {
   /** Where the session opens — the project's checkout, or the directory a handoff named. */
   directory: string;
   mode: ClaudeMode;
-  name: string;
   prompt: string;
   title?: string;
   /** Reopens that conversation instead of starting an empty one — see below. */
@@ -103,9 +102,7 @@ export interface DesktopLaunch {
  * A new session is two commands. `rv open` puts the desktop on the project — switching to its
  * workspaces and opening them when they were closed — and `claudex kitty` then lands the Claude
  * window on whatever that left focused, which `--focus-ide` makes the IDE, so the session opens
- * beside it at full size. `--detach` hands the window to i3 so it outlives this server, and
- * `--remote-control` names the session for the Claude app, which would otherwise list it under
- * an auto-generated name.
+ * beside it at full size. `--detach` hands the window to i3 so it outlives this server.
  *
  * An initial prompt is typed in after that and submitted, so the agent is already working when
  * the session is looked at; without one there is nothing to submit and the session waits.
@@ -126,8 +123,6 @@ export async function launchDesktopSession(
     launch.mode,
     '--directory',
     launch.directory,
-    '--remote-control',
-    launch.name,
     ...(launch.title ? ['--title', launch.title] : []),
     ...(launch.prompt ? ['--submit', launch.prompt] : []),
     ...(launch.resumeSessionId

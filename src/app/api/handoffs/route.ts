@@ -76,7 +76,6 @@ export async function POST(request: NextRequest) {
       projectId: handoff.projectId,
       directory: handoff.directory,
       mode,
-      name: sessionName,
       prompt: briefing,
       title: HANDOFF_TITLE,
     });

@@ -76,7 +76,6 @@ export async function POST(
       projectId: id,
       directory: project.path,
       mode: RESUME_MODE,
-      name,
       prompt: '',
       title: RESUME_TITLE,
       resumeSessionId: sessionId,

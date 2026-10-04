@@ -83,7 +83,6 @@ export async function POST(
         projectId: target.projectId,
         directory: target.path,
         mode,
-        name: sessionName,
         prompt: initialPrompt,
       });
       return NextResponse.json({

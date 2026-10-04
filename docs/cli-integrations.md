@@ -260,8 +260,8 @@ front page, a worktree as much as a main checkout.
 - `claudex desktop screen <windowId>` — that window's current terminal content.
 - `claudex desktop send <windowId> <text> --press-enter` — types into that window.
 - `claudex desktop keys <windowId> <key>` — presses one named key in it, whatever is on screen.
-- `claudex kitty --detach --submit --mode <mode> --directory <path>
---remote-control <name> "<prompt>"` — opens a new session.
+- `claudex kitty --detach --submit --mode <mode> --directory <path> "<prompt>"` — opens a new
+  session.
 - `claudex purgatory send --window <windowId> --pid <pid>` — ends a session the recoverable
   way: the window is parked on claudex's own workspace and SIGTERMed 30s later, until `claudex
 purgatory cancel` takes it back. The only call here that closes a session rather than
@@ -275,9 +275,9 @@ ever handles window ids and never talks to X itself.
 "New" is those last two commands in order: `rv open` first, so the desktop is on the project and
 the window i3 spawns lands on one of its workspaces, then `claudex kitty`. `--detach` hands that
 window to i3, so it outlives a gitmob restart the way a child process would not. The mode picker
-is `claudex`'s own — `auto`, `edit`, `yolo` — not a `claude --permission-mode` value. The session
-is named after the project folder, which `--remote-control <name>` passes to `claude` itself; this
-app never sees the URL that publishes, because the Claude app lists the session by that name.
+is `claudex`'s own — `auto`, `edit`, `yolo` — not a `claude --permission-mode` value. Whatever
+`claude` flags a session gets beyond those, Remote Control and Chrome included, are claudex's
+defaults; this app adds none of its own.
 
 With the modal's Worktree toggle on, a launch is one request: `createWorktree` from
 `src/lib/wtman.ts` runs `wtman open --branch` first — the Wtman tab's Create, forking off main —
@@ -287,10 +287,7 @@ The modal then moves to the worktree's own page, which is where its session is l
 
 Both session menus — the list's, and the screen view's where they sit below Send Keys behind a
 separator — end in the common commands from `src/lib/desktop-keys.ts`, each typed into the
-session with `--press-enter`. It is a plain array, so the list grows by editing it. There is no
-button for `/remote-control`: `remoteControlAtStartup` is on in user settings, so every session
-is connected by the time it appears here, and the command would only raise a dialog the session
-then sits behind until someone sends Esc.
+session with `--press-enter`. It is a plain array, so the list grows by editing it.
 
 "Send Keys" is the keyboard for a session with nobody at its desktop. Its text box goes out as
 `send --force --paste`: `--force` because the empty-prompt check `send` normally applies would
