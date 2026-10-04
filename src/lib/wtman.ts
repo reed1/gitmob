@@ -1,5 +1,4 @@
 import { execFile } from 'child_process';
-import { basename } from 'path';
 import { Project, getProjects } from './projects';
 import { getDesktopState } from './workspaces';
 
@@ -9,7 +8,7 @@ export interface ProjectWorktree {
   /** The `~/wtman` directory that names it, and the suffix of its project id. */
   name: string;
   /** What the checkout is actually on — not the directory name, which is normalized. */
-  branch: string | null;
+  branch: string;
   path: string;
   /** When the checkout was last touched, ISO. */
   touchedAt: string;
@@ -19,25 +18,41 @@ export interface ProjectWorktree {
   open: boolean;
   /** Uncommitted changes in the checkout. */
   dirty: boolean;
-  /** What the main checkout is on, which is what `wtman merge` merges into. */
+  /** What the main checkout is on: what `merge` merges into and `rebase` rebases onto. */
   into: string | null;
   /** Commits on the branch that `into` does not have. */
   ahead: number;
-  /** wtman menu's tag, before it hides it for a dirty checkout. Null with nothing to compare. */
+  /** Commits on `into` that the branch does not have, which a rebase brings in. */
+  behind: number;
+  /** Null with no `into` to compare against. */
   state: MergeState | null;
+  /** A rebase or merge that stopped in the checkout and is not finished. */
+  operation: Operation | null;
+  /** Paths still conflicted in that operation. */
+  conflicts: string[];
 }
 
 /**
- * `merged` has every commit in `into` already; `no-commits` sits on the very commit `into`
- * does, so it never got one of its own. Both are what the wtman menu tags a worktree with.
+ * `merged` has every commit in `into` already; `no commits` still sits on the commit it was
+ * created from, so nothing was ever committed on it. Both are what the wtman menu tags a
+ * worktree with.
  */
-export type MergeState = 'merged' | 'no-commits' | 'unmerged';
+export type MergeState = 'merged' | 'no commits' | 'unmerged';
 
-interface WtmanRow {
+export type Operation = 'rebase' | 'merge';
+
+interface WtmanStatusRow {
+  name: string;
   branch: string;
-  project: string;
   path: string;
   mtime: number;
+  into: string | null;
+  dirty: boolean;
+  ahead: number;
+  behind: number;
+  state: MergeState | null;
+  operation: Operation | null;
+  conflicts: string[];
 }
 
 function run(
@@ -73,127 +88,35 @@ function repoPath(project: Project): string {
 }
 
 /**
- * Which checkout is on which branch, straight from the repo. `wtman list` answers with the
- * directory name, which is the branch with everything git allows and a path does not folded
- * away — `refactor/api-endpoint-registry` lives in `refactor_api-endpoint-registry`. Opening
- * one by that folded name would ask wtman for a branch nobody has, which it would then create.
+ * The worktrees of one project, most recently touched first, as `wtman status --json` sees
+ * them — the same call the wtman menu labels its rows from, so nothing here holds a second
+ * opinion about whether a branch is merged.
  *
- * It is also what "living" means: a directory left behind by a worktree git no longer knows
- * about is not one this tab can open.
- */
-async function branchesByPath(
-  repo: string
-): Promise<Map<string, string | null>> {
-  const output = await run('git', [
-    '-C',
-    repo,
-    'worktree',
-    'list',
-    '--porcelain',
-  ]);
-
-  const branches = new Map<string, string | null>();
-  let path: string | null = null;
-
-  for (const line of output.split('\n')) {
-    if (line.startsWith('worktree ')) {
-      path = line.slice('worktree '.length);
-      branches.set(path, null);
-    } else if (line.startsWith('branch ') && path !== null) {
-      branches.set(path, line.slice('branch refs/heads/'.length));
-    }
-  }
-
-  return branches;
-}
-
-async function currentBranch(path: string): Promise<string | null> {
-  const branch = (
-    await run('git', ['-C', path, 'branch', '--show-current'])
-  ).trim();
-  return branch === '' ? null : branch;
-}
-
-async function revParse(repo: string, ref: string): Promise<string> {
-  return (await run('git', ['-C', repo, 'rev-parse', ref])).trim();
-}
-
-/**
- * The same judgement as `removable_worktree_branches` in wtman, which tags the menu rows:
- * against whatever the main checkout is on, since that is the branch `wtman merge` merges into.
- */
-async function mergeStatus(
-  repo: string,
-  into: string | null,
-  path: string,
-  branch: string | null
-): Promise<Pick<ProjectWorktree, 'dirty' | 'ahead' | 'state'>> {
-  const dirty =
-    (await run('git', ['-C', path, 'status', '--porcelain'])).trim() !== '';
-
-  if (into === null || branch === null || branch === into) {
-    return { dirty, ahead: 0, state: null };
-  }
-
-  const [ahead, head, target] = await Promise.all([
-    run('git', [
-      '-C',
-      repo,
-      'rev-list',
-      '--count',
-      `refs/heads/${into}..refs/heads/${branch}`,
-    ]).then((count) => Number(count.trim())),
-    revParse(repo, `refs/heads/${branch}`),
-    revParse(repo, `refs/heads/${into}`),
-  ]);
-
-  const state: MergeState =
-    ahead > 0 ? 'unmerged' : head === target ? 'no-commits' : 'merged';
-  return { dirty, ahead, state };
-}
-
-/**
- * The worktrees of one project, most recently touched first.
- *
- * `wtman list --json` is the whole index of what exists: every direct child of `~/wtman` is a
- * branch directory and every child of that is a repo, so a worktree is this project's when the
- * repo directory carries its name. That is wtman's own idea of which repo a worktree belongs
- * to — two projects checked out under the same folder name share worktrees there as far as it
- * is concerned — so nothing here holds a second opinion about it.
+ * `name` is the `~/wtman` directory, which is the branch with everything git allows and a path
+ * does not folded away — `refactor/api-endpoint-registry` lives in
+ * `refactor_api-endpoint-registry`. It names the project; `branch` is what goes back to wtman.
  */
 export async function listWorktrees(
   project: Project
 ): Promise<ProjectWorktree[]> {
-  const repo = repoPath(project);
-  const [rows, branches, desktop, into] = await Promise.all([
-    run('wtman', ['list', '--json']).then(
-      (stdout) => JSON.parse(stdout) as WtmanRow[]
+  const [rows, desktop] = await Promise.all([
+    run('wtman', ['status', '--json', repoPath(project)]).then(
+      (stdout) => JSON.parse(stdout) as WtmanStatusRow[]
     ),
-    branchesByPath(repo),
     getDesktopState(),
-    currentBranch(repo),
   ]);
 
   const openIds = new Set(desktop.worktrees.map((worktree) => worktree.id));
 
-  return Promise.all(
-    rows
-      .filter((row) => row.project === basename(repo) && branches.has(row.path))
-      .map(async (row) => {
-        const branch = branches.get(row.path) ?? null;
-        const projectId = `${project.canonicalId}${WORKTREE_SEP}${row.branch}`;
-        return {
-          name: row.branch,
-          branch,
-          path: row.path,
-          touchedAt: new Date(row.mtime * 1000).toISOString(),
-          projectId,
-          open: openIds.has(projectId),
-          into,
-          ...(await mergeStatus(repo, into, row.path, branch)),
-        };
-      })
-  );
+  return rows.map(({ mtime, ...row }) => {
+    const projectId = `${project.canonicalId}${WORKTREE_SEP}${row.name}`;
+    return {
+      ...row,
+      touchedAt: new Date(mtime * 1000).toISOString(),
+      projectId,
+      open: openIds.has(projectId),
+    };
+  });
 }
 
 /** Opening a worktree can mean starting an editor and its terminals, as `rv open` does. */
@@ -230,7 +153,7 @@ export async function openWorktree(
   project: Project,
   worktree: ProjectWorktree
 ): Promise<void> {
-  await openBranch(project, requireBranch(worktree));
+  await openBranch(project, worktree.branch);
 }
 
 /**
@@ -255,13 +178,6 @@ export async function createWorktree(
 
 /** A merge can push the branch to its upstream first, which is the network's time to take. */
 const MERGE_TIMEOUT_MS = 120000;
-
-function requireBranch(worktree: ProjectWorktree): string {
-  if (worktree.branch === null) {
-    throw new Error(`${worktree.name} is on a detached HEAD`);
-  }
-  return worktree.branch;
-}
 
 /**
  * `merge` and `remove` only run under `--interactive`, and every question they put is answered
@@ -297,7 +213,7 @@ export async function mergeWorktree(
     [
       'merge',
       repoPath(project),
-      requireBranch(worktree),
+      worktree.branch,
       ...(squash ? ['--squash'] : []),
     ],
     ['y'],
@@ -317,7 +233,7 @@ export async function removeWorktree(
   force: boolean
 ): Promise<string> {
   const unmerged =
-    worktree.state !== 'merged' && worktree.state !== 'no-commits';
+    worktree.state !== 'merged' && worktree.state !== 'no commits';
   if (removeBranch && unmerged && !force) {
     throw new UnmergedBranch(
       `${worktree.name} has commits ${worktree.into ?? 'the main checkout'} does not`
@@ -329,10 +245,48 @@ export async function removeWorktree(
       'remove',
       ...(removeBranch ? ['--remove-branch'] : []),
       repoPath(project),
-      requireBranch(worktree),
+      worktree.branch,
     ],
     removeBranch && unmerged ? ['y', 'y'] : ['y']
   );
 }
 
 export class UnmergedBranch extends Error {}
+
+/** A rebase replays the branch's commits one by one, and a hook may run on each. */
+const REBASE_TIMEOUT_MS = 120000;
+
+/**
+ * Rebases the branch onto whatever the main checkout is on, in its own worktree. It asks
+ * nothing, so it runs without `--interactive`. A conflict stops it there unfinished, for
+ * whoever opens the worktree to resolve or abort — wtman does not abort it on their behalf, and
+ * fails saying so. That is told apart from any other failure by reading the worktree again:
+ * an unfinished rebase comes back as the worktree, still mid-rebase, rather than as an error.
+ */
+export async function rebaseWorktree(
+  project: Project,
+  worktree: ProjectWorktree
+): Promise<{ unfinished: ProjectWorktree | null }> {
+  try {
+    await run(
+      'wtman',
+      ['rebase', repoPath(project), worktree.branch],
+      REBASE_TIMEOUT_MS
+    );
+    return { unfinished: null };
+  } catch (err) {
+    const stopped = (await listWorktrees(project)).find(
+      (w) => w.name === worktree.name
+    );
+    if (stopped?.operation === 'rebase') return { unfinished: stopped };
+    throw err;
+  }
+}
+
+/** Puts the branch back where it was before a rebase that stopped at a conflict. */
+export async function abortRebase(
+  project: Project,
+  worktree: ProjectWorktree
+): Promise<void> {
+  await run('wtman', ['rebase', '--abort', repoPath(project), worktree.branch]);
+}

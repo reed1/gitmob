@@ -38,36 +38,53 @@ and its servers, so the project list reads them under `canonicalId`, as do the d
 ## Worktrees on disk — `wtman`
 
 `src/lib/wtman.ts`, read by the Wtman tab: every worktree of the project with whether it is
-merged, a menu on each to open, merge or remove it, and the box that creates one.
+merged, a menu on each to open, rebase, merge or remove it, and the box that creates one. This
+app is a wrapper here: what a worktree has on it is wtman's answer, never worked out a second
+time.
 
-- `wtman list --json` — every worktree on this machine, each with its `~/wtman` directory name,
-  the repo directory under it, and when it was last touched. There is no per-project call: the
-  layout _is_ the index, so a worktree is this project's when that repo directory carries its
-  name. Two projects checked out under the same folder name share worktrees as far as wtman is
-  concerned, and nothing here holds a second opinion about that.
+- `wtman status --json <repoPath>` — every worktree of the repo under `~/wtman`, most recently
+  touched first: its directory name, the branch it is really on, its path and when it was last
+  touched, and what it has on it against the branch the main checkout is on. This is the same
+  call the wtman menu labels its rows from.
 - `wtman open <repoPath> --branch <branch>` — opens one, and creates the branch and the
   checkout first when they are not there. Open and Create on the tab are this one command. For a
   worktree that already exists it is nothing but wtman's hand-off to `rofi-vscode open`.
+- `wtman rebase <repoPath> <branch>` — rebases the branch onto whatever the main checkout is
+  on, in its own worktree. `wtman rebase --abort <repoPath> <branch>` gives up one that stopped.
 - `wtman --interactive merge <repoPath> <branch> [--squash]` — merges into whatever the main
   checkout is on, then removes the worktree and the branch.
 - `wtman --interactive remove [--remove-branch] <repoPath> <branch>` — removes the worktree, and
   the branch with it on the flag.
 
-The branch that goes out is the repo's answer, never the directory name. `wtman list` reports the
-directory, which is the branch with everything git allows and a path does not folded away —
+The branch that goes out is the row's `branch`, never its `name`. The name is the directory,
+which is the branch with everything git allows and a path does not folded away —
 `refactor/api-endpoint-registry` lives in `refactor_api-endpoint-registry` — and `wtman open`
-given that folded name would find no such branch and **create** one. So each row is joined
-against `git worktree list --porcelain` in the main checkout for the branch it is really on.
+given that folded name would find no such branch and **create** one. The name is what the
+project id is built from.
 
-That join is also what "living" means, which is the whole of what this tab lists: a directory
-left behind by a worktree git no longer knows about is dropped, and a branch with no worktree
-never appears at all — including one Create makes a worktree for, which stops being invisible
-by acquiring one.
+`status` reads the repo's own worktree list, which is what "living" means here: a directory left
+behind by a worktree git no longer knows about is not listed, and a branch with no worktree never
+appears at all — including one Create makes a worktree for, which stops being invisible by
+acquiring one.
 
-Each row carries the tag the wtman menu puts on it, judged the same way against the branch the
-main checkout is on — the one `merge` merges into: `merged` when every commit is already there,
-`no commits` when it sits on that very commit, otherwise how many commits it has that the main
-checkout does not; and separately, whether the checkout has uncommitted changes.
+Each row says, against the branch the main checkout is on: `merged` when every commit is already
+there, `no commits` when it still sits on the commit it was created from (however far the main
+branch has moved since), otherwise how many commits it has that the main branch does not; how
+many the main branch has that it does not, which is what a rebase brings in; whether the checkout
+has uncommitted changes; and a rebase or merge that stopped in it unfinished, with the paths still
+conflicted. A rebase detaches HEAD until it finishes, and wtman still reports that checkout as
+the branch being rebased.
+
+`rebase` asks nothing, so it runs without `--interactive`. It refuses a worktree with
+uncommitted changes or one already mid-rebase, and does nothing for a branch with every commit of
+the main branch already. A conflict stops it in the worktree, unfinished — wtman does not abort
+it, and fails saying so. The route tells that apart from any other failure by reading the
+worktree again: one still mid-rebase answers with a `warning`, shown as a warning toast, and the
+row keeps saying the rebase is not finished, with the conflicted paths, until it is continued in
+the worktree or aborted from the menu. A worktree open on the desktop can be rebased: the files
+change under Cursor rather than disappear, and that is where a conflict gets resolved. `merge`
+refuses a worktree mid-rebase, since the branch would still be what it was before the rebase
+began.
 
 wtman tells its prompts apart by what it may assume of somebody who is not there: an **offer** —
 carrying the main checkout's uncommitted changes into the new branch — is declined without

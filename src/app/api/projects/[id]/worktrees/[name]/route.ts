@@ -2,15 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getProject } from '@/lib/projects';
 import {
   UnmergedBranch,
+  abortRebase,
   listWorktrees,
   mergeWorktree,
   openWorktree,
+  rebaseWorktree,
   removeWorktree,
 } from '@/lib/wtman';
 
 type Action =
   | { action: 'open' }
   | { action: 'merge'; squash: boolean }
+  | { action: 'rebase' }
+  | { action: 'abort-rebase' }
   | { action: 'remove'; removeBranch: boolean; force: boolean };
 
 /**
@@ -18,6 +22,9 @@ type Action =
  * the repo's answer, not the caller's, and a name that is no longer there must not reach `wtman
  * open`, which would take it for a branch to create. Merge and remove judge whether the branch
  * is merged from the same fresh read.
+ *
+ * A rebase that stopped at a conflict is not an error but a warning, with the worktree list
+ * showing it mid-rebase: it is left that way on purpose, for whoever opens the worktree.
  */
 export async function POST(
   request: NextRequest,
@@ -49,6 +56,19 @@ export async function POST(
       await mergeWorktree(project, worktree, body.squash);
     } else if (body.action === 'remove') {
       await removeWorktree(project, worktree, body.removeBranch, body.force);
+    } else if (body.action === 'rebase') {
+      const { unfinished } = await rebaseWorktree(project, worktree);
+      if (unfinished) {
+        return NextResponse.json(
+          {
+            warning: `Rebase of ${worktree.name} onto ${worktree.into} is not finished: conflict in ${unfinished.conflicts.join(', ')}`,
+            worktrees: await listWorktrees(project).catch(() => undefined),
+          },
+          { status: 409 }
+        );
+      }
+    } else if (body.action === 'abort-rebase') {
+      await abortRebase(project, worktree);
     } else {
       throw new Error(
         `Unexpected action: ${(body as { action: string }).action}`

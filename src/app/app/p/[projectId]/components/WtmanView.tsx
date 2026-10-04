@@ -10,7 +10,7 @@ import { Modal } from '../../../Modal';
 
 interface Worktree {
   name: string;
-  branch: string | null;
+  branch: string;
   path: string;
   touchedAt: string;
   projectId: string;
@@ -18,26 +18,47 @@ interface Worktree {
   dirty: boolean;
   into: string | null;
   ahead: number;
-  state: 'merged' | 'no-commits' | 'unmerged' | null;
+  behind: number;
+  state: 'merged' | 'no commits' | 'unmerged' | null;
+  operation: 'rebase' | 'merge' | null;
+  conflicts: string[];
 }
 
 type Pending =
   | { kind: 'merge'; worktree: Worktree; squash: boolean }
-  | { kind: 'remove'; worktree: Worktree; removeBranch: boolean };
+  | { kind: 'remove'; worktree: Worktree; removeBranch: boolean }
+  | { kind: 'rebase'; worktree: Worktree }
+  | { kind: 'abort-rebase'; worktree: Worktree };
 
 function isMerged(worktree: Worktree): boolean {
-  return worktree.state === 'merged' || worktree.state === 'no-commits';
+  return worktree.state === 'merged' || worktree.state === 'no commits';
+}
+
+/** Why wtman would refuse to rebase it, or null when it would go ahead. */
+function rebaseBlocked(worktree: Worktree): string | null {
+  if (worktree.operation !== null) return `${worktree.operation} not finished`;
+  if (worktree.into === null) return 'main checkout is detached';
+  if (worktree.dirty) return 'commit the uncommitted changes first';
+  if (worktree.behind === 0) return `already on top of ${worktree.into}`;
+  return null;
 }
 
 function MergeBadge({ worktree }: { worktree: Worktree }) {
   const badges: { text: string; className: string }[] = [];
+
+  if (worktree.operation !== null) {
+    badges.push({
+      text: `${worktree.operation} not finished`,
+      className: 'bg-red-500/15 text-red-500',
+    });
+  }
 
   if (worktree.state === 'merged') {
     badges.push({
       text: 'merged',
       className: 'bg-green-500/15 text-green-500',
     });
-  } else if (worktree.state === 'no-commits') {
+  } else if (worktree.state === 'no commits') {
     badges.push({
       text: 'no commits',
       className: 'bg-foreground/10 text-foreground/50',
@@ -49,6 +70,13 @@ function MergeBadge({ worktree }: { worktree: Worktree }) {
     });
   } else if (worktree.state !== null) {
     throw new Error(`Unexpected merge state: ${worktree.state}`);
+  }
+
+  if (worktree.behind > 0) {
+    badges.push({
+      text: `${worktree.behind} behind ${worktree.into}`,
+      className: 'bg-foreground/10 text-foreground/50',
+    });
   }
 
   if (worktree.dirty) {
@@ -88,14 +116,26 @@ function WorktreeKebabMenu({
   onPick: (pending: Pending) => void;
 }) {
   // wtman refuses to delete a folder Cursor has open, since the window goes down with it.
-  const blocked =
-    worktree.branch === null
-      ? 'detached HEAD'
-      : worktree.open
-        ? 'close it on the desktop first'
-        : null;
+  const removeBlocked = worktree.open ? 'close it on the desktop first' : null;
+  // A merge would take the branch as it was before the unfinished rebase began.
+  const mergeBlocked =
+    worktree.operation !== null
+      ? `finish the ${worktree.operation} first`
+      : removeBlocked;
   const into = worktree.into ?? 'main checkout';
-  const canMerge = blocked === null && worktree.into !== null;
+  const canMerge = mergeBlocked === null && worktree.into !== null;
+  const notRebasable = rebaseBlocked(worktree);
+
+  const reasons: string[] = [];
+  if (worktree.operation === null && notRebasable) {
+    reasons.push(`Rebase: ${notRebasable}`);
+  }
+  if (mergeBlocked !== null && mergeBlocked === removeBlocked) {
+    reasons.push(`Merge and remove: ${mergeBlocked}`);
+  } else {
+    if (mergeBlocked !== null) reasons.push(`Merge: ${mergeBlocked}`);
+    if (removeBlocked !== null) reasons.push(`Remove: ${removeBlocked}`);
+  }
 
   return (
     <KebabMenu label={`Actions for ${worktree.name}`} disabled={disabled}>
@@ -104,8 +144,21 @@ function WorktreeKebabMenu({
           {isCurrent ? 'You are here' : 'Go to'}
         </KebabMenuItem>
       ) : (
-        <KebabMenuItem onSelect={onOpen} disabled={worktree.branch === null}>
-          Open
+        <KebabMenuItem onSelect={onOpen}>Open</KebabMenuItem>
+      )}
+      {worktree.operation === 'rebase' ? (
+        <KebabMenuItem
+          onSelect={() => onPick({ kind: 'abort-rebase', worktree })}
+          danger
+        >
+          Abort rebase
+        </KebabMenuItem>
+      ) : (
+        <KebabMenuItem
+          onSelect={() => onPick({ kind: 'rebase', worktree })}
+          disabled={notRebasable !== null}
+        >
+          Rebase onto {into}
         </KebabMenuItem>
       )}
       <KebabMenuItem
@@ -124,7 +177,7 @@ function WorktreeKebabMenu({
         onSelect={() =>
           onPick({ kind: 'remove', worktree, removeBranch: false })
         }
-        disabled={blocked !== null}
+        disabled={removeBlocked !== null}
         danger
       >
         Remove worktree
@@ -133,16 +186,16 @@ function WorktreeKebabMenu({
         onSelect={() =>
           onPick({ kind: 'remove', worktree, removeBranch: true })
         }
-        disabled={blocked !== null}
+        disabled={removeBlocked !== null}
         danger
       >
         Remove worktree and branch
       </KebabMenuItem>
-      {blocked && (
-        <div className="px-4 pt-1 pb-2 text-xs text-foreground/40">
-          Merge and remove: {blocked}
+      {reasons.map((reason) => (
+        <div key={reason} className="px-4 pt-1 pb-2 text-xs text-foreground/40">
+          {reason}
         </div>
-      )}
+      ))}
     </KebabMenu>
   );
 }
@@ -191,6 +244,15 @@ function ConfirmModal({
       );
     }
     confirmLabel = 'Remove';
+  } else if (pending.kind === 'rebase') {
+    heading = `Rebase onto ${into}?`;
+    body = `Replays the branch's ${worktree.ahead} commit${worktree.ahead === 1 ? '' : 's'} on top of the ${worktree.behind} ${into} has gained, in the worktree. A conflict stops it there, unfinished, to be resolved in the worktree or aborted from here.`;
+    confirmLabel = 'Rebase';
+  } else if (pending.kind === 'abort-rebase') {
+    heading = 'Abort the rebase?';
+    body =
+      'Puts the branch back where it was before the rebase began. Any conflict already resolved in the worktree is dropped with it.';
+    confirmLabel = 'Abort rebase';
   } else {
     throw new Error(`Unexpected action: ${(pending as Pending).kind}`);
   }
@@ -215,7 +277,9 @@ function ConfirmModal({
         <button
           onClick={onConfirm}
           className={`px-3 py-1.5 text-sm rounded-lg ${
-            pending.kind === 'remove' || warnings.length > 0
+            pending.kind === 'remove' ||
+            pending.kind === 'abort-rebase' ||
+            warnings.length > 0
               ? 'bg-red-500/15 text-red-500 active:bg-red-500/25'
               : 'bg-blue-600 text-white active:opacity-80'
           }`}
@@ -307,6 +371,16 @@ export function WtmanView({
         force: chosen.removeBranch && !isMerged(worktree),
       });
       if (ok) addToast(`Removed ${worktree.name}`, 'success');
+    } else if (chosen.kind === 'rebase') {
+      // A conflict comes back as a warning toast from apiFetch, and the row stays mid-rebase.
+      const { ok } = await act(worktree, 'Rebasing…', { action: 'rebase' });
+      if (ok)
+        addToast(`Rebased ${worktree.name} onto ${worktree.into}`, 'success');
+    } else if (chosen.kind === 'abort-rebase') {
+      const { ok } = await act(worktree, 'Aborting…', {
+        action: 'abort-rebase',
+      });
+      if (ok) addToast(`Aborted the rebase of ${worktree.name}`, 'success');
     } else {
       throw new Error(`Unexpected action: ${(chosen as Pending).kind}`);
     }
@@ -413,8 +487,7 @@ export function WtmanView({
               <div className="min-w-0">
                 <div className="font-medium truncate">{worktree.name}</div>
                 <div className="text-xs text-foreground/50 truncate">
-                  {worktree.branch ?? 'detached HEAD'} ·{' '}
-                  {relativeTime(worktree.touchedAt)}
+                  {worktree.branch} · {relativeTime(worktree.touchedAt)}
                 </div>
                 <div className="mt-1 flex flex-wrap gap-1 empty:hidden">
                   <MergeBadge worktree={worktree} />
@@ -438,6 +511,13 @@ export function WtmanView({
               )}
             </div>
 
+            {worktree.conflicts.length > 0 && (
+              <div className="mt-2 text-xs text-red-500 break-all">
+                Conflict in {worktree.conflicts.join(', ')}. Resolve it in the
+                worktree and run git rebase --continue, or abort it here.
+              </div>
+            )}
+
             <div className="mt-2 text-xs">
               {worktree.open ? (
                 <span className="text-green-500">Open on the desktop</span>
@@ -456,7 +536,9 @@ export function WtmanView({
         one starts its editor and terminal at the desktop, which is also what
         gives it a project of its own here. Merging goes into whatever the main
         checkout is on, and removes the worktree and branch after; a worktree
-        open on the desktop has to be closed before either.
+        open on the desktop has to be closed before either. Rebasing replays the
+        branch on top of that same branch, and a conflict leaves it unfinished
+        in the worktree.
       </p>
 
       {pending && (
