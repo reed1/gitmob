@@ -93,20 +93,32 @@ function CommitCard({
   );
 }
 
+const PAGE_SIZE = 5;
+
 export function RecentCommits({ projectId }: { projectId: string }) {
-  const [commits, setCommits] = useState<CommitEntry[] | null>(null);
+  // Every refresh refetches all the commits shown, so polling never drops what Load more added.
+  const [count, setCount] = useState(PAGE_SIZE);
+  const [loaded, setLoaded] = useState<{
+    count: number;
+    commits: CommitEntry[];
+  } | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch(
-      `/api/projects/${projectId}/git?action=commits&count=5`
+      `/api/projects/${projectId}/git?action=commits&count=${count}`
     );
     const data = await res.json();
-    setCommits(data.commits ?? []);
-  }, [projectId]);
+    setLoaded({ count, commits: data.commits ?? [] });
+  }, [projectId, count]);
 
   useAutoRefresh(load, 60000);
 
-  if (commits === null) return null;
+  if (loaded === null) return null;
+
+  const { commits } = loaded;
+  const loadingMore = loaded.count < count;
+  // Fewer than asked for means the history has run out.
+  const hasMore = commits.length === loaded.count;
 
   return (
     <section>
@@ -119,6 +131,15 @@ export function RecentCommits({ projectId }: { projectId: string }) {
           <div className="text-sm text-foreground/40">No commits yet</div>
         )}
       </div>
+      {(hasMore || loadingMore) && (
+        <button
+          onClick={() => setCount(count + PAGE_SIZE)}
+          disabled={loadingMore}
+          className="mt-2 w-full py-2 text-sm text-foreground/60 border border-foreground/10 rounded-lg active:bg-foreground/10 disabled:opacity-50"
+        >
+          {loadingMore ? 'Loading...' : 'Load more'}
+        </button>
+      )}
     </section>
   );
 }
