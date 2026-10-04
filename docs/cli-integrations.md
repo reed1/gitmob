@@ -217,9 +217,11 @@ The project card's menu makes the other two, from `src/lib/desktop.ts` behind th
 - `rv close <projectId>` — Close, offered on one that is, behind a confirmation. It is the whole
   teardown `<leader> q q` runs at the desktop, every part at once: the code workspace's
   terminals, the IDE, the project's `rv run` units, its Claude sessions into purgatory, and every
-  other window on its workspaces, closed as its X button would. It returns within a second or
-  so, and an error from any part is what the toast shows. A window holding unsaved work — a
-  guarded page, Cursor's unsaved files — asks at the desktop, where nobody is to answer it.
+  other window on its workspaces, closed as its X button would. When the desktop was on that
+  project, it lands on `.dotfiles`, so no empty workspace keeps it open. It returns within a
+  second or so, and an error from any part is what the toast shows. A window holding unsaved
+  work — a guarded page, Cursor's unsaved files — asks at the desktop, where nobody is to answer
+  it.
 
 Which projects are open comes from `rw-msg get_state`, the same round trip that lists the open
 worktrees, as `openOnDesktop` on every project. Every open project is listed under Active on the
