@@ -283,6 +283,23 @@ export async function rebaseWorktree(
   }
 }
 
+/**
+ * Merges whatever the main checkout is on into the branch, in its worktree, then fast-forwards
+ * the main checkout to it, leaving both on one commit. wtman does it all or nothing: it refuses
+ * either checkout with uncommitted changes, aborts a merge that conflicts, and puts the branch
+ * back when the fast-forward fails. It asks nothing, so it runs without `--interactive`.
+ */
+export async function syncWorktree(
+  project: Project,
+  worktree: ProjectWorktree
+): Promise<void> {
+  await run(
+    'wtman',
+    ['sync', repoPath(project), worktree.branch],
+    MERGE_TIMEOUT_MS
+  );
+}
+
 /** Puts the branch back where it was before a rebase that stopped at a conflict. */
 export async function abortRebase(
   project: Project,

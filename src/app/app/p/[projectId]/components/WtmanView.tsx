@@ -28,7 +28,8 @@ type Pending =
   | { kind: 'merge'; worktree: Worktree; squash: boolean }
   | { kind: 'remove'; worktree: Worktree; removeBranch: boolean }
   | { kind: 'rebase'; worktree: Worktree }
-  | { kind: 'abort-rebase'; worktree: Worktree };
+  | { kind: 'abort-rebase'; worktree: Worktree }
+  | { kind: 'sync'; worktree: Worktree };
 
 function isMerged(worktree: Worktree): boolean {
   return worktree.state === 'merged' || worktree.state === 'no commits';
@@ -40,6 +41,17 @@ function rebaseBlocked(worktree: Worktree): string | null {
   if (worktree.into === null) return 'main checkout is detached';
   if (worktree.dirty) return 'commit the uncommitted changes first';
   if (worktree.behind === 0) return `already on top of ${worktree.into}`;
+  return null;
+}
+
+/** Why wtman would refuse to sync it, or null when it would go ahead. The main checkout's own
+ * uncommitted changes are not on the row, and only wtman refuses those. */
+function syncBlocked(worktree: Worktree): string | null {
+  if (worktree.operation !== null) return `${worktree.operation} not finished`;
+  if (worktree.into === null) return 'main checkout is detached';
+  if (worktree.dirty) return 'commit the uncommitted changes first';
+  if (worktree.ahead === 0 && worktree.behind === 0)
+    return `already on the same commit as ${worktree.into}`;
   return null;
 }
 
@@ -125,10 +137,14 @@ function WorktreeKebabMenu({
   const into = worktree.into ?? 'main checkout';
   const canMerge = mergeBlocked === null && worktree.into !== null;
   const notRebasable = rebaseBlocked(worktree);
+  const notSyncable = syncBlocked(worktree);
 
   const reasons: string[] = [];
   if (worktree.operation === null && notRebasable) {
     reasons.push(`Rebase: ${notRebasable}`);
+  }
+  if (worktree.operation === null && notSyncable) {
+    reasons.push(`Merge sync: ${notSyncable}`);
   }
   if (mergeBlocked !== null && mergeBlocked === removeBlocked) {
     reasons.push(`Merge and remove: ${mergeBlocked}`);
@@ -161,6 +177,12 @@ function WorktreeKebabMenu({
           Rebase onto {into}
         </KebabMenuItem>
       )}
+      <KebabMenuItem
+        onSelect={() => onPick({ kind: 'sync', worktree })}
+        disabled={notSyncable !== null}
+      >
+        Merge sync with {into}
+      </KebabMenuItem>
       <KebabMenuItem
         onSelect={() => onPick({ kind: 'merge', worktree, squash: false })}
         disabled={!canMerge}
@@ -253,6 +275,10 @@ function ConfirmModal({
     body =
       'Puts the branch back where it was before the rebase began. Any conflict already resolved in the worktree is dropped with it.';
     confirmLabel = 'Abort rebase';
+  } else if (pending.kind === 'sync') {
+    heading = `Merge sync with ${into}?`;
+    body = `Merges ${into} into the branch in the worktree, then fast-forwards ${into} in the main checkout to it, so both end on the same commit. The worktree stays. All or nothing: both checkouts must have no uncommitted changes, a conflict aborts the merge, and a failed fast-forward puts the branch back.`;
+    confirmLabel = 'Merge sync';
   } else {
     throw new Error(`Unexpected action: ${(pending as Pending).kind}`);
   }
@@ -381,6 +407,10 @@ export function WtmanView({
         action: 'abort-rebase',
       });
       if (ok) addToast(`Aborted the rebase of ${worktree.name}`, 'success');
+    } else if (chosen.kind === 'sync') {
+      const { ok } = await act(worktree, 'Syncing…', { action: 'sync' });
+      if (ok)
+        addToast(`Synced ${worktree.name} with ${worktree.into}`, 'success');
     } else {
       throw new Error(`Unexpected action: ${(chosen as Pending).kind}`);
     }
@@ -538,7 +568,8 @@ export function WtmanView({
         checkout is on, and removes the worktree and branch after; a worktree
         open on the desktop has to be closed before either. Rebasing replays the
         branch on top of that same branch, and a conflict leaves it unfinished
-        in the worktree.
+        in the worktree. Merge sync merges that branch into the worktree and
+        fast-forwards it to the result, keeping the worktree, or does nothing.
       </p>
 
       {pending && (

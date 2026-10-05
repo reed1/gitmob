@@ -38,7 +38,7 @@ and its servers, so the project list reads them under `canonicalId`, as do the d
 ## Worktrees on disk — `wtman`
 
 `src/lib/wtman.ts`, read by the Wtman tab: every worktree of the project with whether it is
-merged, a menu on each to open, rebase, merge or remove it, and the box that creates one. This
+merged, a menu on each to open, rebase, merge sync, merge or remove it, and the box that creates one. This
 app is a wrapper here: what a worktree has on it is wtman's answer, never worked out a second
 time.
 
@@ -51,6 +51,8 @@ time.
   worktree that already exists it is nothing but wtman's hand-off to `rofi-vscode open`.
 - `wtman rebase <repoPath> <branch>` — rebases the branch onto whatever the main checkout is
   on, in its own worktree. `wtman rebase --abort <repoPath> <branch>` gives up one that stopped.
+- `wtman sync <repoPath> <branch>` — merges whatever the main checkout is on into the branch, in
+  its worktree, then fast-forwards the main checkout to it, keeping the worktree.
 - `wtman --interactive merge <repoPath> <branch> [--squash]` — merges into whatever the main
   checkout is on, then removes the worktree and the branch.
 - `wtman --interactive remove [--remove-branch] <repoPath> <branch>` — removes the worktree, and
@@ -85,6 +87,13 @@ the worktree or aborted from the menu. A worktree open on the desktop can be reb
 change under Cursor rather than disappear, and that is where a conflict gets resolved. `merge`
 refuses a worktree mid-rebase, since the branch would still be what it was before the rebase
 began.
+
+`sync` asks nothing either, and is all or nothing. It refuses before starting when either
+checkout has uncommitted changes (untracked files included) or an unfinished rebase or merge; a
+conflict merging into the branch is aborted rather than left for resolving; and a fast-forward
+of the main checkout that fails resets the branch to where it was before. The menu disables it
+for a row that is dirty, mid-operation, or already on the main branch's commit; the main
+checkout's own state is not on the row, so only wtman refuses that.
 
 wtman tells its prompts apart by what it may assume of somebody who is not there: an **offer** —
 carrying the main checkout's uncommitted changes into the new branch — is declined without

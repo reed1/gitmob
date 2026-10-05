@@ -8,6 +8,7 @@ import {
   openWorktree,
   rebaseWorktree,
   removeWorktree,
+  syncWorktree,
 } from '@/lib/wtman';
 
 type Action =
@@ -15,6 +16,7 @@ type Action =
   | { action: 'merge'; squash: boolean }
   | { action: 'rebase' }
   | { action: 'abort-rebase' }
+  | { action: 'sync' }
   | { action: 'remove'; removeBranch: boolean; force: boolean };
 
 /**
@@ -69,6 +71,8 @@ export async function POST(
       }
     } else if (body.action === 'abort-rebase') {
       await abortRebase(project, worktree);
+    } else if (body.action === 'sync') {
+      await syncWorktree(project, worktree);
     } else {
       throw new Error(
         `Unexpected action: ${(body as { action: string }).action}`
