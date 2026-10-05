@@ -562,6 +562,14 @@ timeout rather than needing to be cleared — which is why this app only ever to
 reads it back to decide anything. A tap that succeeded is away by definition, so the badge hides
 itself without asking again.
 
+## Shared files — `rbak`
+
+`src/app/api/files/rbak/route.ts`, behind "Move all to rbak" in the Files page's header menu.
+
+- `rbak move <paths...>` — every entry of the folder being viewed, in one call, so they land in
+  rbak's local store as a single entry that `rbak restore` brings back together. Its stderr is the
+  error toast.
+
 ## Usage — `claudex usage`
 
 `src/lib/claude-usage.ts`, read by the dollar badge beside the GitMob title.

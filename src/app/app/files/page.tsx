@@ -91,19 +91,7 @@ function EntryMenu({
         className="p-2 rounded-lg text-foreground/50 hover:bg-foreground/10 active:opacity-80"
         aria-label={`Actions for ${entry.name}`}
       >
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M12 5v.01M12 12v.01M12 19v.01"
-          />
-        </svg>
+        <KebabIcon />
       </button>
       {open && (
         <div className="absolute right-0 top-full mt-1 z-20 bg-background border border-foreground/20 rounded-lg shadow-lg py-1 min-w-[140px]">
@@ -139,6 +127,63 @@ function EntryMenu({
             className={`${itemClass} text-red-500`}
           >
             Delete
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function KebabIcon() {
+  return (
+    <svg
+      className="w-5 h-5"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M12 5v.01M12 12v.01M12 19v.01"
+      />
+    </svg>
+  );
+}
+
+function FolderMenu({
+  disabled,
+  onMoveAll,
+}: {
+  disabled: boolean;
+  onMoveAll: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useOutsideClick(open, menuRef, () => setOpen(false));
+
+  return (
+    <div className="relative shrink-0" ref={menuRef}>
+      <button
+        onClick={() => setOpen(!open)}
+        className="p-2 rounded-lg text-foreground/60 hover:bg-foreground/10 active:opacity-80"
+        aria-label="Folder actions"
+      >
+        <KebabIcon />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 z-20 bg-background border border-foreground/20 rounded-lg shadow-lg py-1 min-w-[160px]">
+          <button
+            onClick={() => {
+              setOpen(false);
+              onMoveAll();
+            }}
+            disabled={disabled}
+            className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 disabled:opacity-40"
+          >
+            Move all to rbak
           </button>
         </div>
       )}
@@ -211,6 +256,7 @@ export default function FilesPage() {
   const [entries, setEntries] = useState<SharedFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [moving, setMoving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<SharedFile | null>(null);
   const [preview, setPreview] = useState<SharedFile | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -267,6 +313,25 @@ export default function FilesPage() {
     await load();
   };
 
+  const moveAllToRbak = async () => {
+    setMoving(true);
+    try {
+      const res = await apiFetch(
+        `/api/files/rbak?path=${encodeURIComponent(path)}`,
+        { method: 'POST' }
+      );
+      if (!res.ok) return;
+      const { moved } = await res.json();
+      addToast(
+        moved === 1 ? 'Moved 1 item to rbak' : `Moved ${moved} items to rbak`,
+        'success'
+      );
+      await load();
+    } finally {
+      setMoving(false);
+    }
+  };
+
   useBackToDismiss(preview !== null, () => setPreview(null));
 
   const goUp = () => {
@@ -305,31 +370,16 @@ export default function FilesPage() {
             </div>
           </div>
           <button
-            onClick={() => load()}
-            disabled={loading}
-            className="p-2 rounded-lg hover:bg-foreground/10 active:opacity-80"
-          >
-            <svg
-              className={`w-5 h-5 text-foreground/60 ${loading ? 'animate-spin' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              />
-            </svg>
-          </button>
-          <button
             onClick={() => inputRef.current?.click()}
             disabled={uploading}
             className="px-3 py-1.5 text-sm bg-foreground text-background rounded-lg disabled:opacity-40"
           >
             {uploading ? 'Uploading...' : 'Upload'}
           </button>
+          <FolderMenu
+            disabled={loading || moving || entries.length === 0}
+            onMoveAll={moveAllToRbak}
+          />
           <input
             ref={inputRef}
             type="file"
