@@ -153,7 +153,7 @@ export function NewSessionModal({
           onChange={(e) => setPrompt(e.target.value)}
           rows={4}
           placeholder="Opening prompt (optional)"
-          className="w-full text-sm border border-foreground/20 rounded-lg px-3 py-2 bg-background resize-y"
+          className="w-full text-sm border border-foreground/20 rounded-lg px-3 py-2 bg-background resize-none"
         />
         <div className="flex items-center justify-between gap-2">
           <SpeakButton

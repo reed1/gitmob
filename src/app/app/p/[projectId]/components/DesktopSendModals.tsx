@@ -46,7 +46,7 @@ export function SendTextModal({
           onChange={(e) => setText(e.target.value)}
           rows={4}
           placeholder="Text to type into the session"
-          className="w-full text-sm border border-foreground/20 rounded-lg px-3 py-2 bg-background resize-y"
+          className="w-full text-sm border border-foreground/20 rounded-lg px-3 py-2 bg-background resize-none"
         />
         <label className="flex items-center gap-2 text-sm">
           <input

@@ -248,7 +248,7 @@ export function PendingHandoffs({
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
                   rows={12}
-                  className="w-full text-sm border border-foreground/20 rounded-lg px-3 py-2 bg-background font-mono"
+                  className="w-full text-sm border border-foreground/20 rounded-lg px-3 py-2 bg-background font-mono resize-none"
                 />
               </div>
               <div className="px-4 py-3 border-t border-foreground/10 flex items-center justify-between gap-2">

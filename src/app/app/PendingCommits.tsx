@@ -173,7 +173,7 @@ export function PendingCommits({
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   rows={10}
-                  className="w-full text-sm border border-foreground/20 rounded-lg px-3 py-2 bg-background font-mono"
+                  className="w-full text-sm border border-foreground/20 rounded-lg px-3 py-2 bg-background font-mono resize-none"
                 />
 
                 {/* No Changes tab stands behind these repositories, so this is the only
