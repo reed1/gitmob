@@ -5,15 +5,15 @@ import { useRouter } from 'next/navigation';
 import { apiFetch } from '../../lib/api';
 import { launchDesktopSession } from '../../lib/desktop-client';
 import {
-  CLAUDE_MODES,
-  ClaudeMode,
-  DEFAULT_CLAUDE_MODE,
+  DESKTOP_MODES,
+  DesktopMode,
+  DEFAULT_DESKTOP_MODE,
 } from '../../lib/desktop-modes';
 import { Modal } from './Modal';
 import { SpeakButton, appendSpoken } from './SpeakButton';
 
 /**
- * The one way a Claude session is started from this app — the project card's menu on the front
+ * The one way a desktop session is started from this app — the project card's menu on the front
  * page, the Claude tab and a pinboard note (its text as the opening prompt) all open this. Mode,
  * opening prompt and dictation sit behind the one button, the same trade every other thing sent
  * to a session already makes. A second composer only means the two drift: the front page kept
@@ -37,7 +37,7 @@ export function NewSessionModal({
   onLaunched?: () => void;
 }) {
   const router = useRouter();
-  const [mode, setMode] = useState<ClaudeMode>(DEFAULT_CLAUDE_MODE);
+  const [mode, setMode] = useState<DesktopMode>(DEFAULT_DESKTOP_MODE);
   const [inWorktree, setInWorktree] = useState(false);
   const [branch, setBranch] = useState('');
   const [suggesting, setSuggesting] = useState(false);
@@ -92,10 +92,10 @@ export function NewSessionModal({
         <div className="flex gap-2">
           <select
             value={mode}
-            onChange={(e) => setMode(e.target.value as ClaudeMode)}
+            onChange={(e) => setMode(e.target.value as DesktopMode)}
             className="flex-1 min-w-0 text-sm bg-background border border-foreground/20 rounded-lg px-3 py-2"
           >
-            {CLAUDE_MODES.map((entry) => (
+            {DESKTOP_MODES.map((entry) => (
               <option key={entry.mode} value={entry.mode}>
                 {entry.label}
               </option>

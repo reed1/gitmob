@@ -279,6 +279,21 @@ is `claudex`'s own — `auto`, `edit`, `yolo` — not a `claude --permission-mod
 `claude` flags a session gets beyond those, Remote Control and Chrome included, are claudex's
 defaults; this app adds none of its own.
 
+New-session and handoff pickers use one list of mode IDs and labels in
+`src/lib/desktop-modes.ts`. They pass the chosen ID to `claudex kitty`, which owns provider
+selection, argument validation, prompts and launch behavior. Gitmob uses the same launch call
+for every mode.
+
+Claudex defines `Mode` and `Provider` enums in `core/modes.py`, mapping `auto`, `edit`, `yolo`
+and `recall` to Claude, and `codex` to Codex. Separate provider handlers implement launches;
+unknown modes, unmapped providers and unsupported arguments fail before detaching or consuming
+prompt files. Both providers accept opening prompts, `--submit`, temporary prompt files, titles,
+directories and detached launches. The Codex handler validates arguments and translates common
+resume/fork flags. Claude-only flags such as Chrome, Remote Control, permission modes and
+`--no-defaults` produce explicit errors for Codex. Submitting a prompt while resuming or forking
+Codex requires an explicit session ID. Codex windows remain outside the Claude session registry,
+so the existing Claude session list and controls still cover Claude windows only.
+
 With the modal's Worktree toggle on, a launch is one request: `createWorktree` from
 `src/lib/wtman.ts` runs `wtman open --branch` first — the Wtman tab's Create, forking off main —
 and the two commands above then go to the worktree's id and checkout instead of the project's.

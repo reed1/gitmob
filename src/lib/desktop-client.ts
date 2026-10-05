@@ -1,5 +1,5 @@
 import { addToast, apiFetch } from './api';
-import type { ClaudeMode } from './desktop-modes';
+import type { DesktopMode } from './desktop-modes';
 
 /**
  * Starts a session and answers with the project it landed on, or null when it failed. With a
@@ -7,7 +7,7 @@ import type { ClaudeMode } from './desktop-modes';
  */
 export async function launchDesktopSession(
   projectId: string,
-  mode: ClaudeMode,
+  mode: DesktopMode,
   prompt = '',
   branch = ''
 ): Promise<string | null> {

@@ -1,6 +1,6 @@
 import { execFile } from 'child_process';
 import type { CommonCommand, SpecialKey } from './desktop-keys';
-import type { ClaudeMode } from './desktop-modes';
+import type { DesktopMode } from './desktop-modes';
 
 /** What Claude Code itself reports the session's context window to be holding. */
 export interface SessionContext {
@@ -80,7 +80,7 @@ function run(
 }
 
 /**
- * `claudex desktop` is the only way this app reaches the desktop — claudex owns the session
+ * `claudex desktop` handles existing Claude sessions — claudex owns the session
  * registry, the kitty remote sockets and the i3 lookup that says which windows are still there.
  */
 function claudexDesktop(args: string[]): Promise<string> {
@@ -91,7 +91,7 @@ export interface DesktopLaunch {
   projectId: string;
   /** Where the session opens — the project's checkout, or the directory a handoff named. */
   directory: string;
-  mode: ClaudeMode;
+  mode: DesktopMode;
   prompt: string;
   title?: string;
   /** Reopens that conversation instead of starting an empty one — see below. */
@@ -100,12 +100,12 @@ export interface DesktopLaunch {
 
 /**
  * A new session is two commands. `rv open` puts the desktop on the project — switching to its
- * workspaces and opening them when they were closed — and `claudex kitty` then lands the Claude
- * window on whatever that left focused, which `--focus-ide` makes the IDE, so the session opens
- * beside it at full size. `--detach` hands the window to i3 so it outlives this server.
+ * workspaces and opening them when they were closed. `claudex kitty` then
+ * lands the session on whatever that left focused, which `--focus-ide` makes the IDE, so the
+ * session opens beside it at full size. `--detach` hands the window to i3 so it outlives this server.
  *
- * An initial prompt is typed in after that and submitted, so the agent is already working when
- * the session is looked at; without one there is nothing to submit and the session waits.
+ * An initial prompt is submitted (passed to the chosen CLI as its startup prompt),
+ * so the agent starts working immediately; without one the session waits for input.
  *
  * Everything after `--` belongs to `claude` rather than to claudex, which is how a resume gets
  * its session id across — the detached relaunch carries those arguments through i3 too. `claude

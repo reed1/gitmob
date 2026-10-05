@@ -10,9 +10,9 @@ import { useAutoRefresh } from '../../lib/use-auto-refresh';
 import { CollapsedRows } from './CollapsedRows';
 import { KebabMenu, KebabMenuItem } from './KebabMenu';
 import {
-  CLAUDE_MODES,
-  ClaudeMode,
-  DEFAULT_CLAUDE_MODE,
+  DESKTOP_MODES,
+  DesktopMode,
+  DEFAULT_DESKTOP_MODE,
 } from '../../lib/desktop-modes';
 
 interface PendingHandoff {
@@ -103,7 +103,7 @@ export function PendingHandoffs({
   // shows clean — and a handoff launched from the desktop closes the box instead of going stale.
   const [openId, setOpenId] = useState<string | null>(null);
   const [prompt, setPrompt] = useState('');
-  const [mode, setMode] = useState<ClaudeMode>(DEFAULT_CLAUDE_MODE);
+  const [mode, setMode] = useState<DesktopMode>(DEFAULT_DESKTOP_MODE);
   const [launching, setLaunching] = useState(false);
 
   const open = handoffs.find((handoff) => handoff.id === openId) ?? null;
@@ -119,7 +119,7 @@ export function PendingHandoffs({
 
   const openHandoff = (handoff: PendingHandoff) => {
     setPrompt(handoff.prompt);
-    setMode(DEFAULT_CLAUDE_MODE);
+    setMode(DEFAULT_DESKTOP_MODE);
     setOpenId(handoff.id);
   };
 
@@ -261,10 +261,10 @@ export function PendingHandoffs({
                 <div className="flex items-center gap-2">
                   <select
                     value={mode}
-                    onChange={(e) => setMode(e.target.value as ClaudeMode)}
+                    onChange={(e) => setMode(e.target.value as DesktopMode)}
                     className="text-xs bg-foreground/5 border border-foreground/15 rounded-lg px-2 py-1.5"
                   >
-                    {CLAUDE_MODES.map((entry) => (
+                    {DESKTOP_MODES.map((entry) => (
                       <option key={entry.mode} value={entry.mode}>
                         {entry.label}
                       </option>

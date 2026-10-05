@@ -12,7 +12,7 @@ import {
   typeIntoSession,
 } from '@/lib/desktop';
 import { isCommonCommand } from '@/lib/desktop-keys';
-import { isClaudeMode } from '@/lib/desktop-modes';
+import { isDesktopMode } from '@/lib/desktop-modes';
 import { createWorktree } from '@/lib/wtman';
 
 export async function GET(
@@ -66,7 +66,7 @@ export async function POST(
 
   try {
     if (action === 'launch') {
-      if (!isClaudeMode(mode)) {
+      if (!isDesktopMode(mode)) {
         return NextResponse.json(
           { error: `Unexpected mode: ${mode}` },
           { status: 400 }

@@ -8,10 +8,10 @@ import {
 } from '@/lib/handoffs';
 import { launchDesktopSession } from '@/lib/desktop';
 import { getRepoSummary } from '@/lib/git';
-import { isClaudeMode } from '@/lib/desktop-modes';
+import { isDesktopMode } from '@/lib/desktop-modes';
 
 /** The title a handoff window carries, whichever end launches it. */
-const HANDOFF_TITLE = 'Claude (handoff)';
+const HANDOFF_TITLE = 'Handoff';
 
 /**
  * Whether the tree a briefing would run in has uncommitted work. The question is asked of the
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
   if (!isHandoffId(handoffId)) {
     return NextResponse.json({ error: 'Missing handoff' }, { status: 400 });
   }
-  if (!isClaudeMode(mode)) {
+  if (!isDesktopMode(mode)) {
     return NextResponse.json(
       { error: `Unexpected mode: ${mode}` },
       { status: 400 }
