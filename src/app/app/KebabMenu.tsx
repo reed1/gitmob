@@ -1,6 +1,13 @@
 'use client';
 
-import { createContext, ReactNode, useContext, useRef, useState } from 'react';
+import {
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { useOutsideClick } from '../../lib/use-outside-click';
 
 const CloseKebabMenu = createContext<() => void>(() => {
@@ -23,6 +30,14 @@ export function KebabMenu({
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   useOutsideClick(open, menuRef, () => setOpen(false));
+  useEffect(() => {
+    if (!open) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('keydown', closeOnEscape);
+    return () => document.removeEventListener('keydown', closeOnEscape);
+  }, [open]);
 
   return (
     <div
@@ -51,7 +66,10 @@ export function KebabMenu({
         </svg>
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1 z-20 bg-background border border-foreground/20 rounded-lg shadow-lg py-1 min-w-[140px]">
+        <div
+          data-open-menu
+          className="absolute right-0 top-full mt-1 z-20 bg-background border border-foreground/20 rounded-lg shadow-lg py-1 min-w-[140px]"
+        >
           <CloseKebabMenu.Provider value={() => setOpen(false)}>
             {children}
           </CloseKebabMenu.Provider>

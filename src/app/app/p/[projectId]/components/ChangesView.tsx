@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAutoRefresh } from '../../../../../lib/use-auto-refresh';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { GitStatus } from '../types';
+import { ModalOverlay } from '../../../../../components/ModalOverlay';
 import { apiFetch } from '../../../../../lib/api';
 import { DiffLines } from './DiffLines';
 
@@ -236,12 +237,9 @@ export function ChangesView({
           <DiffLines diff={diff} wordWrap={wordWrap} />
         </div>
         {confirmDiscard && (
-          <div
+          <ModalOverlay
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
-            onClick={(e) => {
-              e.stopPropagation();
-              setConfirmDiscard(false);
-            }}
+            onClose={() => setConfirmDiscard(false)}
           >
             <div
               className="bg-background border border-foreground/20 rounded-lg shadow-xl max-w-sm w-full"
@@ -259,6 +257,7 @@ export function ChangesView({
               </div>
               <div className="px-4 py-3 border-t border-foreground/10 flex justify-end gap-2">
                 <button
+                  data-modal-cancel
                   onClick={() => setConfirmDiscard(false)}
                   className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
                 >
@@ -278,7 +277,7 @@ export function ChangesView({
                 </button>
               </div>
             </div>
-          </div>
+          </ModalOverlay>
         )}
       </div>
     );

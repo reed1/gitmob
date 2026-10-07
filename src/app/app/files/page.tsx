@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { ModalOverlay } from '../../../components/ModalOverlay';
 import { apiFetch, addToast } from '../../../lib/api';
 import { copyText } from '../../../lib/clipboard';
 import { useOutsideClick } from '../../../lib/use-outside-click';
@@ -494,12 +495,9 @@ export default function FilesPage() {
       )}
 
       {deleteTarget && (
-        <div
+        <ModalOverlay
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
-          onClick={(e) => {
-            e.stopPropagation();
-            setDeleteTarget(null);
-          }}
+          onClose={() => setDeleteTarget(null)}
         >
           <div
             className="bg-background border border-foreground/20 rounded-lg shadow-xl max-w-sm w-full"
@@ -518,6 +516,7 @@ export default function FilesPage() {
             </div>
             <div className="px-4 py-3 border-t border-foreground/10 flex justify-end gap-2">
               <button
+                data-modal-cancel
                 onClick={() => setDeleteTarget(null)}
                 className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
               >
@@ -535,7 +534,7 @@ export default function FilesPage() {
               </button>
             </div>
           </div>
-        </div>
+        </ModalOverlay>
       )}
     </div>
   );

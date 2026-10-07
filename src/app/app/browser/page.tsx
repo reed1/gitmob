@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { ModalOverlay } from '../../../components/ModalOverlay';
 import { addToast, apiFetch } from '../../../lib/api';
 import { goHome } from '../../../lib/app-depth';
 import { useBackToDismiss } from '../../../lib/use-back-to-dismiss';
@@ -657,9 +658,9 @@ export default function BrowserPage() {
       )}
 
       {tabsOpen && (
-        <div
+        <ModalOverlay
           className="fixed inset-0 z-30 bg-black/60 flex items-end"
-          onClick={() => setTabsOpen(false)}
+          onClose={() => setTabsOpen(false)}
         >
           <div
             className="w-full max-h-[70vh] overflow-y-auto bg-background rounded-t-xl border-t border-foreground/15"
@@ -722,7 +723,7 @@ export default function BrowserPage() {
               </div>
             ))}
           </div>
-        </div>
+        </ModalOverlay>
       )}
     </div>
   );

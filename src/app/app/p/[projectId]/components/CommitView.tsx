@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { ModalOverlay } from '../../../../../components/ModalOverlay';
 import { apiFetch } from '../../../../../lib/api';
 import { RecentCommits } from './RecentCommits';
 
@@ -281,12 +282,9 @@ export function CommitView({
       </section>
 
       {showShortenModal && (
-        <div
+        <ModalOverlay
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowShortenModal(false);
-          }}
+          onClose={() => setShowShortenModal(false)}
         >
           <div
             className="bg-background border border-foreground/20 rounded-lg shadow-xl max-w-lg w-full"
@@ -311,6 +309,7 @@ export function CommitView({
             </div>
             <div className="px-4 py-3 border-t border-foreground/10 flex justify-end">
               <button
+                data-modal-cancel
                 onClick={() => setShowShortenModal(false)}
                 className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
               >
@@ -318,7 +317,7 @@ export function CommitView({
               </button>
             </div>
           </div>
-        </div>
+        </ModalOverlay>
       )}
     </div>
   );

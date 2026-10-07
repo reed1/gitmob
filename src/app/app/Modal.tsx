@@ -1,7 +1,7 @@
 'use client';
 
 import { type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
+import { ModalOverlay } from '../../components/ModalOverlay';
 
 /**
  * The one dialog shell in the app. Portalled content still bubbles clicks up the React tree
@@ -13,20 +13,16 @@ export function Modal({
   subtitle,
   onClose,
   children,
+  guardDismiss,
 }: {
   heading: string;
   subtitle?: string;
   onClose: () => void;
   children: ReactNode;
+  guardDismiss?: boolean;
 }) {
-  return createPortal(
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
-      onClick={(e) => {
-        e.stopPropagation();
-        onClose();
-      }}
-    >
+  return (
+    <ModalOverlay onClose={onClose} guardDismiss={guardDismiss}>
       <div
         className="bg-background border border-foreground/20 rounded-lg shadow-xl max-w-sm w-full max-h-full overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
@@ -41,7 +37,6 @@ export function Modal({
         </div>
         {children}
       </div>
-    </div>,
-    document.body
+    </ModalOverlay>
   );
 }

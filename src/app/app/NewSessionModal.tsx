@@ -152,6 +152,7 @@ export function NewSessionModal({
       heading={inWorktree ? 'New session in a worktree' : 'New session'}
       subtitle={projectId}
       onClose={onClose}
+      guardDismiss={Boolean(prompt || branch || images.length)}
     >
       <div className="px-4 py-3 space-y-2">
         <div className="flex gap-2">
@@ -335,6 +336,7 @@ export function NewSessionModal({
           />
           <div className="flex gap-2">
             <button
+              data-modal-cancel
               onClick={onClose}
               className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
             >

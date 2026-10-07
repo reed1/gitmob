@@ -4,8 +4,8 @@ import { CustomModelPicker } from './CustomModelPicker';
 import type { CustomModel } from '../../lib/desktop-models';
 
 import { useCallback, useState } from 'react';
-import { createPortal } from 'react-dom';
 import Link from 'next/link';
+import { ModalOverlay } from '../../components/ModalOverlay';
 import { addToast, apiFetch } from '../../lib/api';
 import { copyText } from '../../lib/clipboard';
 import { relativeTime } from '../../lib/relative-time';
@@ -106,6 +106,7 @@ export function PendingHandoffs({
   // shows clean — and a handoff launched from the desktop closes the box instead of going stale.
   const [openId, setOpenId] = useState<string | null>(null);
   const [prompt, setPrompt] = useState('');
+  const [initialPrompt, setInitialPrompt] = useState('');
   const [mode, setMode] = useState<DesktopMode>(DEFAULT_DESKTOP_MODE);
   const [customModel, setCustomModel] = useState<CustomModel>();
   const [launching, setLaunching] = useState(false);
@@ -123,6 +124,7 @@ export function PendingHandoffs({
 
   const openHandoff = (handoff: PendingHandoff) => {
     setPrompt(handoff.prompt);
+    setInitialPrompt(handoff.prompt);
     setMode(DEFAULT_DESKTOP_MODE);
     setCustomModel(undefined);
     setOpenId(handoff.id);
@@ -200,100 +202,103 @@ export function PendingHandoffs({
         />
       </section>
 
-      {open &&
-        createPortal(
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
-            onClick={() => setOpenId(null)}
-          >
-            <div
-              className="bg-background border border-foreground/20 rounded-lg shadow-xl w-full max-w-lg"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="px-4 py-3 border-b border-foreground/10">
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-medium truncate">{open.projectId}</h3>
-                      <CleanBadge clean={open.clean} />
-                    </div>
-                    <div className="text-xs text-foreground/50 truncate">
-                      {open.directory}
-                    </div>
+      {open && (
+        <ModalOverlay
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+          onClose={() => setOpenId(null)}
+          guardDismiss={prompt !== initialPrompt}
+        >
+          <div className="bg-background border border-foreground/20 rounded-lg shadow-xl w-full max-w-lg">
+            <div className="px-4 py-3 border-b border-foreground/10">
+              <div className="flex items-center gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-medium truncate">{open.projectId}</h3>
+                    <CleanBadge clean={open.clean} />
                   </div>
-                  <HandoffKebabMenu handoff={open} onPinned={fetchHandoffs} />
+                  <div className="text-xs text-foreground/50 truncate">
+                    {open.directory}
+                  </div>
                 </div>
-                {/* Dirty is a warning and not a refusal — the briefing may well be about those
+                <HandoffKebabMenu handoff={open} onPinned={fetchHandoffs} />
+              </div>
+              {/* Dirty is a warning and not a refusal — the briefing may well be about those
                     very changes — so the Changes tab is one tap away and Launch stays live. The
                     handoff waits parked either way; only the edits in the box are lost. */}
-                {open.clean === false && (
-                  <Link
-                    href={`/app/p/${open.projectId}?tab=changes`}
-                    className="mt-2 inline-flex items-center gap-1 text-xs text-yellow-400 active:opacity-80"
-                  >
-                    Uncommitted changes here — open Changes
-                    <svg
-                      className="w-3 h-3"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 5l7 7-7 7"
-                      />
-                    </svg>
-                  </Link>
-                )}
-              </div>
-              <div className="px-4 py-3 space-y-2">
-                <CustomModelPicker
-                  key={open.id}
-                  value={customModel}
-                  onChange={setCustomModel}
-                  disabled={launching}
-                />
-                <textarea
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  rows={12}
-                  className="w-full text-sm border border-foreground/20 rounded-lg px-3 py-2 bg-background font-mono resize-none"
-                />
-              </div>
-              <div className="px-4 py-3 border-t border-foreground/10 flex items-center justify-between gap-2">
-                <button
-                  onClick={discard}
-                  className="px-3 py-1.5 text-sm rounded-lg text-red-500 hover:bg-red-500/10"
+              {open.clean === false && (
+                <Link
+                  href={`/app/p/${open.projectId}?tab=changes`}
+                  className="mt-2 inline-flex items-center gap-1 text-xs text-yellow-400 active:opacity-80"
                 >
-                  Delete
+                  Uncommitted changes here — open Changes
+                  <svg
+                    className="w-3 h-3"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </Link>
+              )}
+            </div>
+            <div className="px-4 py-3 space-y-2">
+              <CustomModelPicker
+                key={open.id}
+                value={customModel}
+                onChange={setCustomModel}
+                disabled={launching}
+              />
+              <textarea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                rows={12}
+                className="w-full text-sm border border-foreground/20 rounded-lg px-3 py-2 bg-background font-mono resize-none"
+              />
+            </div>
+            <div className="px-4 py-3 border-t border-foreground/10 flex items-center justify-between gap-2">
+              <button
+                data-modal-cancel
+                onClick={() => setOpenId(null)}
+                className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={discard}
+                className="px-3 py-1.5 text-sm rounded-lg text-red-500 hover:bg-red-500/10"
+              >
+                Delete
+              </button>
+              <div className="flex items-center gap-2">
+                <select
+                  value={mode}
+                  onChange={(e) => setMode(e.target.value as DesktopMode)}
+                  className="text-xs bg-foreground/5 border border-foreground/15 rounded-lg px-2 py-1.5"
+                >
+                  {DESKTOP_MODES.map((entry) => (
+                    <option key={entry.mode} value={entry.mode}>
+                      {entry.label}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={launch}
+                  disabled={launching || !prompt.trim()}
+                  className="px-3 py-1.5 text-sm rounded-lg bg-foreground text-background hover:opacity-90 disabled:opacity-40"
+                >
+                  {launching ? 'Starting...' : 'Launch'}
                 </button>
-                <div className="flex items-center gap-2">
-                  <select
-                    value={mode}
-                    onChange={(e) => setMode(e.target.value as DesktopMode)}
-                    className="text-xs bg-foreground/5 border border-foreground/15 rounded-lg px-2 py-1.5"
-                  >
-                    {DESKTOP_MODES.map((entry) => (
-                      <option key={entry.mode} value={entry.mode}>
-                        {entry.label}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={launch}
-                    disabled={launching || !prompt.trim()}
-                    className="px-3 py-1.5 text-sm rounded-lg bg-foreground text-background hover:opacity-90 disabled:opacity-40"
-                  >
-                    {launching ? 'Starting...' : 'Launch'}
-                  </button>
-                </div>
               </div>
             </div>
-          </div>,
-          document.body
-        )}
+          </div>
+        </ModalOverlay>
+      )}
     </>
   );
 }

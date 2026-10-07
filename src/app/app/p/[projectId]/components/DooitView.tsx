@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { ModalOverlay } from '../../../../../components/ModalOverlay';
 import { apiFetch } from '../../../../../lib/api';
 import { useAutoRefresh } from '../../../../../lib/use-auto-refresh';
 import { SpeakButton, appendSpoken } from '../../../SpeakButton';
@@ -29,6 +30,7 @@ export function DooitView({ projectId }: { projectId: string }) {
 
   const [modalMode, setModalMode] = useState<'add' | 'edit' | null>(null);
   const [modalText, setModalText] = useState('');
+  const [initialModalText, setInitialModalText] = useState('');
   const [editingTodoId, setEditingTodoId] = useState<number | null>(null);
 
   const [expandedTodoId, setExpandedTodoId] = useState<number | null>(null);
@@ -82,12 +84,14 @@ export function DooitView({ projectId }: { projectId: string }) {
   const openAddModal = () => {
     setModalMode('add');
     setModalText('');
+    setInitialModalText('');
     setEditingTodoId(null);
   };
 
   const openEditModal = (todo: Todo) => {
     setModalMode('edit');
     setModalText(todo.description);
+    setInitialModalText(todo.description);
     setEditingTodoId(todo.id);
     setExpandedTodoId(null);
   };
@@ -280,14 +284,15 @@ export function DooitView({ projectId }: { projectId: string }) {
       </div>
 
       {modalMode !== null && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <ModalOverlay
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          onClose={closeModal}
+          guardDismiss={modalText !== initialModalText}
+        >
           <div className="bg-background border border-foreground/20 rounded-lg p-4 w-80 max-w-[90vw]">
             <textarea
               value={modalText}
               onChange={(e) => setModalText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') closeModal();
-              }}
               placeholder="Todo description..."
               rows={3}
               autoCapitalize="off"
@@ -303,6 +308,7 @@ export function DooitView({ projectId }: { projectId: string }) {
               />
               <div className="flex gap-2">
                 <button
+                  data-modal-cancel
                   onClick={closeModal}
                   className="px-3 py-1.5 text-sm text-foreground/70 hover:text-foreground"
                 >
@@ -318,17 +324,21 @@ export function DooitView({ projectId }: { projectId: string }) {
               </div>
             </div>
           </div>
-        </div>
+        </ModalOverlay>
       )}
 
       {deleteConfirmId !== null && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <ModalOverlay
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          onClose={() => setDeleteConfirmId(null)}
+        >
           <div className="bg-background border border-foreground/20 rounded-lg p-4 w-80 max-w-[90vw]">
             <p className="text-sm mb-4">
               Are you sure you want to delete this todo?
             </p>
             <div className="flex gap-2 justify-end">
               <button
+                data-modal-cancel
                 onClick={() => setDeleteConfirmId(null)}
                 className="px-3 py-1.5 text-sm text-foreground/70 hover:text-foreground"
               >
@@ -342,11 +352,17 @@ export function DooitView({ projectId }: { projectId: string }) {
               </button>
             </div>
           </div>
-        </div>
+        </ModalOverlay>
       )}
 
       {showWorkspaceModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <ModalOverlay
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          onClose={() => {
+            setShowWorkspaceModal(false);
+            setWorkspaceText('');
+          }}
+        >
           <div className="bg-background border border-foreground/20 rounded-lg p-4 w-80 max-w-[90vw]">
             <input
               type="text"
@@ -354,10 +370,6 @@ export function DooitView({ projectId }: { projectId: string }) {
               onChange={(e) => setWorkspaceText(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') addWorkspace();
-                if (e.key === 'Escape') {
-                  setShowWorkspaceModal(false);
-                  setWorkspaceText('');
-                }
               }}
               placeholder="Workspace name..."
               autoFocus
@@ -367,6 +379,7 @@ export function DooitView({ projectId }: { projectId: string }) {
             />
             <div className="flex gap-2 justify-end">
               <button
+                data-modal-cancel
                 onClick={() => {
                   setShowWorkspaceModal(false);
                   setWorkspaceText('');
@@ -384,7 +397,7 @@ export function DooitView({ projectId }: { projectId: string }) {
               </button>
             </div>
           </div>
-        </div>
+        </ModalOverlay>
       )}
     </div>
   );

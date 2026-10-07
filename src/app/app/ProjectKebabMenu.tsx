@@ -145,6 +145,7 @@ export default function ProjectKebabMenu({
           </p>
           <div className="px-4 py-3 border-t border-foreground/10 flex justify-end gap-2">
             <button
+              data-modal-cancel
               onClick={() => setCloseConfirmOpen(false)}
               className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
             >
@@ -183,6 +184,7 @@ export default function ProjectKebabMenu({
           </div>
           <div className="px-4 py-3 border-t border-foreground/10 flex justify-end">
             <button
+              data-modal-cancel
               onClick={() => setUrlModalOpen(false)}
               className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
             >

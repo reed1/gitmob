@@ -64,6 +64,7 @@ export function SendTextModal({
           />
           <div className="flex gap-2">
             <button
+              data-modal-cancel
               onClick={onClose}
               className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
             >

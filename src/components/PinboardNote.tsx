@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { ModalOverlay } from './ModalOverlay';
 import { addToast, apiFetch } from '../lib/api';
 import { copyText } from '../lib/clipboard';
 import { SpeakButton, appendSpoken } from '../app/app/SpeakButton';
@@ -161,13 +162,21 @@ export function PinboardNoteCard({
   );
 }
 
-function Overlay({ children }: { children: ReactNode }) {
+function Overlay({
+  children,
+  onClose,
+  guardDismiss,
+}: {
+  children: ReactNode;
+  onClose: () => void;
+  guardDismiss?: boolean;
+}) {
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <ModalOverlay onClose={onClose} guardDismiss={guardDismiss}>
       <div className="bg-background border border-foreground/20 rounded-lg p-4 w-80 max-w-full">
         {children}
       </div>
-    </div>
+    </ModalOverlay>
   );
 }
 
@@ -193,15 +202,13 @@ export function PinboardNoteModal({
   }, []);
 
   return (
-    <Overlay>
+    <Overlay onClose={onClose} guardDismiss={text !== initialText}>
       <textarea
         ref={textareaRef}
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === 'Escape') {
-            onClose();
-          } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
             e.preventDefault();
             if (text.trim()) onSave(text.trim());
           }
@@ -219,6 +226,7 @@ export function PinboardNoteModal({
         />
         <div className="flex gap-2">
           <button
+            data-modal-cancel
             onClick={onClose}
             className="px-3 py-1.5 text-sm text-foreground/70 hover:text-foreground"
           >
@@ -253,7 +261,7 @@ export function PinboardDeleteConfirm({
       if (e.key === 'Enter' || e.key === 'y') {
         e.preventDefault();
         onConfirm();
-      } else if (e.key === 'Escape' || e.key === 'n') {
+      } else if (e.key === 'n') {
         onCancel();
       }
     };
@@ -262,7 +270,7 @@ export function PinboardDeleteConfirm({
   }, [onCancel, onConfirm]);
 
   return (
-    <Overlay>
+    <Overlay onClose={onCancel}>
       <p className="text-sm mb-1">
         Delete this note from{' '}
         <span className="font-mono text-blue-400">{projectId}</span>?
@@ -272,6 +280,7 @@ export function PinboardDeleteConfirm({
       </p>
       <div className="flex gap-2 justify-end">
         <button
+          data-modal-cancel
           onClick={onCancel}
           className="px-3 py-1.5 text-sm text-foreground/70 hover:text-foreground"
         >

@@ -295,6 +295,7 @@ function ConfirmModal({
       </div>
       <div className="px-4 py-3 border-t border-foreground/10 flex justify-end gap-2">
         <button
+          data-modal-cancel
           onClick={onCancel}
           className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
         >
