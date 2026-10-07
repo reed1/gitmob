@@ -288,6 +288,15 @@ is `claudex`'s own — `auto`, `edit`, `yolo` — not a `claude --permission-mod
 `claude` flags a session gets beyond those, Remote Control and Chrome included, are claudex's
 defaults; this app adds none of its own.
 
+Both session modals offer an optional **Use custom model** checkbox. `/api/desktop-models`
+reads `claudex models`, whose JSON providers, models and efforts come from dotfiles'
+`core/models.py`, the same catalog used by the desktop rofi picker. GitMob renders those
+choices and validates submissions against a fresh catalog; it keeps no model list or
+provider flag mapping. Launches pass `--provider`, `--model` and `--effort` to `claudex kitty`,
+which resolves them through that shared catalog before detaching. A Claude selection keeps
+a Claude permission mode; switching providers uses the selected provider's launch mode.
+With the checkbox off, the existing mode and CLI defaults apply.
+
 New-session and handoff pickers use one list of mode IDs and labels in
 `src/lib/desktop-modes.ts`. They pass the chosen ID to `claudex kitty`, which owns provider
 selection, argument validation, prompts and launch behavior. Gitmob uses the same launch call

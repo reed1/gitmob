@@ -1,3 +1,4 @@
+import { isCustomModel } from '@/lib/desktop';
 import { NextRequest, NextResponse } from 'next/server';
 import { getProject } from '@/lib/projects';
 import {
@@ -39,13 +40,20 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const { handoffId, prompt, mode } = await request.json();
+  const { handoffId, prompt, mode, customModel } = await request.json();
   if (!isHandoffId(handoffId)) {
     return NextResponse.json({ error: 'Missing handoff' }, { status: 400 });
   }
   if (!isDesktopMode(mode)) {
     return NextResponse.json(
       { error: `Unexpected mode: ${mode}` },
+      { status: 400 }
+    );
+  }
+
+  if (!(await isCustomModel(customModel))) {
+    return NextResponse.json(
+      { error: 'Invalid custom model' },
       { status: 400 }
     );
   }
@@ -76,6 +84,7 @@ export async function POST(request: NextRequest) {
       projectId: handoff.projectId,
       directory: handoff.directory,
       mode,
+      customModel,
       prompt: briefing,
       title: HANDOFF_TITLE,
     });

@@ -1,3 +1,4 @@
+import { isCustomModel } from '@/lib/desktop';
 import { NextRequest, NextResponse } from 'next/server';
 import { getProject } from '@/lib/projects';
 import {
@@ -62,6 +63,7 @@ export async function POST(
     mode,
     prompt,
     branch,
+    customModel,
   } = await request.json();
 
   try {
@@ -72,6 +74,13 @@ export async function POST(
           { status: 400 }
         );
       }
+      if (!(await isCustomModel(customModel))) {
+        return NextResponse.json(
+          { error: 'Invalid custom model' },
+          { status: 400 }
+        );
+      }
+
       const initialPrompt = typeof prompt === 'string' ? prompt.trim() : '';
       const newBranch = typeof branch === 'string' ? branch.trim() : '';
       // A branch means the session gets a worktree of its own, created off main first.
@@ -83,6 +92,7 @@ export async function POST(
         projectId: target.projectId,
         directory: target.path,
         mode,
+        customModel,
         prompt: initialPrompt,
       });
       return NextResponse.json({

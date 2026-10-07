@@ -1,5 +1,8 @@
 'use client';
 
+import { CustomModelPicker } from './CustomModelPicker';
+import type { CustomModel } from '../../lib/desktop-models';
+
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { addToast, apiFetch } from '../../lib/api';
@@ -43,6 +46,7 @@ export function NewSessionModal({
   const [branch, setBranch] = useState('');
   const [suggesting, setSuggesting] = useState(false);
   const [prompt, setPrompt] = useState(initialPrompt);
+  const [customModel, setCustomModel] = useState<CustomModel>();
   const [launching, setLaunching] = useState(false);
 
   const fileInput = useRef<HTMLInputElement>(null);
@@ -127,7 +131,8 @@ export function NewSessionModal({
         images.length
           ? `${images.map((image, index) => `image ${index + 1}: ${image.path}`).join('\n')}\n\n${prompt.trim()}`
           : prompt.trim(),
-        inWorktree ? branch.trim() : ''
+        inWorktree ? branch.trim() : '',
+        customModel
       );
       if (launchedIn === null) return;
 
@@ -214,6 +219,11 @@ export function NewSessionModal({
             }}
           />
         </div>
+        <CustomModelPicker
+          value={customModel}
+          onChange={setCustomModel}
+          disabled={launching}
+        />
         {inWorktree && (
           <div className="flex gap-2">
             <input

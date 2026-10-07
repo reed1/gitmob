@@ -1,5 +1,6 @@
 import { execFile } from 'child_process';
 import type { CommonCommand, SpecialKey } from './desktop-keys';
+import type { CustomModel, ModelCatalog } from './desktop-models';
 import type { DesktopMode } from './desktop-modes';
 
 /** What Claude Code itself reports the session's context window to be holding. */
@@ -92,6 +93,7 @@ export interface DesktopLaunch {
   /** Where the session opens — the project's checkout, or the directory a handoff named. */
   directory: string;
   mode: DesktopMode;
+  customModel?: CustomModel;
   prompt: string;
   title?: string;
   /** Reopens that conversation instead of starting an empty one — see below. */
@@ -123,6 +125,16 @@ export async function launchDesktopSession(
     launch.mode,
     '--directory',
     launch.directory,
+    ...(launch.customModel
+      ? [
+          '--provider',
+          launch.customModel.provider,
+          '--model',
+          launch.customModel.model,
+          '--effort',
+          launch.customModel.effort,
+        ]
+      : []),
     ...(launch.title ? ['--title', launch.title] : []),
     ...(launch.prompt ? ['--submit', launch.prompt] : []),
     ...(launch.resumeSessionId
@@ -267,4 +279,23 @@ export async function acceptSuggestedPrompt(windowId: string): Promise<void> {
   await pressSessionKey(windowId, 'right');
   await new Promise((resolve) => setTimeout(resolve, 200));
   await pressSessionKey(windowId, 'enter');
+}
+
+export async function getModelCatalog(): Promise<ModelCatalog> {
+  return JSON.parse(await run('claudex', ['models']));
+}
+
+export async function isCustomModel(value: unknown): Promise<boolean> {
+  if (value === undefined) return true;
+  if (!value || typeof value !== 'object') return false;
+  const selection = value as CustomModel;
+  const catalog = await getModelCatalog();
+  return (
+    catalog.efforts.includes(selection.effort) &&
+    catalog.providers.some(
+      (provider) =>
+        provider.id === selection.provider &&
+        provider.models.some((model) => model.id === selection.model)
+    )
+  );
 }

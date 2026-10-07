@@ -1,3 +1,4 @@
+import type { CustomModel } from './desktop-models';
 import { addToast, apiFetch } from './api';
 import type { DesktopMode } from './desktop-modes';
 
@@ -9,12 +10,19 @@ export async function launchDesktopSession(
   projectId: string,
   mode: DesktopMode,
   prompt = '',
-  branch = ''
+  branch = '',
+  customModel?: CustomModel
 ): Promise<string | null> {
   const res = await apiFetch(`/api/projects/${projectId}/desktop`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'launch', mode, prompt, branch }),
+    body: JSON.stringify({
+      action: 'launch',
+      mode,
+      prompt,
+      branch,
+      customModel,
+    }),
   });
   if (!res.ok) return null;
 

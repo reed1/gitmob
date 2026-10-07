@@ -1,5 +1,8 @@
 'use client';
 
+import { CustomModelPicker } from './CustomModelPicker';
+import type { CustomModel } from '../../lib/desktop-models';
+
 import { useCallback, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
@@ -104,6 +107,7 @@ export function PendingHandoffs({
   const [openId, setOpenId] = useState<string | null>(null);
   const [prompt, setPrompt] = useState('');
   const [mode, setMode] = useState<DesktopMode>(DEFAULT_DESKTOP_MODE);
+  const [customModel, setCustomModel] = useState<CustomModel>();
   const [launching, setLaunching] = useState(false);
 
   const open = handoffs.find((handoff) => handoff.id === openId) ?? null;
@@ -120,6 +124,7 @@ export function PendingHandoffs({
   const openHandoff = (handoff: PendingHandoff) => {
     setPrompt(handoff.prompt);
     setMode(DEFAULT_DESKTOP_MODE);
+    setCustomModel(undefined);
     setOpenId(handoff.id);
   };
 
@@ -130,7 +135,7 @@ export function PendingHandoffs({
       const res = await apiFetch('/api/handoffs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ handoffId: open.id, prompt, mode }),
+        body: JSON.stringify({ handoffId: open.id, prompt, mode, customModel }),
       });
       // A launch that failed leaves the handoff parked, and the box open on the text to fix.
       if (!res.ok) return;
@@ -243,7 +248,13 @@ export function PendingHandoffs({
                   </Link>
                 )}
               </div>
-              <div className="px-4 py-3">
+              <div className="px-4 py-3 space-y-2">
+                <CustomModelPicker
+                  key={open.id}
+                  value={customModel}
+                  onChange={setCustomModel}
+                  disabled={launching}
+                />
                 <textarea
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
