@@ -29,9 +29,6 @@ export function CustomModelPicker({
       active = false;
     };
   }, []);
-  const provider = catalog?.providers.find(
-    (entry) => entry.id === value?.provider
-  );
   const style =
     'min-w-0 text-sm bg-background border border-foreground/20 rounded-lg px-3 py-2';
   return (
@@ -63,41 +60,25 @@ export function CustomModelPicker({
       {value && catalog && (
         <div className="flex flex-wrap gap-2">
           <select
-            aria-label="Provider"
-            className={style}
-            value={value.provider}
+            aria-label="Provider and model"
+            className={`${style} flex-1`}
+            value={JSON.stringify([value.provider, value.model])}
             disabled={disabled}
             onChange={(event) => {
-              const next = catalog.providers.find(
-                (entry) => entry.id === event.target.value
-              )!;
-              onChange({
-                ...value,
-                provider: next.id,
-                model: next.models[0].id,
-              });
+              const [provider, model] = JSON.parse(event.target.value);
+              onChange({ ...value, provider, model });
             }}
           >
-            {catalog.providers.map((entry) => (
-              <option key={entry.id} value={entry.id}>
-                {entry.label}
-              </option>
-            ))}
-          </select>
-          <select
-            aria-label="Model"
-            className={`${style} flex-1`}
-            value={value.model}
-            disabled={disabled}
-            onChange={(event) =>
-              onChange({ ...value, model: event.target.value })
-            }
-          >
-            {provider?.models.map((entry) => (
-              <option key={entry.id} value={entry.id}>
-                {entry.label}
-              </option>
-            ))}
+            {catalog.providers.flatMap((provider) =>
+              provider.models.map((model) => (
+                <option
+                  key={`${provider.id}/${model.id}`}
+                  value={JSON.stringify([provider.id, model.id])}
+                >
+                  {provider.label} · {model.label}
+                </option>
+              ))
+            )}
           </select>
           <select
             aria-label="Effort"
