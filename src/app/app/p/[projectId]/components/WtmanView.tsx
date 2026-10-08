@@ -24,9 +24,15 @@ interface Worktree {
   conflicts: string[];
 }
 
+interface RemoteBranch {
+  name: string;
+  branch: string;
+  committedAt: string;
+}
+
 type Pending =
   | { kind: 'merge'; worktree: Worktree; squash: boolean }
-  | { kind: 'remove'; worktree: Worktree; removeBranch: boolean }
+  | { kind: 'remove'; worktree: Worktree }
   | { kind: 'rebase'; worktree: Worktree }
   | { kind: 'abort-rebase'; worktree: Worktree }
   | { kind: 'sync'; worktree: Worktree };
@@ -196,18 +202,7 @@ function WorktreeKebabMenu({
         Squash merge into {into}
       </KebabMenuItem>
       <KebabMenuItem
-        onSelect={() =>
-          onPick({ kind: 'remove', worktree, removeBranch: false })
-        }
-        disabled={removeBlocked !== null}
-        danger
-      >
-        Remove worktree
-      </KebabMenuItem>
-      <KebabMenuItem
-        onSelect={() =>
-          onPick({ kind: 'remove', worktree, removeBranch: true })
-        }
+        onSelect={() => onPick({ kind: 'remove', worktree })}
         disabled={removeBlocked !== null}
         danger
       >
@@ -252,13 +247,9 @@ function ConfirmModal({
     } on ${into} in the main checkout, then removes the worktree and the branch. A conflict stops it before anything is removed.`;
     confirmLabel = pending.squash ? 'Squash merge' : 'Merge';
   } else if (pending.kind === 'remove') {
-    heading = pending.removeBranch
-      ? 'Remove worktree and branch?'
-      : 'Remove worktree?';
-    body = pending.removeBranch
-      ? 'Deletes the checkout and the branch. wtman keeps a backup bundle of any commits not in main.'
-      : 'Deletes the checkout. The branch stays, and can be opened again.';
-    if (pending.removeBranch && !isMerged(worktree)) {
+    heading = 'Remove worktree and branch?';
+    body = `Deletes the checkout, the branch, and ${worktree.branch} on every remote it was pushed to. wtman keeps a backup bundle of any local commits not in main; commits only on the remote are not backed up.`;
+    if (!isMerged(worktree)) {
       warnings.push(
         worktree.state === 'unmerged'
           ? `${worktree.ahead} commit${worktree.ahead === 1 ? '' : 's'} not in ${into}: the branch is force deleted.`
@@ -327,6 +318,7 @@ export function WtmanView({
 }) {
   const router = useRouter();
   const [worktrees, setWorktrees] = useState<Worktree[] | null>(null);
+  const [remoteBranches, setRemoteBranches] = useState<RemoteBranch[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [working, setWorking] = useState<{
     name: string;
@@ -341,6 +333,7 @@ export function WtmanView({
     const data = await res.json();
     if (res.ok) {
       setWorktrees(data.worktrees);
+      setRemoteBranches(data.remoteBranches);
       setError(null);
     } else {
       setError(data.error || 'Could not read worktrees');
@@ -358,6 +351,7 @@ export function WtmanView({
     });
     const data = await res.json();
     if (data.worktrees) setWorktrees(data.worktrees);
+    if (data.remoteBranches) setRemoteBranches(data.remoteBranches);
     return { ok: res.ok, projectId: data.projectId as string };
   };
 
@@ -394,8 +388,7 @@ export function WtmanView({
     } else if (chosen.kind === 'remove') {
       const { ok } = await act(worktree, 'Removing…', {
         action: 'remove',
-        removeBranch: chosen.removeBranch,
-        force: chosen.removeBranch && !isMerged(worktree),
+        force: !isMerged(worktree),
       });
       if (ok) addToast(`Removed ${worktree.name}`, 'success');
     } else if (chosen.kind === 'rebase') {
@@ -422,7 +415,7 @@ export function WtmanView({
     try {
       const { ok, projectId: created } = await post(
         `/api/projects/${projectId}/worktrees`,
-        { branch: newBranch }
+        { from: 'main', branch: newBranch }
       );
       if (ok) {
         setNewBranch('');
@@ -433,10 +426,23 @@ export function WtmanView({
     }
   };
 
+  const checkOut = async (remote: RemoteBranch) => {
+    setWorking({ name: remote.name, label: 'Checking out…' });
+    try {
+      const { ok, projectId: opened } = await post(
+        `/api/projects/${projectId}/worktrees`,
+        { from: 'remote', name: remote.name }
+      );
+      if (ok) router.push(`/app/p/${opened}?tab=pinboard`);
+    } finally {
+      setWorking(null);
+    }
+  };
+
   const busy = creating || working !== null;
 
-  // The branch is created off main, and the changes sitting in the main checkout stay there:
-  // wtman puts both of those questions to a person at a terminal, and there is nobody here.
+  // The branch is created off main, and the changes sitting in the main checkout stay there.
+  // A name already taken, locally or on a remote, is refused by wtman.
   const createBox = (
     <form
       onSubmit={(e) => {
@@ -489,20 +495,14 @@ export function WtmanView({
     );
   }
 
-  if (worktrees.length === 0) {
-    return (
-      <div className="p-4 space-y-3">
-        {createBox}
-        <div className="text-center text-foreground/50">
-          No worktrees checked out for this project yet.
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="p-4 space-y-3">
       {createBox}
+      {worktrees.length === 0 && (
+        <div className="text-center text-foreground/50">
+          No worktrees checked out for this project yet.
+        </div>
+      )}
       {worktrees.map((worktree) => {
         const isCurrent = worktree.projectId === currentProjectId;
         return (
@@ -571,7 +571,47 @@ export function WtmanView({
         branch on top of that same branch, and a conflict leaves it unfinished
         in the worktree. Merge sync merges that branch into the worktree and
         fast-forwards it to the result, keeping the worktree, or does nothing.
+        Removing takes the branch with it, here and on its remote.
       </p>
+
+      {remoteBranches.length > 0 && (
+        <div className="space-y-2 pt-2">
+          <div className="text-xs font-medium text-foreground/50 uppercase tracking-wide">
+            Remote branches
+          </div>
+          {remoteBranches.map((remote) => (
+            <div
+              key={remote.name}
+              className="p-3 border border-foreground/10 rounded-lg flex items-center justify-between gap-3"
+            >
+              <div className="min-w-0">
+                <div className="font-medium truncate">{remote.name}</div>
+                <div className="text-xs text-foreground/50">
+                  {relativeTime(remote.committedAt)}
+                </div>
+              </div>
+              {working?.name === remote.name ? (
+                <span className="shrink-0 text-xs text-foreground/50">
+                  {working.label}
+                </span>
+              ) : (
+                <button
+                  onClick={() => checkOut(remote)}
+                  disabled={busy}
+                  className="shrink-0 px-3 py-1.5 text-xs bg-foreground/10 border border-foreground/15 rounded active:opacity-80 disabled:opacity-40"
+                >
+                  Check out
+                </button>
+              )}
+            </div>
+          ))}
+          <p className="text-xs text-foreground/40">
+            Branches on a remote with no local branch yet, as of the last fetch.
+            Checking one out makes the local branch that tracks it, in a
+            worktree of its own, and opens it.
+          </p>
+        </div>
+      )}
 
       {pending && (
         <ConfirmModal

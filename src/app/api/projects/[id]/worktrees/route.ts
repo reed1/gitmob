@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getProject } from '@/lib/projects';
-import { createWorktree, listWorktrees } from '@/lib/wtman';
+import {
+  createWorktree,
+  listBranches,
+  listRemoteBranches,
+  openRemoteBranch,
+} from '@/lib/wtman';
 
 export async function GET(
   _request: NextRequest,
@@ -14,7 +19,7 @@ export async function GET(
   }
 
   try {
-    return NextResponse.json({ worktrees: await listWorktrees(project) });
+    return NextResponse.json(await listBranches(project));
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'wtman list failed' },
@@ -23,6 +28,14 @@ export async function GET(
   }
 }
 
+type Create =
+  | { from: 'main'; branch: string }
+  | { from: 'remote'; name: string };
+
+/**
+ * A new branch off main, or a worktree for a remote branch. The remote one is looked up rather
+ * than taken from the request: `wtman open` given a name that is not there would create it.
+ */
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -34,27 +47,44 @@ export async function POST(
     return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   }
 
-  const { branch } = await request.json();
-
-  // Everything else about the name is git's to judge, and its complaint is a better one than
-  // any check here would be.
-  if (branch.trim() === '') {
-    return NextResponse.json(
-      { error: 'Branch name is empty' },
-      { status: 400 }
-    );
-  }
+  const body: Create = await request.json();
 
   try {
-    const created = await createWorktree(project, branch.trim());
+    let projectId: string;
+
+    if (body.from === 'main') {
+      // Everything else about the name is git's and wtman's to judge, a name already taken
+      // included, and their complaint is a better one than any check here would be.
+      if (body.branch.trim() === '') {
+        return NextResponse.json(
+          { error: 'Branch name is empty' },
+          { status: 400 }
+        );
+      }
+      projectId = (await createWorktree(project, body.branch.trim())).projectId;
+    } else if (body.from === 'remote') {
+      const remote = (await listRemoteBranches(project)).find(
+        (r) => r.name === body.name
+      );
+      if (!remote) {
+        return NextResponse.json(
+          { error: `No remote branch ${body.name} without a local one` },
+          { status: 404 }
+        );
+      }
+      projectId = (await openRemoteBranch(project, remote)).projectId;
+    } else {
+      throw new Error(`Unexpected source: ${(body as { from: string }).from}`);
+    }
+
     return NextResponse.json({
       success: true,
-      projectId: created.projectId,
-      worktrees: await listWorktrees(project).catch(() => undefined),
+      projectId,
+      ...(await listBranches(project).catch(() => ({}))),
     });
   } catch (err) {
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'wtman open failed' },
+      { error: err instanceof Error ? err.message : 'wtman failed' },
       { status: 500 }
     );
   }

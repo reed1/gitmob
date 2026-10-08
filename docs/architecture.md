@@ -148,8 +148,8 @@ picker of its own. Each view is a `push`, so back walks them the way the screen 
 and the list stops polling while a search box or a transcript is up: a five-second refresh under an
 input box is a keystroke lost every five seconds.
 
-Resuming one is `claudex kitty` again, with the session id after `--`. Contract, and the refusal
-when the conversation is already open in a window, in [cli-integrations.md](cli-integrations.md).
+Resuming one is `claudex kitty` again, with the session id after `--`, refused when the
+conversation is already open in a window. Commands in [cli-integrations.md](cli-integrations.md).
 
 ## The agent's browser, from the phone
 

@@ -18,6 +18,6 @@ Web Push.
 - [docs/pwas.md](docs/pwas.md) — the two hostnames and `src/proxy.ts`, routing rules, icons and
   manifests
 - [docs/notifications.md](docs/notifications.md) — Web Push, subscriptions, the service worker
-- [docs/cli-integrations.md](docs/cli-integrations.md) — the contract with each CLI this app shells
-  out to
+- [docs/cli-integrations.md](docs/cli-integrations.md) — which CLI commands each feature calls,
+  and where each CLI's own docs are
 - [docs/development.md](docs/development.md) — dev servers, build dirs, the production service

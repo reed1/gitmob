@@ -41,6 +41,21 @@ export type MergeState = 'merged' | 'no commits' | 'unmerged';
 
 export type Operation = 'rebase' | 'merge';
 
+export interface RemoteBranch {
+  /** `<remote>/<branch>`, what `wtman open --branch` takes. */
+  name: string;
+  /** The local branch it opens as, and so the branch its worktree reports. */
+  branch: string;
+  /** When its tip was committed, ISO. */
+  committedAt: string;
+}
+
+interface WtmanRemoteRow {
+  name: string;
+  branch: string;
+  committed: number;
+}
+
 interface WtmanStatusRow {
   name: string;
   branch: string;
@@ -119,19 +134,44 @@ export async function listWorktrees(
   });
 }
 
+/**
+ * Remote branches with no local branch yet, most recently committed first — the wtman menu's
+ * `[remote]` rows, read from the remote-tracking refs as of the last fetch.
+ */
+export async function listRemoteBranches(
+  project: Project
+): Promise<RemoteBranch[]> {
+  const rows = JSON.parse(
+    await run('wtman', ['remotes', '--json', repoPath(project)])
+  ) as WtmanRemoteRow[];
+  return rows.map(({ committed, ...row }) => ({
+    ...row,
+    committedAt: new Date(committed * 1000).toISOString(),
+  }));
+}
+
+/** What the Wtman tab shows, read together so one never answers for a later state than the
+ * other. */
+export async function listBranches(project: Project): Promise<{
+  worktrees: ProjectWorktree[];
+  remoteBranches: RemoteBranch[];
+}> {
+  const [worktrees, remoteBranches] = await Promise.all([
+    listWorktrees(project),
+    listRemoteBranches(project),
+  ]);
+  return { worktrees, remoteBranches };
+}
+
 /** Opening a worktree can mean starting an editor and its terminals, as `rv open` does. */
 const OPEN_TIMEOUT_MS = 120000;
 
 /**
- * `wtman open` is one command for both buttons on the tab: it creates the branch and the
- * checkout when they are not there yet, and for one that already exists it is nothing but the
- * hand-off to `rofi-vscode open`. Either way that hand-off is what announces the worktree
- * project to rworkspaces, and so what gives it a page in this app.
- *
- * No `--interactive`: without it wtman declines every offer — the uncommitted changes in the
- * main checkout stay where they are, rather than being carried into a branch nobody at this
- * end can see. It also forks a new branch off main rather than off whatever the checkout is
- * parked on, since that is not a base anybody chose from here.
+ * `wtman open` opens a worktree already on disk, or gives a remote branch a tracking branch and
+ * a worktree first; for one that already exists it is nothing but the hand-off to
+ * `rofi-vscode open`. Either way that hand-off is what announces the worktree project to
+ * rworkspaces, and so what gives it a page in this app. Only names wtman already listed reach
+ * it: given anything else it would create a branch, which is `wtman new`'s job.
  *
  * This waits for the whole open, which is a few seconds of workspace switching and window
  * launching — but only for the launching. Cursor and the project terminal are started through
@@ -156,24 +196,44 @@ export async function openWorktree(
   await openBranch(project, worktree.branch);
 }
 
+/** The worktree wtman just opened for `branch`, which it must have left behind. */
+async function worktreeOf(
+  project: Project,
+  branch: string
+): Promise<ProjectWorktree> {
+  const opened = (await listWorktrees(project)).find(
+    (worktree) => worktree.branch === branch
+  );
+  if (!opened) {
+    throw new Error(`wtman opened ${branch} but left no worktree for it`);
+  }
+  return opened;
+}
+
 /**
- * Creates a worktree for a branch that has none, and opens it. wtman creates the branch too
- * when it does not exist, which is the ordinary case here; a local branch that was never
- * checked out gets its worktree instead of a second branch, and that is wtman's call to make,
- * not something this app checks for first.
+ * Creates a branch off main in a worktree of its own, and opens it, as `wtman new` does. wtman
+ * refuses a name already taken by a local branch or on a remote, and that refusal is the
+ * request's answer: a new branch is only ever new.
+ *
+ * No `--interactive`: without it wtman declines its one offer, and the uncommitted changes in
+ * the main checkout stay where they are rather than being carried into a branch nobody at this
+ * end can see.
  */
 export async function createWorktree(
   project: Project,
   branch: string
 ): Promise<ProjectWorktree> {
-  await openBranch(project, branch);
+  await run('wtman', ['new', repoPath(project), branch], OPEN_TIMEOUT_MS);
+  return worktreeOf(project, branch);
+}
 
-  const worktrees = await listWorktrees(project);
-  const created = worktrees.find((worktree) => worktree.branch === branch);
-  if (!created) {
-    throw new Error(`wtman opened ${branch} but left no worktree for it`);
-  }
-  return created;
+/** Checks a remote branch out as the local branch tracking it, in a worktree, and opens it. */
+export async function openRemoteBranch(
+  project: Project,
+  remote: RemoteBranch
+): Promise<ProjectWorktree> {
+  await openBranch(project, remote.name);
+  return worktreeOf(project, remote.branch);
 }
 
 /** A merge can push the branch to its upstream first, which is the network's time to take. */
@@ -222,32 +282,27 @@ export async function mergeWorktree(
 }
 
 /**
- * Removes the worktree, and with `removeBranch` the branch too, which wtman bundles into a
- * backup first. Deleting a branch git does not consider merged is a second question, and
- * `force` is the answer to it; without it the worktree is kept rather than removed halfway.
+ * Removes the worktree, the branch, which wtman bundles into a backup first, and the branch on
+ * every remote it was pushed to. Deleting a branch with commits the main checkout's branch does
+ * not have is a second question, and `force` is the answer to it; without it nothing is removed.
  */
 export async function removeWorktree(
   project: Project,
   worktree: ProjectWorktree,
-  removeBranch: boolean,
   force: boolean
 ): Promise<string> {
   const unmerged =
     worktree.state !== 'merged' && worktree.state !== 'no commits';
-  if (removeBranch && unmerged && !force) {
+  if (unmerged && !force) {
     throw new UnmergedBranch(
       `${worktree.name} has commits ${worktree.into ?? 'the main checkout'} does not`
     );
   }
 
   return runAnswered(
-    [
-      'remove',
-      ...(removeBranch ? ['--remove-branch'] : []),
-      repoPath(project),
-      worktree.branch,
-    ],
-    removeBranch && unmerged ? ['y', 'y'] : ['y']
+    ['remove', repoPath(project), worktree.branch],
+    unmerged ? ['y', 'y'] : ['y'],
+    MERGE_TIMEOUT_MS
   );
 }
 

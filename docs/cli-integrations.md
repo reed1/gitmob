@@ -1,667 +1,139 @@
 # CLI integrations
 
-Each of these local CLIs owns a piece of state this app only displays. Shell out to the command,
-map its JSON, and let its failures reach the user — reading its cache files or reimplementing its
-lookups here puts two sources of truth on the same state.
+Each of these CLIs owns state this app only displays. Shell out, map the JSON, and let failures
+reach the user — never read their caches or redo their lookups here. What each command does and
+returns is in the CLI's own docs, linked per section; this page only says what this app calls it
+for. Paths under `rlocal/` are in `~/.dotfiles`.
 
 ## Worktrees — `rw-msg`
 
-`src/lib/workspaces.ts` and `src/lib/worktree.ts`, read by the project list.
+`src/lib/workspaces.ts`, `src/lib/worktree.ts` — project list.
+Docs: `rlocal/app/rworkspaces/CLAUDE.md`, `rlocal/lib/python/rworktree/README.md`.
 
-- `rw-msg get_state` — the rworkspaces socket's view of the desktop. Each active project
-  carries `worktree_name` (null on a main checkout) and `canonical_project_id` beside its id
-  and path, so this app never takes an id apart to find out what it is looking at. This is
-  also the only place a worktree project is announced: opening one on the desktop is what
-  brings it into existence.
-- The same reply carries `warnings` — project id, warning id, message — which the project list
-  paints as a red card, as polybar paints them a red project name and a 🚨. What raises one
-  and when it clears is rworkspaces' business; this app only shows what it is holding. They
-  ride on this call rather than a second one, and the map sits beside `projects` rather than
-  inside each: a warning outlives its workspaces being closed, and this app lists projects that
-  are not open at all. Keyed by the id it was raised against, so a worktree has its own.
-
-A worktree project has no config of its own. It runs on the config of the project it is a
-checkout of, pointed at the path rworkspaces reports, with the `loc` url rewritten to carry
-the worktree's name — the one derivation left in `src/lib/worktree.ts`, mirrored from
-`rlocal/lib/python/rworktree` because this app cannot import it.
-
-That makes `getProject` async: a configured id answers from the JSON alone, and anything else
-costs one ~80ms socket round trip. Failure there is not swallowed — the project list reports
-it rather than showing a desktop with nothing open on it.
-
-The other CLIs speak these ids directly: `pt` reports one from a worktree cwd, `rv run`
-resolves and reports one, `rv open` opens one, and `claudex desktop` treats a worktree as the
-project it is.
-What is _not_ per-worktree is sudo, env checks and monitored sites — those belong to the repo
-and its servers, so the project list reads them under `canonicalId`, as do the dooit todos.
+- `rw-msg get_state` — which projects and worktrees are open on the desktop, and their warnings.
 
 ## Worktrees on disk — `wtman`
 
-`src/lib/wtman.ts`, read by the Wtman tab: every worktree of the project with whether it is
-merged, a menu on each to open, rebase, merge sync, merge or remove it, and the box that creates one. This
-app is a wrapper here: what a worktree has on it is wtman's answer, never worked out a second
-time.
+`src/lib/wtman.ts` — Wtman tab, and the session modal's Worktree toggle.
+Docs: `rlocal/app/wtman/CLAUDE.md`.
 
-- `wtman status --json <repoPath>` — every worktree of the repo under `~/wtman`, most recently
-  touched first: its directory name, the branch it is really on, its path and when it was last
-  touched, and what it has on it against the branch the main checkout is on. This is the same
-  call the wtman menu labels its rows from.
-- `wtman open <repoPath> --branch <branch>` — opens one, and creates the branch and the
-  checkout first when they are not there. Open and Create on the tab are this one command. For a
-  worktree that already exists it is nothing but wtman's hand-off to `rofi-vscode open`.
-- `wtman rebase <repoPath> <branch>` — rebases the branch onto whatever the main checkout is
-  on, in its own worktree. `wtman rebase --abort <repoPath> <branch>` gives up one that stopped.
-- `wtman sync <repoPath> <branch>` — merges whatever the main checkout is on into the branch, in
-  its worktree, then fast-forwards the main checkout to it, keeping the worktree.
-- `wtman --interactive merge <repoPath> <branch> [--squash]` — merges into whatever the main
-  checkout is on, then removes the worktree and the branch.
-- `wtman --interactive remove [--remove-branch] <repoPath> <branch>` — removes the worktree, and
-  the branch with it on the flag.
-
-The branch that goes out is the row's `branch`, never its `name`. The name is the directory,
-which is the branch with everything git allows and a path does not folded away —
-`refactor/api-endpoint-registry` lives in `refactor_api-endpoint-registry` — and `wtman open`
-given that folded name would find no such branch and **create** one. The name is what the
-project id is built from.
-
-`status` reads the repo's own worktree list, which is what "living" means here: a directory left
-behind by a worktree git no longer knows about is not listed, and a branch with no worktree never
-appears at all — including one Create makes a worktree for, which stops being invisible by
-acquiring one.
-
-Each row says, against the branch the main checkout is on: `merged` when every commit is already
-there, `no commits` when it still sits on the commit it was created from (however far the main
-branch has moved since), otherwise how many commits it has that the main branch does not; how
-many the main branch has that it does not, which is what a rebase brings in; whether the checkout
-has uncommitted changes; and a rebase or merge that stopped in it unfinished, with the paths still
-conflicted. A rebase detaches HEAD until it finishes, and wtman still reports that checkout as
-the branch being rebased.
-
-`rebase` asks nothing, so it runs without `--interactive`. It refuses a worktree with
-uncommitted changes or one already mid-rebase, and does nothing for a branch with every commit of
-the main branch already. A conflict stops it in the worktree, unfinished — wtman does not abort
-it, and fails saying so. The route tells that apart from any other failure by reading the
-worktree again: one still mid-rebase answers with a `warning`, shown as a warning toast, and the
-row keeps saying the rebase is not finished, with the conflicted paths, until it is continued in
-the worktree or aborted from the menu. A worktree open on the desktop can be rebased: the files
-change under Cursor rather than disappear, and that is where a conflict gets resolved. `merge`
-refuses a worktree mid-rebase, since the branch would still be what it was before the rebase
-began.
-
-`sync` asks nothing either, and is all or nothing. It refuses before starting when either
-checkout has uncommitted changes (untracked files included) or an unfinished rebase or merge; a
-conflict merging into the branch is aborted rather than left for resolving; and a fast-forward
-of the main checkout that fails resets the branch to where it was before. The menu disables it
-for a row that is dirty, mid-operation, or already on the main branch's commit; the main
-checkout's own state is not on the row, so only wtman refuses that.
-
-wtman tells its prompts apart by what it may assume of somebody who is not there: an **offer** —
-carrying the main checkout's uncommitted changes into the new branch — is declined without
-`--interactive`, and a **confirmation** — everything `remove` and `merge` ask — is refused. So
-`open` runs without the flag, and `merge` and `remove` run with it, their confirmations answered
-on stdin with what the person said yes to in the tab's dialog, one line per prompt in wtman's
-order. `remove` asks to continue, and asks again before force deleting a branch git does not
-consider merged; the second answer is only sent when the row said unmerged and the dialog said
-so, and the request is refused up front when it did not, rather than letting wtman remove the
-worktree and then stop at the branch. `merge` may ask whether to copy the branch's box
-directories into the main checkout, answered yes as at the terminal. A prompt nobody answered for
-reads end of input, which wtman turns into a refusal rather than a guess.
-
-wtman itself refuses to merge or remove a worktree still open on the desktop, since Cursor goes
-down with the folder it has open; the menu greys both out for an open one instead of letting that
-refusal be the message.
-
-The one thing that is not simply an offer declined is which branch a new one forks off. wtman
-forks off main here, not off whatever the main checkout is parked on: declining the offer would
-mean HEAD, and a checkout's current branch is invisible to whoever is tapping Create from a
-phone, so it is not a base anybody chose.
-
-The request waits for that open, and should: nothing about it needs detaching. `launch-on-left`
-starts Cursor and the project terminal through i3's own `exec`, so they belong to i3 rather than
-to this server, and `rofi-vscode open` returns once they are launched. Waiting is what turns a
-failed open into an error the tab can show — the few seconds it costs buy the difference between
-an open that worked and one that went nowhere.
-
-Opening a worktree is what announces it to rworkspaces, and so what gives it a project of its
-own here — which is why the row for one already open links to that page instead of opening it
-again. Whether it is open comes from the same `rw-msg get_state` the project list reads, on the
-same round trip: a stale "not open" would invite opening a worktree twice.
+- `wtman status --json <repo>` — the worktree list.
+- `wtman remotes --json <repo>` — the remote branches list.
+- `wtman open <repo> --branch <branch>` — Open on a worktree; Check out on a remote branch.
+- `wtman new <repo> <branch>` — Create, and a session in a new worktree.
+- `wtman rebase [--abort] <repo> <branch>` — Rebase, Abort rebase.
+- `wtman sync <repo> <branch>` — Merge sync.
+- `wtman --interactive merge <repo> <branch> [--squash]` — Merge, Squash merge.
+- `wtman --interactive remove <repo> <branch>` — Remove worktree and branch.
 
 ## Pinboard — `rv pinboard`
 
-`src/lib/pinboard.ts`, read and written by the Pinboard tab and read by the `/pinboard`
-overview.
+`src/lib/pinboard.ts` — Pinboard tab, `/pinboard` overview.
+Docs: `rlocal/app/rofi-vscode/docs/pinboard.md`.
 
-- `rv pinboard list --project-id <projectId> --json` — the notes on that project's board.
-- `rv pinboard add --project-id <projectId> [--metadata <json>] <text>` — adds one, with a JSON
-  object on its metadata where the caller has keys to find it by later.
-- `rv pinboard edit --project-id <projectId> <noteId> <text>` — replaces its text.
-- `rv pinboard delete --project-id <projectId> <noteId>` — removes it.
+- `rv pinboard list|add|edit|delete --project-id <id> ...` — a project's notes.
 
-The project is always a flag: rv defaults it to whatever project the working directory sits
-in, which for a server running out of gitmob's own checkout is never the one we mean.
+## Push and sudo — `pt`
 
-Nothing here touches the YAML. The board files are a repo of their own —
-`reed1/pinboard-data`, rebased hourly by `pinboard-pull.timer` — and `rv pinboard` commits
-each write, so a note added from a phone survives that pull instead of riding on autostash.
-Underneath, rv hands every write to the `pinboard` CLI, which owns what a note is: the next
-id, where it lands on the canvas, its colour from the configured palette, and its timestamps.
+`src/lib/push.ts`, `src/lib/push-command.ts`, `src/lib/sudo.ts` — Push tab, Sudo tab, project list.
+Docs: `rlocal/app/push_tool/CLAUDE.md`.
 
-That makes an add cost a subprocess rather than a file write, which is the price of not
-being a second writer of a format the desktop app already owns. A board the desktop has open
-needs no telling: the app watches its file and reloads.
-
-Notes are keyed by the canonical id — they belong to the repo, as the dooit todos do.
-
-There is no all-projects call: the `/pinboard` overview gets its 50 newest notes by running
-`list` once per configured project, eight at a time, and sorting what comes back. `rv pinboard
-recents` looks close but answers with one line of prose per board, not notes.
-
-## Push — `pt`
-
-`src/lib/push.ts` and `src/lib/push-command.ts`, read by the Push tab.
-
-- `pt push config`, with cwd set to the project — the pick-list: the servers with their ssh
-  hosts, the targets pt discovers from the `push-*` tags in the project's ansible playbooks, the
-  `push_scope` keys, and which servers a push with none named would go to. A word rather than a
-  `--json` flag, since it answers a different question than a push does.
-- `pt push check [server...] [scope N] --json`, as the scope is typed — the same push, asked
-  rather than run: the servers and targets it resolves to, and the changed files with the target
-  each one picked. The tab highlights the targets from that answer, so what is lit is pt's own,
-  never a second reading of `push_scope` here.
-- `pt push [server...] [target...] [scope N]` — the deploy: `git push`, then
-  `ansible-playbook` limited to those servers with the matching tags.
-
-`check` is a mode of pt's rather than a flag on the push, which is what lets the tab ask on every
-keystroke: there is no `-n` that a mistake here could drop and turn a question into a deploy to
-production. It is also why the tab has no confirmation step — the answer is already on screen
-before Deploy is tapped, so a second screen saying the same thing bought nothing.
-
-Nothing here reads the ansible tree or repeats pt's default-server rule. The argument line is the
-only thing this app builds, and it lives in `push-command.ts` — pure, so the tab can preview the
-exact command before running it and the route can check a selection against the same pick-list.
-
-A deploy outlives the request that started it, so it goes through the CLI job runner
-(`src/lib/cli-jobs.ts`) as a detached process logging to
-`~/.local/share/gitmob/cli-jobs/push-{projectId}.log`. The tab can be left and come back to a
-push still running. One job id per project means a new push replaces the last one's log, and a
-push already running is refused rather than raced.
-
-The tab shows nothing about sudo. Passwordless sudo is the Sudo tab's subject and a push does
-not depend on it — the playbooks carry their own `ansible_become_pass` — so putting it on the
-server chips only suggested a prerequisite that is not one.
-
-## Sudo — `pt`
-
-`src/lib/sudo.ts`, read by the Sudo tab and the project list.
-
-- `pt sudo list --json`, with cwd set to the project — the targets of one project.
-- `pt sudo list --all-projects --json` — the project-list sweep, one call to abubot for all of them,
-  kept in memory and refreshed behind the list — see [architecture.md](architecture.md).
-- `pt sudo <target> on|off|status` — does the SSH work.
-
-`pt` owns the target-to-server mapping; the flags themselves are abubot's, which pt reads over
-HTTP. When it fails, the Sudo tab shows the error: reporting every target as disabled would be
-a lie about a security setting.
+- `pt push config` — the Push tab's servers and targets.
+- `pt push check [...] --json` — what a push would deploy, previewed as it is typed.
+- `pt push [...]` — Deploy, as a detached CLI job.
+- `pt sudo list [--all-projects] --json` — the Sudo tab, and the project list's sweep.
+- `pt sudo <target> on|off|status` — the Sudo tab's toggles.
 
 ## Env checks — `rpass`
 
-`src/lib/env-check.ts`, read by the project list.
+`src/lib/env-check.ts` — project list.
+Docs: `rlocal/app/rpass/CLAUDE.md`.
 
-- `rpass env check --json`, with cwd set to the project — that one project's status, `ok`,
-  `warning` or `error`. Anything but `ok` is the orange key on the card.
+- `rpass env check --json` — the orange key on a project card.
 
-Asked only of the projects open on the desktop, under `canonicalId`, and run in the configured
-project's checkout. rpass decrypts the saved env files to answer, so each result is kept in
-`~/.local/share/gitmob/env-checks.json`, and one older than an hour is rechecked behind the list
-rather than in front of it; a check that fails keeps the last answer rather than caching a clean
-one.
+## Run and desktop projects — `rv`
 
-## Run — `rv`
+`src/lib/run.ts`, `src/lib/desktop.ts` — Run tab, project menu, session launch.
+Docs: `rlocal/app/rofi-vscode/CLAUDE.md`, `rlocal/app/rofi-vscode/docs/run.md`.
 
-`src/lib/run.ts`, read by the Run tab.
+- `rv run start|stop|restart|status|logs -p <id> ...` — the Run tab.
+- `rv open <id> [--focus-ide]` — Open on the project menu, and before every session launch.
+- `rv close <id>` — Close on the project menu.
 
-Transient systemd user units named `rvp-{projectId}-{cmd}.service`, with logs read via journalctl.
-Every verb is a subcommand of `rv run` — `start`, `stop`, `restart`, `status`, `logs` — with the
-project always `-p` and the command the positional after the verb: `rv run start -p X Y`,
-`rv run stop -p X Y`. Status is scoped to one project by default (the cwd's, which for
-this server is gitmob), so the project-list sweep passes `--all` and buckets the rows itself,
-while the Run tab asks for its one project with `-p`. A worktree id (`krisna::feat-x`) is a
-project id like any other to `-p`: rv splits it and runs the canonical project's config against
-the worktree's checkout.
+## Sessions — `claudex`
 
-`rv open <projectId> --focus-ide` is the other call, made by the session launch below: it switches
-the desktop to the project and opens its workspaces when they were closed. Whether the project was
-already open is rv's question to answer, so this app calls it unconditionally. `--focus-ide` leaves
-the IDE focused, which is what decides where the window `claudex kitty` spawns next lands.
+`src/lib/desktop.ts`, `src/lib/handoffs.ts`, `src/lib/claude-usage.ts` — Claude tab, project
+list, front page handoffs, usage badge.
+Docs: `rlocal/app/claudex/CLAUDE.md`.
 
-The project card's menu makes the other two, from `src/lib/desktop.ts` behind the `open` and
-`close` actions of the desktop route. Both take a worktree id as readily as a configured one.
-
-- `rv open <projectId>` — Open, offered on a project that is checked out but not open on the
-  desktop.
-- `rv close <projectId>` — Close, offered on one that is, behind a confirmation. It is the whole
-  teardown `<leader> q q` runs at the desktop, every part at once: the code workspace's
-  terminals, the IDE, the project's `rv run` units, its Claude sessions into purgatory, and every
-  other window on its workspaces, closed as its X button would. When the desktop was on that
-  project, it lands on `.dotfiles`, so no empty workspace keeps it open. It returns within a
-  second or so, and an error from any part is what the toast shows. A window holding unsaved
-  work — a guarded page, Cursor's unsaved files — asks at the desktop, where nobody is to answer
-  it.
-
-Which projects are open comes from `rw-msg get_state`, the same round trip that lists the open
-worktrees, as `openOnDesktop` on every project. Every open project is listed under Active on the
-front page, a worktree as much as a main checkout.
-
-## Desktop — `claudex`
-
-`src/lib/desktop.ts`, read by the Desktop section of the Claude tab and the project list.
-
-- `claudex desktop list <projectId>` — the Claude Code sessions on that project's workspaces. A
-  window counts wherever the project's number prefixes the workspace name, so a session dragged
-  from the code slot to the browser one stays on the project's list. A worktree is a project of
-  its own here and answers only to its own id. Each session carries a `context` — the tokens in
-  its context window, the window's size, and the percentage — or null.
-- `claudex desktop list --all` — the same, for every project open on the desktop. Asked once,
-  before a resume: see the recall section below.
-- `claudex desktop count` — session counts per project, the project-list sweep (~120ms) behind
-  the sparkle icon on a project's card.
-- `claudex desktop screen <windowId>` — that window's current terminal content.
-- `claudex desktop send <windowId> <text> --press-enter` — types into that window.
-- `claudex desktop keys <windowId> <key>` — presses one named key in it, whatever is on screen.
-- `claudex kitty --detach --submit --mode <mode> --directory <path> "<prompt>"` — opens a new
-  session.
-- `claudex purgatory send --window <windowId> --pid <pid>` — ends a session the recoverable
-  way: the window is parked on claudex's own workspace and SIGTERMed 30s later, until `claudex
-purgatory cancel` takes it back. The only call here that closes a session rather than
-  reading or typing into one, and the only one outside `claudex desktop`. The window and pid
-  were noted together, possibly hours earlier, and claudex closes nothing unless the pid is
-  still Claude in that window. Made by the Commit tab, below, not the Desktop section.
-
-claudex owns the session registry, the kitty remote sockets and the i3 lookup, so this app only
-ever handles window ids and never talks to X itself.
-
-"New" is those last two commands in order: `rv open` first, so the desktop is on the project and
-the window i3 spawns lands on one of its workspaces, then `claudex kitty`. `--detach` hands that
-window to i3, so it outlives a gitmob restart the way a child process would not. The mode picker
-is `claudex`'s own — `auto`, `edit`, `yolo` — not a `claude --permission-mode` value. Whatever
-`claude` flags a session gets beyond those, Remote Control and Chrome included, are claudex's
-defaults; this app adds none of its own.
-
-Both session modals offer an optional **Use custom model** checkbox. `/api/desktop-models`
-reads `claudex models`, whose JSON providers, models and efforts come from dotfiles'
-`core/models.py`, the same catalog used by the desktop rofi picker. GitMob renders those
-choices and validates submissions against a fresh catalog; it keeps no model list or
-provider flag mapping. Launches pass `--provider`, `--model` and `--effort` to `claudex kitty`,
-which resolves them through that shared catalog before detaching. A Claude selection keeps
-a Claude permission mode; switching providers uses the selected provider's launch mode.
-With the checkbox off, the existing mode and CLI defaults apply.
-
-New-session and handoff pickers use one list of mode IDs and labels in
-`src/lib/desktop-modes.ts`. They pass the chosen ID to `claudex kitty`, which owns provider
-selection, argument validation, prompts and launch behavior. Gitmob uses the same launch call
-for every mode.
-
-Claudex defines `Mode` and `Provider` enums in `core/modes.py`, mapping `auto`, `edit`, `yolo`
-and `recall` to Claude, and `codex` to Codex. Separate provider handlers implement launches;
-unknown modes, unmapped providers and unsupported arguments fail before detaching or consuming
-prompt files. Both providers accept opening prompts, `--submit`, temporary prompt files, titles,
-directories and detached launches. The Codex handler validates arguments and translates common
-resume/fork flags. Claude-only flags such as Chrome, Remote Control, permission modes and
-`--no-defaults` produce explicit errors for Codex. Submitting a prompt while resuming or forking
-Codex requires an explicit session ID. Codex windows remain outside the Claude session registry,
-so the existing Claude session list and controls still cover Claude windows only.
-
-With the modal's Worktree toggle on, a launch is one request: `createWorktree` from
-`src/lib/wtman.ts` runs `wtman open --branch` first — the Wtman tab's Create, forking off main —
-and the two commands above then go to the worktree's id and checkout instead of the project's.
-Nothing opens a session in a worktree that failed to appear, since the launch waits on that open.
-The modal then moves to the worktree's own page, which is where its session is listed.
-
-Both session menus — the list's, and the screen view's where they sit below Send Keys behind a
-separator — end in the common commands from `src/lib/desktop-keys.ts`, each typed into the
-session with `--press-enter`. It is a plain array, so the list grows by editing it.
-
-"Send Keys" is the keyboard for a session with nobody at its desktop. Its text box goes out as
-`send --force --paste`: `--force` because the empty-prompt check `send` normally applies would
-refuse the dialogs this exists to answer, and `--paste` so a multi-line box arrives as multiple
-lines instead of submitting at every newline. Its key buttons are `keys`, listed in
-`src/lib/desktop-keys.ts` — the client component cannot import `desktop.ts` for them, since that
-one reaches for child_process. They post to `/desktop/keys` rather than to `/desktop`, so the
-duplicate guard can let a repeated press through by path; see [architecture.md](architecture.md). The launch modes live in `src/lib/desktop-modes.ts` for the same
-reason.
-
-The context on a session is Claude Code's own count, not one this app works out. Claude Code
-reports it in the statusline payload, `claudex usage store` records it under the session id on
-every render, and `list` joins it in — so `list` costs what it always did (~0.2s, all of it the
-kitty round trip it already made per window) and the sessions are never probed. The alternatives
-were both worse: a transcript carries token counts but not the window they are measured against,
-so a 1M session reads as 169% of a 200k one, and the number on a session's screen is a regex over
-rendered terminal text that a dialog covers up. A session that has not rendered a statusline yet
-has no context, which the Desktop section says rather than guessing at.
-
-There is no session file on either side: every window on the list comes from claudex's own lookup,
-so a session this app never started is still listed, and one it started is still listed after it
-forgets. The window id is the whole handle — claudex reaches a window through the kitty socket the
-window itself carries, not through its session registry — so a session resumed into a window drives
-the same as a fresh one. `session_id` and `cwd` come from that registry and are the two fields that
-can be null on a live session; nothing here may treat a null as a session it cannot reach.
+- `claudex desktop list [<id>|--all]` — the session list; `--all` before a resume.
+- `claudex desktop count` — the sparkle count on project cards.
+- `claudex desktop screen|send|keys <windowId> ...` — a session's screen and keyboard.
+- `claudex kitty --detach --submit --mode <mode> --directory <path> ...` — New session, resume,
+  and handoff launch.
+- `claudex models` — the custom model picker.
+- `claudex purgatory send --window <id> --pid <pid>` — closing the session after a commit.
+- `claudex gitlock release --repo <path>` — after a parked commit is accepted or rejected.
+- `claudex usage show --json` — the usage badge and panel.
+- Handoffs parked by `claudex handoff` in `~/.local/share/gitmob/pending-handoffs` — the front
+  page's handoff list. Writer: `rlocal/app/claudex/claudex-handoff`.
 
 ## Past sessions — `recall`
 
-`src/lib/recall.ts`, read by the Search view on the Claude tab.
+`src/lib/recall.ts` — Search on the Claude tab.
+Docs: https://github.com/zippoxer/recall.
 
-`recall` indexes every Claude Code transcript on this machine and answers questions about them
-in JSON — the TUI it opens with is one caller of its own search, not the only one, so nothing
-here scrapes a terminal or reads the JSONL under `~/.claude`.
+- `recall search|list -s claude --cwd <path> ...` — search results and recent sessions.
+- `recall read <sessionId>` — the transcript view.
 
-- `recall search <query> -s claude --cwd <path> -l 5000 -C 1` — the matches, each with its
-  session id, the session's cwd and timestamp, and the messages that matched with one either
-  side. Trimmed to 25 here.
-- `recall list -s claude --cwd <path> -l 5000` — the recent sessions, which is what an empty
-  search box shows. It carries no message text at all, so each of the ten kept is then `read`
-  for the message its session opened with. That is a subprocess per row, and it is what holds
-  the list to ten: everything older is behind the search box, which reaches any distance back
-  for one call.
-- `recall read <sessionId>` — the whole conversation, user and assistant turns with the tool
-  calls already collapsed out. This is the transcript view.
+## Commits — `gg kitty-commit`
 
-`-s claude` throughout: recall also indexes Codex, Droid and OpenCode, and none of those is a
-session `claudex kitty` can reopen. `--cwd` is an exact match, which is recall's own idea of a
-folder scope — a session started in a subdirectory of the project belongs to that subdirectory,
-and widening it here would be this app holding a second opinion about whose sessions are whose.
+`src/lib/pending-commits.ts` — Commit tab, front page.
+Docs: `rlocal/app/gg/CLAUDE.md`. Writer: `rlocal/app/gg/gg-kitty-commit`.
 
-`-l` is a lookback, not a page size: it caps what recall considers **before** `--cwd` narrows
-it, so a limit of ten answers with however many of the newest ten sessions on this machine
-happen to be the project's — six, on the first project this was tried against. It is set past
-the whole index instead, and the rows are trimmed here. That costs nothing: the index scan is
-the work, so `-l 5000` and `-l 10` both come back in about 0.2s, and a common word over a busy
-project is under half a megabyte of JSON. A project whose sessions all sit further back than
-this many would drop out of its own search, which is the one thing this number can still get
-wrong.
+- Parked commits in `~/.local/share/gitmob/pending-commits` — the message the Commit tab loads.
 
-A warm search answers in ~0.2s. The first call after a run of new sessions indexes them before
-answering, which is what the 60s budget is for; the progress it prints goes to stderr, so stdout
-is the JSON alone.
+## Cloning — `gh`
 
-Resuming is the same two commands as "New" — `rv open`, then `claudex kitty` — with
-`-- --resume <sessionId>` on the end, in yolo mode with no prompt, titled `Claude (recall)`.
-Everything after `--` belongs to `claude` rather than to claudex, and the detached relaunch
-carries it through i3. `claude --resume` only finds a session under the directory it was held
-in, which the project-scoped `--cwd` above is what guarantees.
+`src/lib/clone.ts` — Clone on a project's menu.
+Docs: https://cli.github.com/manual/gh_repo_clone.
 
-`claudex desktop list --all` goes first. A conversation already open in a window is one no
-second `claude --resume` may be pointed at, so that one is refused with a 409 and the window id
-that has it — the browser lands on that window's screen instead of opening a rival to it. A live
-session can report a null id, and one of those matches nothing here: the check covers every
-session claudex can name, which is not quite the same as all of them.
-
-## Handoffs — parked by `claudex handoff`
-
-`src/lib/handoffs.ts`, read by the front page: the waiting handoffs lead it, above the project
-list and outside it — the project cards say nothing about them, because a section announcing
-them a screen-width above would only be saying it twice.
-
-A handoff is a briefing one Claude Code session writes for another to run alone. `claudex
-handoff` launches none of them: a session that opened its own window would drop it on top of
-whatever the user was doing, running a prompt nobody had read. Every handoff is parked instead,
-one file per handoff under `~/.local/share/gitmob/pending-handoffs`, and read before it runs —
-here, or through `claudex handoff --launch-rofi` at the desktop:
-
-```json
-{
-  "project_id": "gitmob",
-  "directory": "/home/reed/proj/gitmob",
-  "prompt": "…",
-  "timestamp": "…"
-}
-```
-
-This is a handover, not a cache read behind claudex's back: claudex writes the file and never
-looks at it again, and this app is the only reader — it lists them all through `/api/handoffs`,
-and deletes the file once the session it describes has been launched, or dropped. claudex
-resolves `project_id` (worktrees included) before writing, so nothing here maps a path back to a
-project; the launch reads the project's checkout back out of it for the session name. The file is
-renamed into place from a dotfile beside it, because the page reads the directory while claudex
-writes to it.
-
-They belong on the front page rather than on the project they name: a briefing waiting for a
-session to be started is an announcement, and a tab nobody opens announces nothing.
-
-Launching one is the same two commands as "New", with the handoff's own directory and
-`--title "Claude (handoff)"` — the title a handoff window carries whichever end launches it.
-Editing the prompt first is what this end is for: the text is the browser's, the directory is
-not, so a launch takes the prompt from the request and everything else from the file. A launch
-that fails leaves the handoff parked, to fix and try again.
-
-Each listed handoff carries whether the tree it would run in is clean, from one `git status` on
-the handoff's **own directory** — the cwd the session gets, which is a worktree's when a worktree
-was handed over, and which a status on the project's checkout would answer for the wrong tree. A
-session started on a dirty one mixes its work with what was already there, so the answer is on the
-row before anything is opened, and again beside Launch, where it links to the Changes tab. It
-refuses nothing: a briefing is sometimes about those very changes. A directory gone since the
-handoff was parked has no answer, and says so rather than claiming either.
-
-The prompt is parked whole: nothing trims it on the way in. claudex-kitty caps initial text at
-100000 bytes, near the kernel's limit on a single argument, and rejects anything over — a
-briefing that long fails the launch and stays parked, where the box that edits it is the way to
-cut it down.
-
-A handoff that is not for now goes to its project's pinboard from the kebab menu on its row or in its modal, and stops
-being parked once the note has landed. The note reads `Claudex Handoff: <prompt>`; the file's other
-fields ride on the note's metadata rather than its text, through `rv pinboard add --project-id
-<project_id> --metadata <json>`:
-
-```json
-{
-  "claudex_handoff": {
-    "id": "…",
-    "project_id": "gitmob",
-    "directory": "/home/reed/proj/gitmob",
-    "timestamp": "…"
-  }
-}
-```
-
-so `rv pinboard list --json | jq '.[] | select(.metadata.claudex_handoff)'` finds every one put
-off, with enough to park it again. The same menu copies the handoff file's absolute path, for a
-session at the desktop to read it from.
-
-## Cloning a missing checkout — `gh`
-
-`src/lib/clone.ts` and `src/app/api/projects/[id]/clone`, behind the Clone entry on a project's
-menu.
-
-A project is a YAML file in rofi-vscode; whether it has been cloned onto _this_ machine is a
-separate question, and one the project list answers as `missing` — a `not cloned` pill on the
-card, and the same pill where the branch chip goes on the project page. It is a plain
-`existsSync` on the path, not a lookup: the path is already in the list this app reads.
-
-- `gh repo clone <repo> <path>` — the clone. It is what `rv open` runs when it meets a project
-  with no checkout, so a clone started from a phone and one started at the desktop are the same
-  command. `gh` takes the ssh url out of the project config as readily as an `OWNER/REPO`, and
-  git makes the leading directories itself, so nothing here creates the parent.
-
-`rv open`'s own clone is not reusable from here for the reason it exists: it opens a floating
-terminal and waits for a keypress, which is a confirmation with nobody in front of it. The
-confirmation here is the menu entry — it appears only on a project whose checkout is missing.
-
-A clone is minutes of downloading, so it goes through the CLI job runner
-(`src/lib/cli-jobs.ts`) as a detached process logging to
-`~/.local/share/gitmob/cli-jobs/clone-{projectId}.log`, and the box showing it can be closed and
-reopened on one still running. Unlike a push it is always notified: there is no reason to start
-one and stay on the page. The list is told to refresh itself when the job exits 0, which is what
-drops the pill.
-
-Refused rather than run: a worktree, which is wtman's to create and would put a second checkout
-where git expects the one it tracks; a project with no `repo` in its YAML; a path that already
-exists; and a clone already running for that project.
-
-## Commits — parked by `gg kitty-commit`
-
-`src/lib/pending-commits.ts`, read by the Commit tab and by the front page.
-
-`gg c` generates a commit message and puts it in front of the user to accept. At the desktop
-that is a kitty overlay over the session that asked; away from it — `am-i-afk` again — the
-commit is parked here instead, one file per parked commit under
-`~/.local/share/gitmob/pending-commits`, named with a uuid:
-
-```
-Repo: /home/reed/proj/gloss/datasets/oss
-Cwd: /home/reed/proj/gloss/datasets/oss/entries
-Time: 2026-09-12T13:44:26.040354+00:00
-Source: remote
-Window: 155189262
-Pid: 48213
-Close-Session: false
-
-Add external links to entries and update KBLI to the 2025 edition
-
-Each entry that benefits now ends with a `Pranala luar:` block…
-```
-
-Headers, a blank line, then the message — a commit object's own shape. The message is the
-tail of the file byte for byte, so it reads under `cat` and commits under `git commit -F`,
-neither of which is true of a subject and a body escaped onto one JSON line. Its first line is
-the subject by git's rule, so no header says so. Both ends split once at the first blank line,
-which is what leaves the body free to contain a `Fix: whatever` line or a `---` fence.
-
-`Cwd:` appears only where `gg c` ran below the toplevel, and `Window:` and `Pid:` only where a
-session asked: a `gg c` typed into a plain terminal parks a commit like any other. The uuid carries no
-meaning — `Repo:` says which repository this is for, and the reading side matches on it. One
-repository can hold only one parked commit anyway, since the session that parked it holds that
-repository's commit lock until the commit lands.
-
-`Window:` and `Pid:` are the kitty window and process of the Claude Code session that asked, and
-the whole of what this app needs to end it: `claudex purgatory send --window --pid` above. They
-are a pair because the answer can come hours later, when X may have handed the window id to
-another terminal; claudex closes nothing unless the pid is still Claude in that window. It is what turns the overlay's
-`t` toggle into a checkbox here — "Close the Claude Code session after committing", defaulting
-to `Close-Session:`, which gg sets from the same ctrl+n no-close flag that sets the toggle's
-default at the desktop.
-
-Accepting drops the file and hands back the commit lock — `claudex gitlock release --repo` —
-and so does rejecting. The delete goes first either way: a session parked while still holding
-the commit lock would take it to the grave. Only accepting closes the session; rejecting means
-the work is not done, so it stays.
-
-`Repo:` is matched against project paths **exactly**, and where it matches, the commit belongs
-to that project: its card goes blue, it sorts to the top of the list, and the Commit tab loads
-the message into its boxes. Where nothing matches, it is announced on the front page instead —
-see [architecture.md](architecture.md).
+- `gh repo clone <repo> <path>` — a checkout missing on this machine, as a detached CLI job.
 
 ## AFK — `am-i-afk`
 
-`src/lib/afk.ts`, read by the badge left of the refresh button on the front page.
+`src/lib/afk.ts` — the badge on the front page.
+Docs: `rlocal/bin/am-i-afk`.
 
-- `am-i-afk` — the away verdict, exit 0 away and 1 here. It rides along on `/api/projects` as
-  `away`, one more sweep in that route's `Promise.all`, null when it cannot be asked at all.
-- Touching `/tmp/rlocal/am-i-afk-forced.flag` forces that verdict away. `POST /api/afk` is the
-  badge tapping it.
-
-`am-i-afk` draws the away line for anything that has to choose between the screen in front of
-the user and somewhere they will find it later — gg's commit message. This app is the somewhere,
-so it is the one worth saying which way the line falls: while the badge shows, the next commit
-message goes to a review overlay on the desktop instead of landing here.
-
-The badge appears only on "here", the answer that is surprising on a phone. Tapping it covers the
-case the idle timer cannot: the user got up mid-keystroke and is holding the phone, with 180s to
-go before the desktop notices. The flag lasts exactly that long, so it expires into the idle
-timeout rather than needing to be cleared — which is why this app only ever touches it, and never
-reads it back to decide anything. A tap that succeeded is away by definition, so the badge hides
-itself without asking again.
+- `am-i-afk` — whether the badge shows.
+- touching `/tmp/rlocal/am-i-afk-forced.flag` — tapping the badge.
 
 ## Shared files — `rbak`
 
-`src/app/api/files/rbak/route.ts`, behind "Move all to rbak" in the Files page's header menu.
+`src/app/api/files/rbak/route.ts` — "Move all to rbak" on the Files page.
+Docs: `rlocal/app/rbak/CLAUDE.md`.
 
-- `rbak move <paths...>` — every entry of the folder being viewed, in one call, so they land in
-  rbak's local store as a single entry that `rbak restore` brings back together. Its stderr is the
-  error toast.
+- `rbak move <paths...>` — the folder's entries, as one rbak entry.
 
-## Usage — `claudex usage`
+## Dictation — rvoice STT server
 
-`src/lib/claude-usage.ts`, read by the dollar badge beside the GitMob title.
+`src/app/app/SpeakButton.tsx` — the Speak button; called from the browser, not the server.
+Docs: `rlocal/app/rvoice/stt_server/README.md`.
 
-- `claudex usage show --json` — today's Claude Code API spend plus the latest rate-limit windows
-  (`five_hour`, `seven_day`), each with its used percentage and reset time.
-
-The statusline feeds that ledger and claudex keeps the day totals and the rate-limit snapshot, so
-this app asks it for them rather than reading its caches and redoing the date check. It rides along
-on `/api/projects` as `claudeUsage` — one more sweep in that route's `Promise.all`, null when
-claudex cannot answer, and the badge simply does not render then.
-
-Clicking the badge opens `src/app/UsagePanel.tsx` under the title: a bar per window with its
-percentage and how long until it resets. The windows come from one snapshot claudex captured when
-Claude Code last reported, so the panel says how old that reading is.
-
-## Dictation — the rvoice STT server
-
-`src/app/app/p/[projectId]/components/SpeakButton.tsx`, in the Claude tab's Send-text and
-New-session modals.
-
-The one integration on this page the **browser** makes itself rather than the server: a
-`multipart/form-data` POST to `https://rvoice-stt.zerotail.r-mulyadi.com/transcribe`, answered by
-`rlocal/app/rvoice/stt_server/main.py` on rdzero.
-
-- `file` — Opus, in whatever container `MediaRecorder` gives: WebM on Chrome, Ogg on Firefox. The
-  server sniffs both and hands them to FFmpeg. 32 kbps, which is what rvoice sends over the tailnet
-  and is transparent to Parakeet.
-- `language=en` — Parakeet on the GPU. Every other value routes to Whisper, which loads on demand.
-- `autocorrect=<canonical project id>` — the server layers that project's phrase table over the
-  global one before returning. The **canonical** id is the contract: the tables are keyed by
-  rofi-vscode project, so a worktree id matches none of them. An id with no entries of its own is
-  not an error, it just leaves the global table.
-
-It answers `{"text": ...}`, or `{"error": ...}` with a 400 — the shape `apiFetch` already reports,
-which is why the call goes through it despite being cross-origin.
-
-Going direct rather than through `/api` costs nothing and saves a hop: portman puts CORS headers on
-every Caddy route it makes, so every front already answers a cross-origin POST. What it does cost
-is the secure-origin requirement — `navigator.mediaDevices` does not exist on `.loc` or
-`dev.gitmob.loc`, so the button only works on an HTTPS front.
+- `POST https://rvoice-stt.zerotail.r-mulyadi.com/transcribe` (`file`, `language`,
+  `autocorrect=<canonical id>`) — dictated text.
 
 ## The agent's browser — `claude-in-chrome`
 
-`src/lib/browser.ts`, read and driven by `/app/browser`.
+`src/lib/browser.ts` — `/app/browser`.
+Docs: `rlocal/bin/claude-in-chrome`.
 
-`claude-in-chrome` (rlocal/bin) owns the Chrome the Claude extension drives — its profile, its
-window, the i3 workspace it lives alone on, and the systemd unit that keeps it there. It is one
-browser for the whole desktop, not a project's, so nothing on this path takes a project id and
-the page sits at the top of the app rather than on a tab.
-
-- `claude-in-chrome cdp tabs` — the open tabs, each with its id, title and url.
-- `claude-in-chrome cdp shot [--target <id>]` — a JPEG of one tab, base64, **sized in CSS
-  pixels**. That sizing is the contract the whole page rests on: a tap comes back as the
-  coordinate it landed on, with nothing on either side rescaling it.
-- `claude-in-chrome cdp click|scroll|text|key [--target <id>] ...` — driving that tab.
-- `claude-in-chrome cdp navigate|back|forward|reload [--target <id>]` — moving it.
-- `claude-in-chrome cdp open|close|activate` — the tabs themselves.
-
-It exists because the desktop's own answer does not travel. `chrome-attach` mirrors that
-window's pixels to a laptop over x11vnc, and to do it at all it has to **focus** the window
-first: nothing composites on the desktop, so X hands back garbage for a window whose workspace is not
-in front, and the script puts the desktop back where it found it afterwards. A phone has no
-vncviewer and no ssh, and the workspace switch is a side effect nobody at the desk asked for.
-CDP renders from inside Chrome instead — the `--disable-backgrounding-occluded-windows` flags
-that Chrome is launched with are what keep an occluded renderer answering — so a frame comes
-back with the desktop left on whatever it was on.
-
-The one thing it does have to do is bring the target tab to the front of that window before
-capturing: Chrome composites the visible tab and no other, and a capture aimed at a background
-one never answers at all. Alone on its own workspace, that costs nothing.
-
-What it reaches is the **page**, not Chrome: no omnibox behind the URL box, no extension popup,
-no file picker, no HTTP-auth dialog. Those are still `chrome-attach` and a laptop.
+- `claude-in-chrome cdp tabs|shot|click|scroll|text|key|navigate|back|forward|reload|open|close|activate`
+  — the page's tabs, screenshots and input.
 
 ## Diff exclusions — `~/.config/git/diff-exclude.yaml`
 
-`src/lib/diff-exclude.ts`, read by the review page.
+`src/lib/diff-exclude.ts` — the review page.
+Docs: `rlocal/app/gg/CLAUDE.md`.
 
-The files whose changes nobody reads line by line — lockfiles, notebooks, vaults — listed once in
-the dotfiles and read by everything that shows or acts on a diff: gg leaves them out of the AI
-commit message, the powerts formatter leaves them alone, and the review page shows each as a
-row with no diff. A flat YAML list of globs as in `.gitignore`: a pattern without a slash matches
-the file name in any directory, `*` stays within one, `**` crosses them, and both match names
-starting with a dot. picomatch here and in powerts, git's `glob` pathspec magic in gg — so a
-pattern means the same thing to all three.
+- The globs whose files show as a row with no diff.

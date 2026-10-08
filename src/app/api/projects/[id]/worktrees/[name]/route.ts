@@ -3,6 +3,7 @@ import { getProject } from '@/lib/projects';
 import {
   UnmergedBranch,
   abortRebase,
+  listBranches,
   listWorktrees,
   mergeWorktree,
   openWorktree,
@@ -17,7 +18,7 @@ type Action =
   | { action: 'rebase' }
   | { action: 'abort-rebase' }
   | { action: 'sync' }
-  | { action: 'remove'; removeBranch: boolean; force: boolean };
+  | { action: 'remove'; force: boolean };
 
 /**
  * The worktree is looked up rather than taken from the request: the branch wtman is handed is
@@ -57,14 +58,14 @@ export async function POST(
     } else if (body.action === 'merge') {
       await mergeWorktree(project, worktree, body.squash);
     } else if (body.action === 'remove') {
-      await removeWorktree(project, worktree, body.removeBranch, body.force);
+      await removeWorktree(project, worktree, body.force);
     } else if (body.action === 'rebase') {
       const { unfinished } = await rebaseWorktree(project, worktree);
       if (unfinished) {
         return NextResponse.json(
           {
             warning: `Rebase of ${worktree.name} onto ${worktree.into} is not finished: conflict in ${unfinished.conflicts.join(', ')}`,
-            worktrees: await listWorktrees(project).catch(() => undefined),
+            ...(await listBranches(project).catch(() => ({}))),
           },
           { status: 409 }
         );
@@ -82,7 +83,7 @@ export async function POST(
     return NextResponse.json({
       success: true,
       projectId: worktree.projectId,
-      worktrees: await listWorktrees(project).catch(() => undefined),
+      ...(await listBranches(project).catch(() => ({}))),
     });
   } catch (err) {
     if (err instanceof UnmergedBranch) {
