@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getProject } from '@/lib/projects';
 import {
   createWorktree,
-  listBranches,
-  listRemoteBranches,
-  openRemoteBranch,
+  createWorktreeFrom,
+  listBranchRows,
+  listWorktrees,
 } from '@/lib/wtman';
 
 export async function GET(
@@ -19,7 +19,7 @@ export async function GET(
   }
 
   try {
-    return NextResponse.json(await listBranches(project));
+    return NextResponse.json({ worktrees: await listWorktrees(project) });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'wtman list failed' },
@@ -30,11 +30,12 @@ export async function GET(
 
 type Create =
   | { from: 'main'; branch: string }
-  | { from: 'remote'; name: string };
+  | { from: 'branch'; name: string };
 
 /**
- * A new branch off main, or a worktree for a remote branch. The remote one is looked up rather
- * than taken from the request: `wtman open` given a name that is not there would create it.
+ * A worktree for a new branch off main, or for a local or remote branch with none. The
+ * existing branch is looked up rather than taken from the request, so only a row the tab listed
+ * reaches wtman.
  */
 export async function POST(
   request: NextRequest,
@@ -62,17 +63,17 @@ export async function POST(
         );
       }
       projectId = (await createWorktree(project, body.branch.trim())).projectId;
-    } else if (body.from === 'remote') {
-      const remote = (await listRemoteBranches(project)).find(
+    } else if (body.from === 'branch') {
+      const row = (await listBranchRows(project)).find(
         (r) => r.name === body.name
       );
-      if (!remote) {
+      if (!row) {
         return NextResponse.json(
-          { error: `No remote branch ${body.name} without a local one` },
+          { error: `No branch ${body.name} without a worktree` },
           { status: 404 }
         );
       }
-      projectId = (await openRemoteBranch(project, remote)).projectId;
+      projectId = (await createWorktreeFrom(project, row)).projectId;
     } else {
       throw new Error(`Unexpected source: ${(body as { from: string }).from}`);
     }
@@ -80,7 +81,7 @@ export async function POST(
     return NextResponse.json({
       success: true,
       projectId,
-      ...(await listBranches(project).catch(() => ({}))),
+      worktrees: await listWorktrees(project).catch(() => undefined),
     });
   } catch (err) {
     return NextResponse.json(

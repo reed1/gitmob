@@ -18,13 +18,15 @@ Docs: `rlocal/app/rworkspaces/CLAUDE.md`, `rlocal/lib/python/rworktree/README.md
 Docs: `rlocal/app/wtman/CLAUDE.md`.
 
 - `wtman status --json <repo>` — the worktree list.
-- `wtman remotes --json <repo>` — the remote branches list.
-- `wtman open <repo> --branch <branch>` — Open on a worktree; Check out on a remote branch.
-- `wtman new <repo> <branch>` — Create, and a session in a new worktree.
+- `wtman branches --json <repo>` — the branches without a worktree, local and remote.
+- `wtman open <repo> --branch <branch>` — Open on a worktree.
+- `wtman new <repo> <branch> [--from-local | --from-remote <remote>]` — Create, Create worktree
+  on a branch row, and a session in a new worktree.
 - `wtman rebase [--abort] <repo> <branch>` — Rebase, Abort rebase.
 - `wtman sync <repo> <branch>` — Merge sync.
 - `wtman --interactive merge <repo> <branch> [--squash]` — Merge, Squash merge.
-- `wtman --interactive remove <repo> <branch>` — Remove worktree and branch.
+- `wtman --interactive remove [--remote <remote>] <repo> <branch>` — Remove on a worktree or a
+  branch row.
 
 ## Pinboard — `rv pinboard`
 

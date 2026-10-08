@@ -3,7 +3,6 @@ import { getProject } from '@/lib/projects';
 import {
   UnmergedBranch,
   abortRebase,
-  listBranches,
   listWorktrees,
   mergeWorktree,
   openWorktree,
@@ -22,9 +21,9 @@ type Action =
 
 /**
  * The worktree is looked up rather than taken from the request: the branch wtman is handed is
- * the repo's answer, not the caller's, and a name that is no longer there must not reach `wtman
- * open`, which would take it for a branch to create. Merge and remove judge whether the branch
- * is merged from the same fresh read.
+ * the repo's answer, not the caller's, so a name that is no longer there is a 404 here rather
+ * than a refusal from wtman. Merge and remove judge whether the branch is merged from the same
+ * fresh read.
  *
  * A rebase that stopped at a conflict is not an error but a warning, with the worktree list
  * showing it mid-rebase: it is left that way on purpose, for whoever opens the worktree.
@@ -65,7 +64,7 @@ export async function POST(
         return NextResponse.json(
           {
             warning: `Rebase of ${worktree.name} onto ${worktree.into} is not finished: conflict in ${unfinished.conflicts.join(', ')}`,
-            ...(await listBranches(project).catch(() => ({}))),
+            worktrees: await listWorktrees(project).catch(() => undefined),
           },
           { status: 409 }
         );
@@ -83,7 +82,7 @@ export async function POST(
     return NextResponse.json({
       success: true,
       projectId: worktree.projectId,
-      ...(await listBranches(project).catch(() => ({}))),
+      worktrees: await listWorktrees(project).catch(() => undefined),
     });
   } catch (err) {
     if (err instanceof UnmergedBranch) {

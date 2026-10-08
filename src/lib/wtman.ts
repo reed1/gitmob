@@ -41,20 +41,29 @@ export type MergeState = 'merged' | 'no commits' | 'unmerged';
 
 export type Operation = 'rebase' | 'merge';
 
-export interface RemoteBranch {
-  /** `<remote>/<branch>`, what `wtman open --branch` takes. */
+/** A branch with no worktree: a local one, or one only on a remote. */
+export interface BranchRow {
+  kind: 'local' | 'remote';
+  /** The branch, or `<remote>/<branch>` for a remote one. */
   name: string;
-  /** The local branch it opens as, and so the branch its worktree reports. */
+  /** The local branch, and so the branch its worktree will report. */
   branch: string;
-  /** When its tip was committed, ISO. */
-  committedAt: string;
+  remote: string | null;
+  /** When its tip was committed, ISO; null for a remote branch never fetched. */
+  committedAt: string | null;
+  into: string | null;
+  ahead: number;
+  behind: number;
+  state: MergeState | null;
+  /** A remote branch whose last fetch is not where the remote is now. */
+  stale: boolean;
+  /** For a local branch: the remotes it is on, and whether each is on the same commit. */
+  remotes: Record<string, boolean>;
 }
 
-interface WtmanRemoteRow {
-  name: string;
-  branch: string;
-  committed: number;
-}
+type WtmanBranchRow = Omit<BranchRow, 'committedAt'> & {
+  committed: number | null;
+};
 
 interface WtmanStatusRow {
   name: string;
@@ -135,43 +144,29 @@ export async function listWorktrees(
 }
 
 /**
- * Remote branches with no local branch yet, most recently committed first — the wtman menu's
- * `[remote]` rows, read from the remote-tracking refs as of the last fetch.
+ * Local and remote branches with no worktree, most recently committed first, as `wtman
+ * branches --json` sees them. wtman asks each remote where its branches are now, which is what
+ * makes a remote row's `stale` mean something — and what makes this a network call.
  */
-export async function listRemoteBranches(
-  project: Project
-): Promise<RemoteBranch[]> {
+export async function listBranchRows(project: Project): Promise<BranchRow[]> {
   const rows = JSON.parse(
-    await run('wtman', ['remotes', '--json', repoPath(project)])
-  ) as WtmanRemoteRow[];
+    await run('wtman', ['branches', '--json', repoPath(project)])
+  ) as WtmanBranchRow[];
   return rows.map(({ committed, ...row }) => ({
     ...row,
-    committedAt: new Date(committed * 1000).toISOString(),
+    committedAt:
+      committed === null ? null : new Date(committed * 1000).toISOString(),
   }));
-}
-
-/** What the Wtman tab shows, read together so one never answers for a later state than the
- * other. */
-export async function listBranches(project: Project): Promise<{
-  worktrees: ProjectWorktree[];
-  remoteBranches: RemoteBranch[];
-}> {
-  const [worktrees, remoteBranches] = await Promise.all([
-    listWorktrees(project),
-    listRemoteBranches(project),
-  ]);
-  return { worktrees, remoteBranches };
 }
 
 /** Opening a worktree can mean starting an editor and its terminals, as `rv open` does. */
 const OPEN_TIMEOUT_MS = 120000;
 
 /**
- * `wtman open` opens a worktree already on disk, or gives a remote branch a tracking branch and
- * a worktree first; for one that already exists it is nothing but the hand-off to
- * `rofi-vscode open`. Either way that hand-off is what announces the worktree project to
- * rworkspaces, and so what gives it a page in this app. Only names wtman already listed reach
- * it: given anything else it would create a branch, which is `wtman new`'s job.
+ * `wtman open` opens a worktree already on disk, which is nothing but the hand-off to
+ * `rofi-vscode open`; `wtman new` makes the worktree first and ends in the same hand-off. That
+ * hand-off is what announces the worktree project to rworkspaces, and so what gives it a page
+ * in this app.
  *
  * This waits for the whole open, which is a few seconds of workspace switching and window
  * launching — but only for the launching. Cursor and the project terminal are started through
@@ -179,21 +174,15 @@ const OPEN_TIMEOUT_MS = 120000;
  * request; what comes back is whether the open succeeded, which is the one thing worth waiting
  * for and the reason nothing here detaches it.
  */
-function openBranch(project: Project, branch: string): Promise<string> {
-  return run(
-    'wtman',
-    ['open', repoPath(project), '--branch', branch],
-    OPEN_TIMEOUT_MS
-  );
-}
-
-/** Opens a worktree that is already on disk. The branch is the repo's answer, never the
- * directory name: see above. */
 export async function openWorktree(
   project: Project,
   worktree: ProjectWorktree
 ): Promise<void> {
-  await openBranch(project, worktree.branch);
+  await run(
+    'wtman',
+    ['open', repoPath(project), '--branch', worktree.branch],
+    OPEN_TIMEOUT_MS
+  );
 }
 
 /** The worktree wtman just opened for `branch`, which it must have left behind. */
@@ -227,16 +216,33 @@ export async function createWorktree(
   return worktreeOf(project, branch);
 }
 
-/** Checks a remote branch out as the local branch tracking it, in a worktree, and opens it. */
-export async function openRemoteBranch(
+/**
+ * Makes a worktree for a branch that has none, and opens it: a local branch as it is, a remote
+ * one fetched and tracked by a local branch of its name first.
+ */
+export async function createWorktreeFrom(
   project: Project,
-  remote: RemoteBranch
+  row: BranchRow
 ): Promise<ProjectWorktree> {
-  await openBranch(project, remote.name);
-  return worktreeOf(project, remote.branch);
+  await run(
+    'wtman',
+    ['new', repoPath(project), row.branch, ...sourceOf(row)],
+    OPEN_TIMEOUT_MS
+  );
+  return worktreeOf(project, row.branch);
 }
 
-/** A merge can push the branch to its upstream first, which is the network's time to take. */
+function sourceOf(row: BranchRow): string[] {
+  if (row.kind === 'local') {
+    return ['--from-local'];
+  } else if (row.kind === 'remote' && row.remote !== null) {
+    return ['--from-remote', row.remote];
+  } else {
+    throw new Error(`Unexpected branch row: ${row.kind} ${row.name}`);
+  }
+}
+
+/** Merging and removing ask every remote where the branch is now, and delete it there. */
 const MERGE_TIMEOUT_MS = 120000;
 
 /**
@@ -259,8 +265,9 @@ function runAnswered(
 }
 
 /**
- * Merges the branch into whatever the main checkout is on, then removes its worktree and the
- * branch, as `wtman merge` does. The one question it may ask is whether to copy the branch's
+ * Merges the branch into whatever the main checkout is on, then removes its worktree, the
+ * branch and the branch on its remotes, as `wtman merge` does — refused before anything when a
+ * remote has commits the branch lacks. The one question it may ask is whether to copy the branch's
  * box directories into the main checkout first, and yes is its default at the terminal too.
  * wtman refuses a worktree still open on the desktop, since Cursor goes down with its folder.
  */
@@ -283,12 +290,12 @@ export async function mergeWorktree(
 
 /**
  * Removes the worktree, the branch, which wtman bundles into a backup first, and the branch on
- * every remote it was pushed to. Deleting a branch with commits the main checkout's branch does
+ * every remote it was pushed to — refused when a remote has commits the branch lacks. Deleting a branch with commits the main checkout's branch does
  * not have is a second question, and `force` is the answer to it; without it nothing is removed.
  */
 export async function removeWorktree(
   project: Project,
-  worktree: ProjectWorktree,
+  worktree: ProjectWorktree | BranchRow,
   force: boolean
 ): Promise<string> {
   const unmerged =
@@ -304,6 +311,29 @@ export async function removeWorktree(
     unmerged ? ['y', 'y'] : ['y'],
     MERGE_TIMEOUT_MS
   );
+}
+
+/**
+ * Removes a branch with no worktree. A local one goes as a worktree's does, remotes included,
+ * and wtman refuses it unless every remote has it on the same commit. A remote one goes from
+ * that remote only, and wtman refuses it while its last fetch is stale.
+ */
+export async function removeBranch(
+  project: Project,
+  row: BranchRow,
+  force: boolean
+): Promise<string> {
+  if (row.kind === 'local') {
+    return removeWorktree(project, row, force);
+  } else if (row.kind === 'remote' && row.remote !== null) {
+    return runAnswered(
+      ['remove', '--remote', row.remote, repoPath(project), row.branch],
+      ['y'],
+      MERGE_TIMEOUT_MS
+    );
+  } else {
+    throw new Error(`Unexpected branch row: ${row.kind} ${row.name}`);
+  }
 }
 
 export class UnmergedBranch extends Error {}

@@ -24,11 +24,23 @@ interface Worktree {
   conflicts: string[];
 }
 
-interface RemoteBranch {
+interface BranchRow {
+  kind: 'local' | 'remote';
   name: string;
   branch: string;
-  committedAt: string;
+  remote: string | null;
+  committedAt: string | null;
+  into: string | null;
+  ahead: number;
+  behind: number;
+  state: Worktree['state'];
+  stale: boolean;
+  remotes: Record<string, boolean>;
 }
+
+/** What a row's badges say: against the main checkout's branch, for a worktree or not. */
+type Comparison = Pick<Worktree, 'state' | 'ahead' | 'behind' | 'into'> &
+  Partial<Pick<Worktree, 'dirty' | 'operation'>>;
 
 type Pending =
   | { kind: 'merge'; worktree: Worktree; squash: boolean }
@@ -37,7 +49,7 @@ type Pending =
   | { kind: 'abort-rebase'; worktree: Worktree }
   | { kind: 'sync'; worktree: Worktree };
 
-function isMerged(worktree: Worktree): boolean {
+function isMerged(worktree: Comparison): boolean {
   return worktree.state === 'merged' || worktree.state === 'no commits';
 }
 
@@ -61,10 +73,16 @@ function syncBlocked(worktree: Worktree): string | null {
   return null;
 }
 
-function MergeBadge({ worktree }: { worktree: Worktree }) {
-  const badges: { text: string; className: string }[] = [];
+function MergeBadge({
+  worktree,
+  extra = [],
+}: {
+  worktree: Comparison;
+  extra?: { text: string; className: string }[];
+}) {
+  const badges: { text: string; className: string }[] = [...extra];
 
-  if (worktree.operation !== null) {
+  if (worktree.operation) {
     badges.push({
       text: `${worktree.operation} not finished`,
       className: 'bg-red-500/15 text-red-500',
@@ -244,11 +262,11 @@ function ConfirmModal({
     heading = `${pending.squash ? 'Squash merge' : 'Merge'} into ${into}?`;
     body = `Backs the branch up, ${
       pending.squash ? 'squashes its commits into one commit' : 'merges it'
-    } on ${into} in the main checkout, then removes the worktree and the branch. A conflict stops it before anything is removed.`;
+    } on ${into} in the main checkout, then removes the worktree and the branch, here and on its remotes. Refused if a remote has commits the branch lacks; a conflict stops it before anything is removed.`;
     confirmLabel = pending.squash ? 'Squash merge' : 'Merge';
   } else if (pending.kind === 'remove') {
     heading = 'Remove worktree and branch?';
-    body = `Deletes the checkout, the branch, and ${worktree.branch} on every remote it was pushed to. wtman keeps a backup bundle of any local commits not in main; commits only on the remote are not backed up.`;
+    body = `Deletes the checkout, the branch, and ${worktree.branch} on every remote it was pushed to. Refused if a remote has commits the branch lacks. wtman keeps a backup bundle of commits not in main.`;
     if (!isMerged(worktree)) {
       warnings.push(
         worktree.state === 'unmerged'
@@ -309,6 +327,135 @@ function ConfirmModal({
   );
 }
 
+/** Why wtman would refuse to remove it, or null when it would go ahead. */
+function branchRemoveBlocked(row: BranchRow): string | null {
+  if (row.kind === 'remote') {
+    return row.stale
+      ? 'stale, the remote has moved since the last fetch'
+      : null;
+  }
+  const differs = Object.entries(row.remotes)
+    .filter(([, same]) => !same)
+    .map(([remote]) => remote);
+  return differs.length > 0
+    ? `${differs.join(', ')} is on another commit`
+    : null;
+}
+
+function branchBadges(row: BranchRow): { text: string; className: string }[] {
+  if (row.kind === 'remote') {
+    return row.stale
+      ? [{ text: 'stale', className: 'bg-amber-500/15 text-amber-500' }]
+      : [];
+  }
+  return [
+    { text: 'local', className: 'bg-foreground/10 text-foreground/60' },
+    ...Object.entries(row.remotes).map(([remote, same]) =>
+      same
+        ? {
+            text: `same on ${remote}`,
+            className: 'bg-foreground/10 text-foreground/50',
+          }
+        : {
+            text: `differs from ${remote}`,
+            className: 'bg-amber-500/15 text-amber-500',
+          }
+    ),
+  ];
+}
+
+function BranchKebabMenu({
+  row,
+  disabled,
+  onCreate,
+  onRemove,
+}: {
+  row: BranchRow;
+  disabled: boolean;
+  onCreate: () => void;
+  onRemove: () => void;
+}) {
+  const removeBlocked = branchRemoveBlocked(row);
+  return (
+    <KebabMenu label={`Actions for ${row.name}`} disabled={disabled}>
+      <KebabMenuItem onSelect={onCreate}>Create worktree</KebabMenuItem>
+      <KebabMenuItem
+        onSelect={onRemove}
+        disabled={removeBlocked !== null}
+        danger
+      >
+        {row.kind === 'remote' ? `Remove from ${row.remote}` : 'Remove branch'}
+      </KebabMenuItem>
+      {removeBlocked && (
+        <div className="px-4 pt-1 pb-2 text-xs text-foreground/40">
+          Remove: {removeBlocked}
+        </div>
+      )}
+    </KebabMenu>
+  );
+}
+
+function RemoveBranchModal({
+  row,
+  onCancel,
+  onConfirm,
+}: {
+  row: BranchRow;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const into = row.into ?? 'the main checkout';
+  const warnings: string[] = [];
+  let body: string;
+
+  if (row.kind === 'local') {
+    const remotes = Object.keys(row.remotes);
+    body = `Deletes the branch${remotes.length > 0 ? `, here and on ${remotes.join(', ')}` : ''}. Refused unless each remote is on the same commit. wtman keeps a backup bundle of commits not in main.`;
+    if (!isMerged(row)) {
+      warnings.push(
+        `${row.ahead} commit${row.ahead === 1 ? '' : 's'} not in ${into}: the branch is force deleted.`
+      );
+    }
+  } else if (row.kind === 'remote') {
+    body = `Deletes ${row.branch} on ${row.remote}. Nothing backs it up.`;
+    if (row.ahead > 0) {
+      warnings.push(
+        `${row.ahead} commit${row.ahead === 1 ? '' : 's'} not in ${into} go with it.`
+      );
+    }
+  } else {
+    throw new Error(`Unexpected branch kind: ${(row as BranchRow).kind}`);
+  }
+
+  return (
+    <Modal heading="Remove branch?" subtitle={row.name} onClose={onCancel}>
+      <div className="px-4 py-3 space-y-2 text-sm text-foreground/70">
+        <p>{body}</p>
+        {warnings.map((warning) => (
+          <p key={warning} className="text-red-500">
+            {warning}
+          </p>
+        ))}
+      </div>
+      <div className="px-4 py-3 border-t border-foreground/10 flex justify-end gap-2">
+        <button
+          data-modal-cancel
+          onClick={onCancel}
+          className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={onConfirm}
+          className="px-3 py-1.5 text-sm rounded-lg bg-red-500/15 text-red-500 active:bg-red-500/25"
+        >
+          Remove
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
 export function WtmanView({
   projectId,
   currentProjectId,
@@ -318,13 +465,15 @@ export function WtmanView({
 }) {
   const router = useRouter();
   const [worktrees, setWorktrees] = useState<Worktree[] | null>(null);
-  const [remoteBranches, setRemoteBranches] = useState<RemoteBranch[]>([]);
+  const [branches, setBranches] = useState<BranchRow[] | null>(null);
+  const [branchesError, setBranchesError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [working, setWorking] = useState<{
     name: string;
     label: string;
   } | null>(null);
   const [pending, setPending] = useState<Pending | null>(null);
+  const [removing, setRemoving] = useState<BranchRow | null>(null);
   const [newBranch, setNewBranch] = useState('');
   const [creating, setCreating] = useState(false);
 
@@ -333,7 +482,6 @@ export function WtmanView({
     const data = await res.json();
     if (res.ok) {
       setWorktrees(data.worktrees);
-      setRemoteBranches(data.remoteBranches);
       setError(null);
     } else {
       setError(data.error || 'Could not read worktrees');
@@ -343,6 +491,20 @@ export function WtmanView({
   // The desktop takes a while to finish opening one, so the badge catches up on its own.
   useAutoRefresh(load, 10000);
 
+  const loadBranches = useCallback(async () => {
+    const res = await fetch(`/api/projects/${projectId}/branches`);
+    const data = await res.json();
+    if (res.ok) {
+      setBranches(data.branches);
+      setBranchesError(null);
+    } else {
+      setBranchesError(data.error || 'Could not read branches');
+    }
+  }, [projectId]);
+
+  // Every read asks each remote where its branches are, seconds over ssh.
+  useAutoRefresh(loadBranches, 60000);
+
   const post = async (url: string, body: object) => {
     const res = await apiFetch(url, {
       method: 'POST',
@@ -351,7 +513,6 @@ export function WtmanView({
     });
     const data = await res.json();
     if (data.worktrees) setWorktrees(data.worktrees);
-    if (data.remoteBranches) setRemoteBranches(data.remoteBranches);
     return { ok: res.ok, projectId: data.projectId as string };
   };
 
@@ -383,14 +544,19 @@ export function WtmanView({
         action: 'merge',
         squash: chosen.squash,
       });
-      if (ok)
+      if (ok) {
         addToast(`Merged ${worktree.name} into ${worktree.into}`, 'success');
+        loadBranches();
+      }
     } else if (chosen.kind === 'remove') {
       const { ok } = await act(worktree, 'Removing…', {
         action: 'remove',
         force: !isMerged(worktree),
       });
-      if (ok) addToast(`Removed ${worktree.name}`, 'success');
+      if (ok) {
+        addToast(`Removed ${worktree.name}`, 'success');
+        loadBranches();
+      }
     } else if (chosen.kind === 'rebase') {
       // A conflict comes back as a warning toast from apiFetch, and the row stays mid-rebase.
       const { ok } = await act(worktree, 'Rebasing…', { action: 'rebase' });
@@ -426,14 +592,30 @@ export function WtmanView({
     }
   };
 
-  const checkOut = async (remote: RemoteBranch) => {
-    setWorking({ name: remote.name, label: 'Checking out…' });
+  const createFrom = async (row: BranchRow) => {
+    setWorking({ name: row.name, label: 'Creating…' });
     try {
       const { ok, projectId: opened } = await post(
         `/api/projects/${projectId}/worktrees`,
-        { from: 'remote', name: remote.name }
+        { from: 'branch', name: row.name }
       );
       if (ok) router.push(`/app/p/${opened}?tab=pinboard`);
+      else loadBranches();
+    } finally {
+      setWorking(null);
+    }
+  };
+
+  const removeBranch = async (row: BranchRow) => {
+    setRemoving(null);
+    setWorking({ name: row.name, label: 'Removing…' });
+    try {
+      const { ok } = await post(`/api/projects/${projectId}/branches`, {
+        name: row.name,
+        force: row.kind === 'local' && !isMerged(row),
+      });
+      if (ok) addToast(`Removed ${row.name}`, 'success');
+      await loadBranches();
     } finally {
       setWorking(null);
     }
@@ -562,55 +744,62 @@ export function WtmanView({
         );
       })}
 
-      <p className="text-xs text-foreground/40 pt-1">
-        Every worktree git still knows about, whether or not it is open. Opening
-        one starts its editor and terminal at the desktop, which is also what
-        gives it a project of its own here. Merging goes into whatever the main
-        checkout is on, and removes the worktree and branch after; a worktree
-        open on the desktop has to be closed before either. Rebasing replays the
-        branch on top of that same branch, and a conflict leaves it unfinished
-        in the worktree. Merge sync merges that branch into the worktree and
-        fast-forwards it to the result, keeping the worktree, or does nothing.
-        Removing takes the branch with it, here and on its remote.
+      <p className="text-xs text-foreground/40">
+        Merge and remove delete the branch here and on its remotes, and stop if
+        a remote has commits it lacks.
       </p>
 
-      {remoteBranches.length > 0 && (
-        <div className="space-y-2 pt-2">
-          <div className="text-xs font-medium text-foreground/50 uppercase tracking-wide">
-            Remote branches
-          </div>
-          {remoteBranches.map((remote) => (
-            <div
-              key={remote.name}
-              className="p-3 border border-foreground/10 rounded-lg flex items-center justify-between gap-3"
-            >
-              <div className="min-w-0">
-                <div className="font-medium truncate">{remote.name}</div>
-                <div className="text-xs text-foreground/50">
-                  {relativeTime(remote.committedAt)}
-                </div>
-              </div>
-              {working?.name === remote.name ? (
-                <span className="shrink-0 text-xs text-foreground/50">
-                  {working.label}
-                </span>
-              ) : (
-                <button
-                  onClick={() => checkOut(remote)}
-                  disabled={busy}
-                  className="shrink-0 px-3 py-1.5 text-xs bg-foreground/10 border border-foreground/15 rounded active:opacity-80 disabled:opacity-40"
-                >
-                  Check out
-                </button>
-              )}
-            </div>
-          ))}
-          <p className="text-xs text-foreground/40">
-            Branches on a remote with no local branch yet, as of the last fetch.
-            Checking one out makes the local branch that tracks it, in a
-            worktree of its own, and opens it.
-          </p>
+      <div className="space-y-2 pt-2">
+        <div className="text-xs font-medium text-foreground/50 uppercase tracking-wide">
+          Branches without a worktree
         </div>
+        {branchesError && (
+          <div className="text-xs text-red-500 break-all">{branchesError}</div>
+        )}
+        {branches === null && !branchesError && (
+          <div className="text-xs text-foreground/50">Asking the remotes…</div>
+        )}
+        {branches?.length === 0 && (
+          <div className="text-xs text-foreground/50">None.</div>
+        )}
+        {branches?.map((row) => (
+          <div
+            key={row.name}
+            className="p-3 border border-foreground/10 rounded-lg flex items-center justify-between gap-3"
+          >
+            <div className="min-w-0">
+              <div className="font-medium truncate">{row.name}</div>
+              <div className="text-xs text-foreground/50">
+                {row.committedAt
+                  ? relativeTime(row.committedAt)
+                  : 'never fetched'}
+              </div>
+              <div className="mt-1 flex flex-wrap gap-1 empty:hidden">
+                <MergeBadge worktree={row} extra={branchBadges(row)} />
+              </div>
+            </div>
+            {working?.name === row.name ? (
+              <span className="shrink-0 text-xs text-foreground/50">
+                {working.label}
+              </span>
+            ) : (
+              <BranchKebabMenu
+                row={row}
+                disabled={busy}
+                onCreate={() => createFrom(row)}
+                onRemove={() => setRemoving(row)}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+
+      {removing && (
+        <RemoveBranchModal
+          row={removing}
+          onCancel={() => setRemoving(null)}
+          onConfirm={() => removeBranch(removing)}
+        />
       )}
 
       {pending && (
