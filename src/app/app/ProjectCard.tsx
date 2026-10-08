@@ -194,6 +194,7 @@ export default function ProjectCard({
         project={project}
         hasChanges={project.editing}
         onChanged={onChanged}
+        onClosed={onChanged}
       />
     </div>
   );

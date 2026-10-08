@@ -219,6 +219,7 @@ export default function ProjectPage() {
                 project={project}
                 hasChanges={changeCount > 0}
                 onChanged={() => window.location.reload()}
+                onClosed={() => goHome(router)}
               />
             )
           )}

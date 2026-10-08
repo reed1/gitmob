@@ -23,14 +23,17 @@ interface Props {
   };
   /** The tree is dirty: there is something to review. */
   hasChanges: boolean;
-  /** The project's state moved on — cloned, or opened or closed on the desktop. */
+  /** The project's state moved on — cloned, or opened on the desktop. */
   onChanged: () => void;
+  /** Closed on the desktop; a worktree has no project left to show after that. */
+  onClosed: () => void;
 }
 
 export default function ProjectKebabMenu({
   project,
   hasChanges,
   onChanged,
+  onClosed,
 }: Props) {
   const router = useRouter();
   const [urlModalOpen, setUrlModalOpen] = useState(false);
@@ -54,7 +57,8 @@ export default function ProjectKebabMenu({
       `${action === 'open' ? 'Opened' : 'Closed'} ${project.id} on the desktop`,
       'success'
     );
-    onChanged();
+    if (action === 'open') onChanged();
+    else onClosed();
   };
 
   return (
