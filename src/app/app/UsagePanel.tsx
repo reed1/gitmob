@@ -2,9 +2,13 @@
 
 import { ClaudeUsage, UsageWindow } from './types';
 
-const WINDOWS: { key: 'fiveHour' | 'sevenDay'; label: string }[] = [
-  { key: 'fiveHour', label: '5-hour' },
-  { key: 'sevenDay', label: 'Weekly' },
+const WINDOWS: {
+  key: 'fiveHour' | 'sevenDay';
+  label: string;
+  durationSeconds: number;
+}[] = [
+  { key: 'fiveHour', label: '5-hour', durationSeconds: 5 * 3600 },
+  { key: 'sevenDay', label: 'Weekly', durationSeconds: 7 * 24 * 3600 },
 ];
 
 function barColor(percentage: number | null): string {
@@ -35,6 +39,16 @@ function formatReset(resetsAt: number | null): string {
   return `resets ${clock} (in ${formatDuration(seconds)})`;
 }
 
+function elapsedPercentage(
+  resetsAt: number | null,
+  durationSeconds: number
+): number | null {
+  if (resetsAt === null) return null;
+  const remaining = resetsAt - Date.now() / 1000;
+  const elapsed = 100 * (1 - remaining / durationSeconds);
+  return Math.min(100, Math.max(0, elapsed));
+}
+
 function formatCapturedAt(capturedAt: number): string {
   const seconds = Date.now() / 1000 - capturedAt;
   return seconds < 60
@@ -45,11 +59,14 @@ function formatCapturedAt(capturedAt: number): string {
 function WindowRow({
   label,
   usageWindow,
+  durationSeconds,
 }: {
   label: string;
   usageWindow: UsageWindow;
+  durationSeconds: number;
 }) {
   const percentage = usageWindow.usedPercentage;
+  const elapsed = elapsedPercentage(usageWindow.resetsAt, durationSeconds);
   return (
     <div className="space-y-1">
       <div className="flex items-baseline justify-between text-xs">
@@ -58,11 +75,24 @@ function WindowRow({
           {percentage === null ? 'N/A' : `${Math.round(percentage)}%`}
         </span>
       </div>
-      <div className="h-1.5 rounded-full bg-foreground/10 overflow-hidden">
-        <div
-          className={`h-full rounded-full ${barColor(percentage)}`}
-          style={{ width: `${percentage ?? 0}%` }}
-        />
+      <div className="space-y-0.5">
+        <div className="h-1.5 rounded-full bg-foreground/10 overflow-hidden">
+          <div
+            className={`h-full rounded-full ${barColor(percentage)}`}
+            style={{ width: `${percentage ?? 0}%` }}
+          />
+        </div>
+        {elapsed !== null && (
+          <div
+            className="h-0.5 rounded-full bg-foreground/10 overflow-hidden"
+            title={`${Math.round(elapsed)}% of the window elapsed`}
+          >
+            <div
+              className="h-full rounded-full bg-blue-500"
+              style={{ width: `${elapsed}%` }}
+            />
+          </div>
+        )}
       </div>
       <div className="text-[11px] text-foreground/50">
         {formatReset(usageWindow.resetsAt)}
@@ -85,7 +115,12 @@ export default function UsagePanel({ usage }: { usage: ClaudeUsage }) {
         </div>
       ) : (
         windows.map((w) => (
-          <WindowRow key={w.key} label={w.label} usageWindow={w.data} />
+          <WindowRow
+            key={w.key}
+            label={w.label}
+            usageWindow={w.data}
+            durationSeconds={w.durationSeconds}
+          />
         ))
       )}
       {usage.capturedAt !== null && (
