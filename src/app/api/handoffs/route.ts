@@ -1,4 +1,4 @@
-import { isCustomModel } from '@/lib/desktop';
+import { isCustomModel, isProvider } from '@/lib/desktop';
 import { NextRequest, NextResponse } from 'next/server';
 import { getProject } from '@/lib/projects';
 import {
@@ -9,7 +9,6 @@ import {
 } from '@/lib/handoffs';
 import { launchDesktopSession } from '@/lib/desktop';
 import { getRepoSummary } from '@/lib/git';
-import { isDesktopMode } from '@/lib/desktop-modes';
 
 /** The title a handoff window carries, whichever end launches it. */
 const HANDOFF_TITLE = 'Handoff';
@@ -40,18 +39,18 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const { handoffId, prompt, mode, customModel } = await request.json();
+  const { handoffId, prompt, provider, customModel } = await request.json();
   if (!isHandoffId(handoffId)) {
     return NextResponse.json({ error: 'Missing handoff' }, { status: 400 });
   }
-  if (!isDesktopMode(mode)) {
+  if (!(await isProvider(provider))) {
     return NextResponse.json(
-      { error: `Unexpected mode: ${mode}` },
+      { error: `Unexpected provider: ${provider}` },
       { status: 400 }
     );
   }
 
-  if (!(await isCustomModel(customModel))) {
+  if (!(await isCustomModel(provider, customModel))) {
     return NextResponse.json(
       { error: 'Invalid custom model' },
       { status: 400 }
@@ -83,7 +82,7 @@ export async function POST(request: NextRequest) {
     await launchDesktopSession({
       projectId: handoff.projectId,
       directory: handoff.directory,
-      mode,
+      provider,
       customModel,
       prompt: briefing,
       title: HANDOFF_TITLE,

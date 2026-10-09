@@ -68,12 +68,19 @@ Docs: `rlocal/app/rofi-vscode/CLAUDE.md`, `rlocal/app/rofi-vscode/docs/run.md`.
 list, front page handoffs, usage badge.
 Docs: `rlocal/app/claudex/CLAUDE.md`.
 
-- `claudex desktop list [<id>|--all]` — the session list; `--all` before a resume.
+- `claudex desktop list [<id>|--all]` — the session list, Claude and Codex windows alike, each
+  with its `provider`; `--all` before a resume.
 - `claudex desktop count` — the sparkle count on project cards.
-- `claudex desktop screen|send|keys <windowId> ...` — a session's screen and keyboard.
-- `claudex kitty --detach --submit --mode <mode> --directory <path> ...` — New session, resume,
-  and handoff launch.
-- `claudex models` — the custom model picker.
+- `claudex desktop screen|send|keys <windowId> ...` — a session's screen and keyboard. `send`
+  takes its text after `--`, so text starting with `-` is typed rather than parsed.
+- `claudex kitty --detach --provider <id> --directory <path> [--model <m> --effort <e>]
+  [--resume <sessionId>] [--submit --file <path> --rm-file]` — New session, resume, and handoff
+  launch. The prompt goes in a fresh file under the OS temp dir, handed over for claudex to read
+  once and delete, so it is never parsed as an option. Every session runs without permission
+  prompts; provider and model are the only choices.
+- `claudex models` — the providers, models and efforts on offer: the provider dropdown (first
+  one by default), the custom model picker, and the server's check of both. Read once per server
+  process, so a catalog edit takes a gitmob restart.
 - `claudex purgatory send --window <id> --pid <pid>` — closing the session after a commit.
 - `claudex gitlock release --repo <path>` — after a parked commit is accepted or rejected.
 - `claudex usage show --json` — the usage badge and panel.

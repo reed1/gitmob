@@ -108,7 +108,7 @@ export function DesktopSessions({
 
       {!error && sessions?.length === 0 && workspaces.length > 0 && (
         <div className="text-sm text-foreground/40">
-          No Claude windows on this project&apos;s workspaces.
+          No Claude or Codex windows on this project&apos;s workspaces.
         </div>
       )}
 

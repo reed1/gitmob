@@ -17,6 +17,8 @@ export interface SessionContext {
 
 export interface DesktopSession {
   windowId: string;
+  /** A provider id from `claudex models`. */
+  provider: string;
   title: string;
   workspace: string;
   projectId: string;

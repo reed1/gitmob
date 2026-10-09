@@ -1,6 +1,7 @@
 'use client';
 
 import { CustomModelPicker } from './CustomModelPicker';
+import { ProviderSelect } from './ProviderSelect';
 import type { CustomModel } from '../../lib/desktop-models';
 
 import { useCallback, useState } from 'react';
@@ -12,11 +13,7 @@ import { relativeTime } from '../../lib/relative-time';
 import { useAutoRefresh } from '../../lib/use-auto-refresh';
 import { CollapsedRows } from './CollapsedRows';
 import { KebabMenu, KebabMenuItem } from './KebabMenu';
-import {
-  DESKTOP_MODES,
-  DesktopMode,
-  DEFAULT_DESKTOP_MODE,
-} from '../../lib/desktop-modes';
+import { useModelCatalog } from '../../lib/use-model-catalog';
 
 interface PendingHandoff {
   id: string;
@@ -107,7 +104,9 @@ export function PendingHandoffs({
   const [openId, setOpenId] = useState<string | null>(null);
   const [prompt, setPrompt] = useState('');
   const [initialPrompt, setInitialPrompt] = useState('');
-  const [mode, setMode] = useState<DesktopMode>(DEFAULT_DESKTOP_MODE);
+  const { catalog, error: catalogError } = useModelCatalog();
+  const [chosenProvider, setChosenProvider] = useState<string>();
+  const provider = chosenProvider ?? catalog?.providers[0]?.id;
   const [customModel, setCustomModel] = useState<CustomModel>();
   const [launching, setLaunching] = useState(false);
 
@@ -125,19 +124,24 @@ export function PendingHandoffs({
   const openHandoff = (handoff: PendingHandoff) => {
     setPrompt(handoff.prompt);
     setInitialPrompt(handoff.prompt);
-    setMode(DEFAULT_DESKTOP_MODE);
+    setChosenProvider(undefined);
     setCustomModel(undefined);
     setOpenId(handoff.id);
   };
 
   const launch = async () => {
-    if (!open) return;
+    if (!open || !provider) return;
     setLaunching(true);
     try {
       const res = await apiFetch('/api/handoffs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ handoffId: open.id, prompt, mode, customModel }),
+        body: JSON.stringify({
+          handoffId: open.id,
+          prompt,
+          provider,
+          customModel,
+        }),
       });
       // A launch that failed leaves the handoff parked, and the box open on the text to fix.
       if (!res.ok) return;
@@ -250,6 +254,9 @@ export function PendingHandoffs({
             <div className="px-4 py-3 space-y-2">
               <CustomModelPicker
                 key={open.id}
+                catalog={catalog}
+                error={catalogError}
+                provider={provider}
                 value={customModel}
                 onChange={setCustomModel}
                 disabled={launching}
@@ -276,20 +283,19 @@ export function PendingHandoffs({
                 Delete
               </button>
               <div className="flex items-center gap-2">
-                <select
-                  value={mode}
-                  onChange={(e) => setMode(e.target.value as DesktopMode)}
+                <ProviderSelect
+                  catalog={catalog}
+                  value={provider}
+                  onChange={(next) => {
+                    setChosenProvider(next);
+                    setCustomModel(undefined);
+                  }}
+                  disabled={launching}
                   className="text-xs bg-foreground/5 border border-foreground/15 rounded-lg px-2 py-1.5"
-                >
-                  {DESKTOP_MODES.map((entry) => (
-                    <option key={entry.mode} value={entry.mode}>
-                      {entry.label}
-                    </option>
-                  ))}
-                </select>
+                />
                 <button
                   onClick={launch}
-                  disabled={launching || !prompt.trim()}
+                  disabled={launching || !provider || !prompt.trim()}
                   className="px-3 py-1.5 text-sm rounded-lg bg-foreground text-background hover:opacity-90 disabled:opacity-40"
                 >
                   {launching ? 'Starting...' : 'Launch'}

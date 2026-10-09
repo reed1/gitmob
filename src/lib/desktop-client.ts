@@ -1,6 +1,5 @@
 import type { CustomModel } from './desktop-models';
 import { addToast, apiFetch } from './api';
-import type { DesktopMode } from './desktop-modes';
 
 /**
  * Starts a session and answers with the project it landed on, or null when it failed. With a
@@ -8,7 +7,7 @@ import type { DesktopMode } from './desktop-modes';
  */
 export async function launchDesktopSession(
   projectId: string,
-  mode: DesktopMode,
+  provider: string,
   prompt = '',
   branch = '',
   customModel?: CustomModel
@@ -18,7 +17,7 @@ export async function launchDesktopSession(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       action: 'launch',
-      mode,
+      provider,
       prompt,
       branch,
       customModel,

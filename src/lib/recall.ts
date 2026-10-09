@@ -53,7 +53,7 @@ interface RecallRawSessionRow {
  */
 const RECALL_TIMEOUT_MS = 60000;
 
-/** Sessions this app can reopen. recall also indexes Codex, Droid and OpenCode. */
+/** The sessions this search covers. recall also indexes Codex, Droid and OpenCode. */
 const CLAUDE_SOURCE = ['-s', 'claude'];
 
 /**

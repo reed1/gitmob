@@ -1,5 +1,5 @@
+/** A model and effort of the session's provider, picked from `claudex models`. */
 export interface CustomModel {
-  provider: string;
   model: string;
   effort: string;
 }

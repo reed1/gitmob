@@ -1,26 +1,23 @@
 'use client';
 
 import { CustomModelPicker } from './CustomModelPicker';
+import { ProviderSelect } from './ProviderSelect';
 import type { CustomModel } from '../../lib/desktop-models';
 
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { addToast, apiFetch } from '../../lib/api';
 import { launchDesktopSession } from '../../lib/desktop-client';
-import {
-  DESKTOP_MODES,
-  DesktopMode,
-  DEFAULT_DESKTOP_MODE,
-} from '../../lib/desktop-modes';
+import { useModelCatalog } from '../../lib/use-model-catalog';
 import { Modal } from './Modal';
 import { KebabMenu, KebabMenuItem } from './KebabMenu';
 import { SpeakButton, appendSpoken } from './SpeakButton';
 
 /**
  * The one way a desktop session is started from this app — the project card's menu on the front
- * page, the Claude tab and a pinboard note (its text as the opening prompt) all open this. Mode,
- * opening prompt and dictation sit behind the one button, the same trade every other thing sent
- * to a session already makes. A second composer only means the two drift: the front page kept
+ * page, the Claude tab and a pinboard note (its text as the opening prompt) all open this.
+ * Provider, opening prompt and dictation sit behind the one button, the same trade every other
+ * thing sent to a session already makes. A second composer only means the two drift: the front page kept
  * its own for a while, and it was the one without a Speak button.
  *
  * Worktree opens the session in a new worktree instead, on a branch forked off main — named by
@@ -41,7 +38,9 @@ export function NewSessionModal({
   onLaunched?: () => void;
 }) {
   const router = useRouter();
-  const [mode, setMode] = useState<DesktopMode>(DEFAULT_DESKTOP_MODE);
+  const { catalog, error: catalogError } = useModelCatalog();
+  const [chosenProvider, setChosenProvider] = useState<string>();
+  const provider = chosenProvider ?? catalog?.providers[0]?.id;
   const [inWorktree, setInWorktree] = useState(false);
   const [branch, setBranch] = useState('');
   const [suggesting, setSuggesting] = useState(false);
@@ -122,12 +121,12 @@ export function NewSessionModal({
   };
 
   const launch = async () => {
-    if (launching || missingBranch || uploadsPending) return;
+    if (!provider || launching || missingBranch || uploadsPending) return;
     setLaunching(true);
     try {
       const launchedIn = await launchDesktopSession(
         projectId,
-        mode,
+        provider,
         images.length
           ? `${images.map((image, index) => `image ${index + 1}: ${image.path}`).join('\n')}\n\n${prompt.trim()}`
           : prompt.trim(),
@@ -156,17 +155,16 @@ export function NewSessionModal({
     >
       <div className="px-4 py-3 space-y-2">
         <div className="flex gap-2">
-          <select
-            value={mode}
-            onChange={(e) => setMode(e.target.value as DesktopMode)}
+          <ProviderSelect
+            catalog={catalog}
+            value={provider}
+            onChange={(next) => {
+              setChosenProvider(next);
+              setCustomModel(undefined);
+            }}
+            disabled={launching}
             className="flex-1 min-w-0 text-sm bg-background border border-foreground/20 rounded-lg px-3 py-2"
-          >
-            {DESKTOP_MODES.map((entry) => (
-              <option key={entry.mode} value={entry.mode}>
-                {entry.label}
-              </option>
-            ))}
-          </select>
+          />
           <KebabMenu label="Session options" disabled={launching}>
             <KebabMenuItem onSelect={() => setInWorktree(!inWorktree)}>
               <span
@@ -221,6 +219,9 @@ export function NewSessionModal({
           />
         </div>
         <CustomModelPicker
+          catalog={catalog}
+          error={catalogError}
+          provider={provider}
           value={customModel}
           onChange={setCustomModel}
           disabled={launching}
@@ -344,7 +345,9 @@ export function NewSessionModal({
             </button>
             <button
               onClick={launch}
-              disabled={launching || missingBranch || uploadsPending}
+              disabled={
+                !provider || launching || missingBranch || uploadsPending
+              }
               className="px-3 py-1.5 text-sm rounded-lg bg-foreground text-background hover:opacity-90 disabled:opacity-40"
             >
               {launching

@@ -1,34 +1,26 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import type { CustomModel, ModelCatalog } from '../../lib/desktop-models';
 
+/** A model and effort of the session's provider, out of `claudex models`. */
 export function CustomModelPicker({
+  catalog,
+  error,
+  provider,
   value,
   onChange,
   disabled,
 }: {
+  catalog?: ModelCatalog;
+  error: string;
+  provider?: string;
   value?: CustomModel;
   onChange: (value?: CustomModel) => void;
   disabled: boolean;
 }) {
-  const [catalog, setCatalog] = useState<ModelCatalog>();
-  const [error, setError] = useState('');
-  useEffect(() => {
-    let active = true;
-    fetch('/api/desktop-models')
-      .then(async (response) => {
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error);
-        if (active) setCatalog(data);
-      })
-      .catch((error) => {
-        if (active) setError(error.message);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
+  const models = catalog?.providers.find(
+    (entry) => entry.id === provider
+  )?.models;
   const style =
     'min-w-0 text-sm bg-background border border-foreground/20 rounded-lg px-3 py-2';
   return (
@@ -37,19 +29,14 @@ export function CustomModelPicker({
         <input
           type="checkbox"
           checked={!!value}
-          disabled={disabled || !catalog?.providers.length}
-          onChange={(event) => {
-            const first = catalog?.providers[0];
+          disabled={disabled || !models?.length}
+          onChange={(event) =>
             onChange(
-              event.target.checked && first
-                ? {
-                    provider: first.id,
-                    model: first.models[0].id,
-                    effort: catalog!.efforts[0],
-                  }
+              event.target.checked && models?.length
+                ? { model: models[0].id, effort: catalog!.efforts[0] }
                 : undefined
-            );
-          }}
+            )
+          }
         />
         Use custom model
       </label>
@@ -57,28 +44,22 @@ export function CustomModelPicker({
       {!catalog && !error && (
         <p className="text-xs text-foreground/50">Loading models…</p>
       )}
-      {value && catalog && (
+      {value && catalog && models && (
         <div className="flex flex-wrap gap-2">
           <select
-            aria-label="Provider and model"
+            aria-label="Model"
             className={`${style} flex-1`}
-            value={JSON.stringify([value.provider, value.model])}
+            value={value.model}
             disabled={disabled}
-            onChange={(event) => {
-              const [provider, model] = JSON.parse(event.target.value);
-              onChange({ ...value, provider, model });
-            }}
+            onChange={(event) =>
+              onChange({ ...value, model: event.target.value })
+            }
           >
-            {catalog.providers.flatMap((provider) =>
-              provider.models.map((model) => (
-                <option
-                  key={`${provider.id}/${model.id}`}
-                  value={JSON.stringify([provider.id, model.id])}
-                >
-                  {provider.label} · {model.label}
-                </option>
-              ))
-            )}
+            {models.map((model) => (
+              <option key={model.id} value={model.id}>
+                {model.label}
+              </option>
+            ))}
           </select>
           <select
             aria-label="Effort"

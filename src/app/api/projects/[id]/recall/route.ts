@@ -6,8 +6,8 @@ import { readSession, recentSessions, searchSessions } from '@/lib/recall';
 /** What a resumed window is called, as a handoff's is "Claude (handoff)". */
 const RESUME_TITLE = 'Claude (recall)';
 
-/** `claudex recall` resumes with --dangerously-skip-permissions; this is the same session. */
-const RESUME_MODE = 'yolo';
+/** The search below reads Claude transcripts alone, so whatever it finds is a Claude session. */
+const RESUME_PROVIDER = 'claude';
 
 export async function GET(
   request: NextRequest,
@@ -70,12 +70,12 @@ export async function POST(
     }
 
     // The search is scoped to the project's path, so that is the directory the session was
-    // held in — the one `claude --resume` can find it under.
+    // held in — the one a resume can find it under.
     const name = project.path.split('/').pop() || id;
     await launchDesktopSession({
       projectId: id,
       directory: project.path,
-      mode: RESUME_MODE,
+      provider: RESUME_PROVIDER,
       prompt: '',
       title: RESUME_TITLE,
       resumeSessionId: sessionId,

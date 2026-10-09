@@ -1,7 +1,10 @@
 import { execFile } from 'child_process';
+import { randomUUID } from 'crypto';
+import { rm, writeFile } from 'fs/promises';
+import { tmpdir } from 'os';
+import { join } from 'path';
 import type { CommonCommand, SpecialKey } from './desktop-keys';
 import type { CustomModel, ModelCatalog } from './desktop-models';
-import type { DesktopMode } from './desktop-modes';
 
 /** What Claude Code itself reports the session's context window to be holding. */
 export interface SessionContext {
@@ -22,6 +25,8 @@ export interface SessionHandle {
 
 export interface DesktopSession {
   windowId: string;
+  /** A provider id from `claudex models`. */
+  provider: string;
   title: string;
   workspace: string;
   projectId: string;
@@ -39,6 +44,7 @@ interface ClaudexSessionContext {
 
 interface ClaudexSessionRow {
   window_id: string;
+  provider: string;
   title: string;
   workspace: string;
   project_id: string;
@@ -81,7 +87,7 @@ function run(
 }
 
 /**
- * `claudex desktop` handles existing Claude sessions — claudex owns the session
+ * `claudex desktop` handles existing sessions, Claude and Codex alike — claudex owns the session
  * registry, the kitty remote sockets and the i3 lookup that says which windows are still there.
  */
 function claudexDesktop(args: string[]): Promise<string> {
@@ -92,7 +98,8 @@ export interface DesktopLaunch {
   projectId: string;
   /** Where the session opens — the project's checkout, or the directory a handoff named. */
   directory: string;
-  mode: DesktopMode;
+  /** A provider id from `claudex models`. */
+  provider: string;
   customModel?: CustomModel;
   prompt: string;
   title?: string;
@@ -106,29 +113,45 @@ export interface DesktopLaunch {
  * lands the session on whatever that left focused, which `--focus-ide` makes the IDE, so the
  * session opens beside it at full size. `--detach` hands the window to i3 so it outlives this server.
  *
- * An initial prompt is submitted (passed to the chosen CLI as its startup prompt),
+ * An initial prompt is submitted (passed to the provider as its startup prompt),
  * so the agent starts working immediately; without one the session waits for input.
  *
- * Everything after `--` belongs to `claude` rather than to claudex, which is how a resume gets
- * its session id across — the detached relaunch carries those arguments through i3 too. `claude
- * --resume` only finds a session under the directory it was held in, so the directory above is
+ * The prompt travels as a file claudex reads once and deletes, so no prompt can be mistaken
+ * for one of its options. One claudex refused is left behind, and removed here.
+ *
+ * A resume only finds a session under the directory it was held in, so the directory above is
  * the contract, not a convenience.
  */
 export async function launchDesktopSession(
   launch: DesktopLaunch
 ): Promise<void> {
   await run('rv', ['open', launch.projectId, '--focus-ide'], OPEN_TIMEOUT_MS);
-  await run('claudex', [
+  const promptFile = launch.prompt
+    ? join(tmpdir(), `gitmob-prompt-${randomUUID()}.txt`)
+    : null;
+  if (promptFile) {
+    await writeFile(promptFile, launch.prompt, { mode: 0o600, flag: 'wx' });
+  }
+  try {
+    await runKitty(launch, promptFile);
+  } finally {
+    if (promptFile) await rm(promptFile, { force: true });
+  }
+}
+
+function runKitty(
+  launch: DesktopLaunch,
+  promptFile: string | null
+): Promise<string> {
+  return run('claudex', [
     'kitty',
     '--detach',
-    '--mode',
-    launch.mode,
+    '--provider',
+    launch.provider,
     '--directory',
     launch.directory,
     ...(launch.customModel
       ? [
-          '--provider',
-          launch.customModel.provider,
           '--model',
           launch.customModel.model,
           '--effort',
@@ -136,10 +159,8 @@ export async function launchDesktopSession(
         ]
       : []),
     ...(launch.title ? ['--title', launch.title] : []),
-    ...(launch.prompt ? ['--submit', launch.prompt] : []),
-    ...(launch.resumeSessionId
-      ? ['--', '--resume', launch.resumeSessionId]
-      : []),
+    ...(launch.resumeSessionId ? ['--resume', launch.resumeSessionId] : []),
+    ...(promptFile ? ['--submit', '--file', promptFile, '--rm-file'] : []),
   ]);
 }
 
@@ -158,6 +179,7 @@ export async function closeProjectOnDesktop(projectId: string): Promise<void> {
 function toDesktopSession(row: ClaudexSessionRow): DesktopSession {
   return {
     windowId: row.window_id,
+    provider: row.provider,
     title: row.title,
     workspace: row.workspace,
     projectId: row.project_id,
@@ -187,9 +209,9 @@ export async function listDesktopSessions(projectId: string): Promise<{
 }
 
 /**
- * Every Claude window on the desktop, whatever project it belongs to. Asked before a resume:
- * a conversation already open in a window is one `claude --resume` must not be pointed at a
- * second time. A live session can report a null id, and one of those matches nothing here.
+ * Every session window on the desktop, whatever project it belongs to. Asked before a resume:
+ * a conversation already open in a window is one a resume must not be pointed at a second
+ * time. A live session can report a null id, and one of those matches nothing here.
  */
 export async function listAllDesktopSessions(): Promise<DesktopSession[]> {
   const result: ClaudexListResult = JSON.parse(
@@ -240,14 +262,15 @@ export async function sendSessionCommand(
   windowId: string,
   command: CommonCommand
 ): Promise<void> {
-  await claudexDesktop(['send', windowId, command, '--press-enter']);
+  await claudexDesktop(['send', windowId, '--press-enter', '--', command]);
 }
 
 /**
  * Send Keys is a keyboard for a session, so it types past the empty-prompt check `send`
  * normally applies: the caller has the screen in front of them and may well be answering
  * the dialog that check exists to protect. `--paste` keeps a multi-line box multi-line
- * instead of submitting at every newline.
+ * instead of submitting at every newline. The text goes after `--`, where nothing it starts
+ * with reads as an option.
  */
 export async function typeIntoSession(
   windowId: string,
@@ -257,10 +280,11 @@ export async function typeIntoSession(
   await claudexDesktop([
     'send',
     windowId,
-    text,
     '--force',
     '--paste',
     ...(pressEnter ? ['--press-enter'] : []),
+    '--',
+    text,
   ]);
 }
 
@@ -281,21 +305,41 @@ export async function acceptSuggestedPrompt(windowId: string): Promise<void> {
   await pressSessionKey(windowId, 'enter');
 }
 
-export async function getModelCatalog(): Promise<ModelCatalog> {
-  return JSON.parse(await run('claudex', ['models']));
+let modelCatalog: Promise<ModelCatalog> | undefined;
+
+/**
+ * The providers, models and efforts a session can open on, read once per server process:
+ * the catalog changes when claudex is edited, and gitmob is restarted after that. A failed
+ * read is not kept, so the next request asks again.
+ */
+export function getModelCatalog(): Promise<ModelCatalog> {
+  modelCatalog ??= run('claudex', ['models'])
+    .then((output): ModelCatalog => JSON.parse(output))
+    .catch((error) => {
+      modelCatalog = undefined;
+      throw error;
+    });
+  return modelCatalog;
 }
 
-export async function isCustomModel(value: unknown): Promise<boolean> {
+export async function isProvider(value: unknown): Promise<boolean> {
+  const catalog = await getModelCatalog();
+  return catalog.providers.some((provider) => provider.id === value);
+}
+
+export async function isCustomModel(
+  provider: string,
+  value: unknown
+): Promise<boolean> {
   if (value === undefined) return true;
   if (!value || typeof value !== 'object') return false;
   const selection = value as CustomModel;
   const catalog = await getModelCatalog();
+  const models = catalog.providers.find(
+    (entry) => entry.id === provider
+  )?.models;
   return (
     catalog.efforts.includes(selection.effort) &&
-    catalog.providers.some(
-      (provider) =>
-        provider.id === selection.provider &&
-        provider.models.some((model) => model.id === selection.model)
-    )
+    !!models?.some((model) => model.id === selection.model)
   );
 }

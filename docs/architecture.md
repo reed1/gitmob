@@ -148,8 +148,9 @@ picker of its own. Each view is a `push`, so back walks them the way the screen 
 and the list stops polling while a search box or a transcript is up: a five-second refresh under an
 input box is a keystroke lost every five seconds.
 
-Resuming one is `claudex kitty` again, with the session id after `--`, refused when the
-conversation is already open in a window. Commands in [cli-integrations.md](cli-integrations.md).
+Resuming one is `claudex kitty --provider claude --resume <id>`, refused when the conversation is
+already open in a window. The search covers Claude transcripts alone, so every resume is a Claude
+one. Commands in [cli-integrations.md](cli-integrations.md).
 
 ## The agent's browser, from the phone
 
@@ -177,9 +178,9 @@ picker, no HTTP-auth dialog. Contract in [cli-integrations.md](cli-integrations.
 
 ## One session modal
 
-Starting a Claude session goes through the same modal as everything else sent to one: mode, opening
-prompt and dictation are composed together, then launched. The tab's button only opens it. A
-launcher that fired on its own click had nowhere to dictate into. There is exactly one such modal —
+Starting a session goes through the same modal as everything else sent to one: provider (Claude or
+Codex), model, opening prompt and dictation are composed together, then launched. The tab's button
+only opens it. A launcher that fired on its own click had nowhere to dictate into. There is exactly one such modal —
 `src/app/app/NewSessionModal.tsx`, opened by the Claude tab, the project card's menu on the front
 page and a pinboard note's Claude button, sharing the dialog shell in `src/app/app/Modal.tsx`. A
 note opens it on the project whose board it sits on — the owning project on the overview, the
