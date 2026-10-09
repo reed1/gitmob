@@ -295,7 +295,7 @@ export function FileBrowser({
           className="w-full px-4 py-3 text-left flex items-center gap-3 active:bg-foreground/5"
         >
           <svg
-            className="w-5 h-5 text-foreground/50"
+            className="w-5 h-5 shrink-0 text-foreground/50"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -322,7 +322,7 @@ export function FileBrowser({
           >
             {entry.isDirectory ? (
               <svg
-                className="w-5 h-5 text-blue-400"
+                className="w-5 h-5 shrink-0 text-blue-400"
                 fill="currentColor"
                 viewBox="0 0 20 20"
               >
@@ -330,7 +330,7 @@ export function FileBrowser({
               </svg>
             ) : imageTypeFor(entry.name) ? (
               <svg
-                className="w-5 h-5 text-emerald-400"
+                className="w-5 h-5 shrink-0 text-emerald-400"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -344,7 +344,7 @@ export function FileBrowser({
               </svg>
             ) : (
               <svg
-                className="w-5 h-5 text-foreground/40"
+                className="w-5 h-5 shrink-0 text-foreground/40"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -357,7 +357,7 @@ export function FileBrowser({
                 />
               </svg>
             )}
-            <span className="truncate">{entry.name}</span>
+            <span className="min-w-0 truncate">{entry.name}</span>
           </button>
         ))
       )}
