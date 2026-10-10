@@ -23,9 +23,20 @@ export const COMMAND_KEYS = [
   { key: 'ctrl-u', label: 'Ctrl+U' },
 ] as const;
 
-/** Arrows sit where they do on a keyboard: Up alone, then Left/Down/Right beneath it. */
-export const ARROW_KEY_ROWS = [
-  [{ key: 'up', label: '↑' }],
+/**
+ * The navigation block as on a keyboard: Home and End above the arrows, Page Up and Page Down
+ * either side of Up.
+ */
+export const NAVIGATION_KEY_ROWS = [
+  [
+    { key: 'home', label: 'Home' },
+    { key: 'end', label: 'End' },
+  ],
+  [
+    { key: 'page-up', label: 'PgUp' },
+    { key: 'up', label: '↑' },
+    { key: 'page-down', label: 'PgDn' },
+  ],
   [
     { key: 'left', label: '←' },
     { key: 'down', label: '↓' },
@@ -33,7 +44,7 @@ export const ARROW_KEY_ROWS = [
   ],
 ] as const;
 
-export const SPECIAL_KEYS = [...COMMAND_KEYS, ...ARROW_KEY_ROWS.flat()];
+export const SPECIAL_KEYS = [...COMMAND_KEYS, ...NAVIGATION_KEY_ROWS.flat()];
 
 export type SpecialKey = (typeof SPECIAL_KEYS)[number]['key'];
 

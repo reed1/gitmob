@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { addToast, apiFetch } from '../../../../../lib/api';
 import {
-  ARROW_KEY_ROWS,
+  NAVIGATION_KEY_ROWS,
   COMMAND_KEYS,
   type SpecialKey,
 } from '../../../../../lib/desktop-keys';
@@ -122,9 +122,11 @@ export function SendKeysModal({
           {COMMAND_KEYS.map(({ key, label }) => keyButton(key, label))}
         </div>
         <div className="space-y-2">
-          {ARROW_KEY_ROWS.map((row, i) => (
-            <div key={i} className="grid grid-cols-3 gap-2">
-              {row.length === 1 && <div />}
+          {NAVIGATION_KEY_ROWS.map((row, i) => (
+            <div
+              key={i}
+              className={`grid gap-2 ${row.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}
+            >
               {row.map(({ key, label }) => keyButton(key, label))}
             </div>
           ))}
