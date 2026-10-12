@@ -1,5 +1,7 @@
 'use client';
 
+import { saveTextHistory } from '../../lib/text-history';
+
 import { CustomModelPicker } from './CustomModelPicker';
 import { ProviderSelect } from './ProviderSelect';
 import type { CustomModel } from '../../lib/desktop-models';
@@ -122,6 +124,7 @@ export function NewSessionModal({
 
   const launch = async () => {
     if (!provider || launching || missingBranch || uploadsPending) return;
+    saveTextHistory({ text: prompt, source: 'New session', projectId });
     setLaunching(true);
     try {
       const launchedIn = await launchDesktopSession(

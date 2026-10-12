@@ -1,5 +1,7 @@
 'use client';
 
+import { saveTextHistory } from '../../lib/text-history';
+
 import { useCallback, useState } from 'react';
 import { ModalOverlay } from '../../components/ModalOverlay';
 import { addToast, apiFetch } from '../../lib/api';
@@ -73,6 +75,11 @@ export function PendingCommits({
 
   const accept = async () => {
     if (!open) return;
+    saveTextHistory({
+      text: message,
+      source: `Commit: ${open.repo}`,
+      projectId: open.insideProject ?? undefined,
+    });
     setCommitting(true);
     try {
       const res = await apiFetch('/api/pending-commits', {

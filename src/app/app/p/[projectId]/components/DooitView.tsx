@@ -1,5 +1,7 @@
 'use client';
 
+import { saveTextHistory } from '../../../../../lib/text-history';
+
 import { useState, useCallback } from 'react';
 import { ModalOverlay } from '../../../../../components/ModalOverlay';
 import { apiFetch } from '../../../../../lib/api';
@@ -105,6 +107,7 @@ export function DooitView({ projectId }: { projectId: string }) {
   const handleModalSave = async () => {
     if (!modalText.trim() || selectedWorkspace === null) return;
     if (modalMode === 'add') {
+      saveTextHistory({ text: modalText, source: 'Add todo', projectId });
       const res = await apiFetch('/api/dooit?action=add_todo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -121,6 +124,7 @@ export function DooitView({ projectId }: { projectId: string }) {
       closeModal();
       return;
     } else if (modalMode === 'edit' && editingTodoId !== null) {
+      saveTextHistory({ text: modalText, source: 'Edit todo', projectId });
       const res = await apiFetch('/api/dooit?action=update_todo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

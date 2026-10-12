@@ -1,5 +1,7 @@
 'use client';
 
+import { saveTextHistory } from '../../../../../lib/text-history';
+
 import { useState } from 'react';
 import { addToast, apiFetch } from '../../../../../lib/api';
 import {
@@ -28,6 +30,7 @@ export function SendTextModal({
 
   const send = async () => {
     if (!text) return;
+    saveTextHistory({ text, source: 'Send text', projectId });
     onClose();
 
     const res = await apiFetch(`/api/projects/${projectId}/desktop`, {

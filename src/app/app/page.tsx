@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import ProjectCard from './ProjectCard';
+import { TextHistoryModal } from './TextHistoryModal';
 import { PendingHandoffs } from './PendingHandoffs';
 import { PendingCommits } from './PendingCommits';
 import { UncommittedProjects } from './UncommittedProjects';
@@ -58,6 +59,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [textHistoryOpen, setTextHistoryOpen] = useState(false);
   const [restarting, setRestarting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -332,6 +334,29 @@ export default function Home() {
               </button>
               {menuOpen && (
                 <div className="absolute right-0 top-full mt-1 z-20 bg-background border border-foreground/20 rounded-lg shadow-lg py-1 min-w-[180px]">
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setTextHistoryOpen(true);
+                    }}
+                    className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 flex items-center gap-2"
+                  >
+                    <svg
+                      className="w-4 h-4 text-foreground/60"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M3 12a9 9 0 1 0 3-6.7L3 8m0-5v5h5m4-1v5l3 2"
+                      />
+                    </svg>
+                    Text history
+                  </button>
                   <Link
                     href="/pinboard"
                     onClick={() => setMenuOpen(false)}
@@ -532,6 +557,10 @@ export default function Home() {
           )}
         </div>
       </header>
+
+      {textHistoryOpen && (
+        <TextHistoryModal onClose={() => setTextHistoryOpen(false)} />
+      )}
 
       <main className="p-4 space-y-6">
         {staleBuild && (

@@ -1,5 +1,7 @@
 'use client';
 
+import { saveTextHistory } from '../../lib/text-history';
+
 import { CustomModelPicker } from './CustomModelPicker';
 import { ProviderSelect } from './ProviderSelect';
 import type { CustomModel } from '../../lib/desktop-models';
@@ -131,6 +133,11 @@ export function PendingHandoffs({
 
   const launch = async () => {
     if (!open || !provider) return;
+    saveTextHistory({
+      text: prompt,
+      source: 'Handoff',
+      projectId: open.projectId,
+    });
     setLaunching(true);
     try {
       const res = await apiFetch('/api/handoffs', {

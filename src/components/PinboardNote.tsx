@@ -1,5 +1,7 @@
 'use client';
 
+import { saveTextHistory } from '../lib/text-history';
+
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ModalOverlay } from './ModalOverlay';
 import { addToast, apiFetch } from '../lib/api';
@@ -201,6 +203,12 @@ export function PinboardNoteModal({
     textarea.setSelectionRange(textarea.value.length, textarea.value.length);
   }, []);
 
+  const save = () => {
+    if (!text.trim()) return;
+    saveTextHistory({ text, source: 'Pinboard note', projectId });
+    onSave(text.trim());
+  };
+
   return (
     <Overlay onClose={onClose} guardDismiss={text !== initialText}>
       <textarea
@@ -210,7 +218,7 @@ export function PinboardNoteModal({
         onKeyDown={(e) => {
           if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
             e.preventDefault();
-            if (text.trim()) onSave(text.trim());
+            save();
           }
         }}
         placeholder="Note text..."
@@ -233,7 +241,7 @@ export function PinboardNoteModal({
             Cancel
           </button>
           <button
-            onClick={() => onSave(text.trim())}
+            onClick={save}
             disabled={!text.trim()}
             className="px-3 py-1.5 text-sm bg-foreground text-background rounded disabled:opacity-30"
           >
