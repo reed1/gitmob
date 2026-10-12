@@ -7,7 +7,6 @@ import {
   COMMON_COMMANDS,
   type CommonCommand,
 } from '../../../../../lib/desktop-keys';
-import { useAutoRefresh } from '../../../../../lib/use-auto-refresh';
 
 /** A physical keycap: a raised grey box, its thick bottom border reading as the key's side. */
 const keycapClass =
@@ -31,27 +30,48 @@ export function DesktopScreenView({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [wrap, setWrap] = useState(false);
+  const [paused, setPaused] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [textOpen, setTextOpen] = useState(false);
   const [keysOpen, setKeysOpen] = useState(false);
   const preRef = useRef<HTMLPreElement>(null);
   const scrolledToBottom = useRef(false);
 
-  const fetchScreen = useCallback(async () => {
-    const res = await fetch(
-      `/api/projects/${projectId}/desktop?window=${encodeURIComponent(windowId)}`
-    );
-    const data = await res.json();
-    if (res.ok) {
-      setContent(data.content ?? '');
-      setError(null);
-    } else {
-      setError(data.error || 'Could not read the session');
-    }
-    setLoading(false);
-  }, [projectId, windowId]);
+  const fetchScreen = useCallback(
+    async (signal: AbortSignal) => {
+      const res = await fetch(
+        `/api/projects/${projectId}/desktop?window=${encodeURIComponent(windowId)}`
+      );
+      const data = await res.json();
+      if (signal.aborted) return;
+      if (res.ok) {
+        setContent(data.content ?? '');
+        setError(null);
+      } else {
+        setError(data.error || 'Could not read the session');
+      }
+      setLoading(false);
+    },
+    [projectId, windowId]
+  );
 
-  useAutoRefresh(fetchScreen, 3000);
+  useEffect(() => {
+    if (paused) return;
+    const controller = new AbortController();
+    const initialRefresh = setTimeout(
+      () => void fetchScreen(controller.signal),
+      0
+    );
+    const interval = setInterval(
+      () => void fetchScreen(controller.signal),
+      3000
+    );
+    return () => {
+      controller.abort();
+      clearTimeout(initialRefresh);
+      clearInterval(interval);
+    };
+  }, [fetchScreen, paused]);
 
   const acceptPrompt = async () => {
     setMenuOpen(false);
@@ -132,15 +152,26 @@ export function DesktopScreenView({
                 onClick={() => setMenuOpen(false)}
               />
               <div className="absolute right-0 top-full mt-1 z-20 bg-background border border-foreground/20 rounded-lg shadow-lg py-1 min-w-[140px]">
-                <button
-                  onClick={() => {
-                    setWrap((w) => !w);
-                    setMenuOpen(false);
-                  }}
-                  className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 whitespace-nowrap"
-                >
-                  {wrap ? 'No Wrap' : 'Wrap'}
-                </button>
+                {[
+                  { label: 'Wrap', checked: wrap, setChecked: setWrap },
+                  { label: 'Pause', checked: paused, setChecked: setPaused },
+                ].map(({ label, checked, setChecked }) => (
+                  <label
+                    key={label}
+                    className="flex w-full items-center gap-2 px-4 py-2 text-sm hover:bg-foreground/10 whitespace-nowrap cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(event) => {
+                        setChecked(event.target.checked);
+                        setMenuOpen(false);
+                      }}
+                      className="w-4 h-4 accent-foreground"
+                    />
+                    {label}
+                  </label>
+                ))}
                 <button
                   onClick={() => {
                     setMenuOpen(false);
