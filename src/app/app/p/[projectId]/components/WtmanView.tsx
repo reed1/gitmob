@@ -47,7 +47,7 @@ type Pending =
   | { kind: 'remove'; worktree: Worktree }
   | { kind: 'rebase'; worktree: Worktree }
   | { kind: 'abort-rebase'; worktree: Worktree }
-  | { kind: 'sync'; worktree: Worktree };
+  | { kind: 'sync'; worktree: Worktree; propagate: boolean };
 
 function isMerged(worktree: Comparison): boolean {
   return worktree.state === 'merged' || worktree.state === 'no commits';
@@ -202,10 +202,16 @@ function WorktreeKebabMenu({
         </KebabMenuItem>
       )}
       <KebabMenuItem
-        onSelect={() => onPick({ kind: 'sync', worktree })}
+        onSelect={() => onPick({ kind: 'sync', worktree, propagate: false })}
         disabled={notSyncable !== null}
       >
         Merge sync with {into}
+      </KebabMenuItem>
+      <KebabMenuItem
+        onSelect={() => onPick({ kind: 'sync', worktree, propagate: true })}
+        disabled={notSyncable !== null}
+      >
+        Merge sync propagate with {into}
       </KebabMenuItem>
       <KebabMenuItem
         onSelect={() => onPick({ kind: 'merge', worktree, squash: false })}
@@ -285,9 +291,13 @@ function ConfirmModal({
       'Puts the branch back where it was before the rebase began. Any conflict already resolved in the worktree is dropped with it.';
     confirmLabel = 'Abort rebase';
   } else if (pending.kind === 'sync') {
-    heading = `Merge sync with ${into}?`;
-    body = `Merges ${into} into the branch in the worktree, then fast-forwards ${into} in the main checkout to it, so both end on the same commit. The worktree stays. All or nothing: both checkouts must have no uncommitted changes, a conflict aborts the merge, and a failed fast-forward puts the branch back.`;
-    confirmLabel = 'Merge sync';
+    heading = `Merge sync${pending.propagate ? ' propagate' : ''} with ${into}?`;
+    body = `Merges ${into} into the branch in the worktree, then fast-forwards ${into} in the main checkout to it, so both end on the same commit. The worktree stays. All or nothing: both checkouts must have no uncommitted changes, a conflict aborts the merge, and a failed fast-forward puts the branch back.${
+      pending.propagate
+        ? ` Then fast-forwards every other worktree that was on ${into}'s commit, so they stay on it. One with uncommitted changes or an unfinished rebase or merge is left behind, without undoing the sync.`
+        : ''
+    }`;
+    confirmLabel = pending.propagate ? 'Merge sync propagate' : 'Merge sync';
   } else {
     throw new Error(`Unexpected action: ${(pending as Pending).kind}`);
   }
@@ -568,9 +578,17 @@ export function WtmanView({
       });
       if (ok) addToast(`Aborted the rebase of ${worktree.name}`, 'success');
     } else if (chosen.kind === 'sync') {
-      const { ok } = await act(worktree, 'Syncing…', { action: 'sync' });
+      const { ok } = await act(worktree, 'Syncing…', {
+        action: 'sync',
+        propagate: chosen.propagate,
+      });
       if (ok)
-        addToast(`Synced ${worktree.name} with ${worktree.into}`, 'success');
+        addToast(
+          chosen.propagate
+            ? `Synced ${worktree.name} with ${worktree.into} and propagated it`
+            : `Synced ${worktree.name} with ${worktree.into}`,
+          'success'
+        );
     } else {
       throw new Error(`Unexpected action: ${(chosen as Pending).kind}`);
     }

@@ -373,14 +373,22 @@ export async function rebaseWorktree(
  * the main checkout to it, leaving both on one commit. wtman does it all or nothing: it refuses
  * either checkout with uncommitted changes, aborts a merge that conflicts, and puts the branch
  * back when the fast-forward fails. It asks nothing, so it runs without `--interactive`.
+ * With `propagate`, the other worktrees that were on the main checkout's commit are
+ * fast-forwarded after it; one left behind fails the call, though the sync itself stays.
  */
 export async function syncWorktree(
   project: Project,
-  worktree: ProjectWorktree
+  worktree: ProjectWorktree,
+  propagate: boolean
 ): Promise<void> {
   await run(
     'wtman',
-    ['sync', repoPath(project), worktree.branch],
+    [
+      'sync',
+      ...(propagate ? ['--propagate'] : []),
+      repoPath(project),
+      worktree.branch,
+    ],
     MERGE_TIMEOUT_MS
   );
 }
