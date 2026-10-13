@@ -14,7 +14,8 @@ Docs: `rlocal/app/rworkspaces/CLAUDE.md`, `rlocal/lib/python/rworktree/README.md
 
 ## Worktrees on disk — `wtman`
 
-`src/lib/wtman.ts` — Wtman tab, and the session modal's Worktree toggle.
+`src/lib/wtman.ts` — Wtman tab, the Wtman item on a worktree's kebab menu, and the session modal's
+Worktree toggle.
 Docs: `rlocal/app/wtman/CLAUDE.md`.
 
 - `wtman status --json <repo>` — the worktree list.

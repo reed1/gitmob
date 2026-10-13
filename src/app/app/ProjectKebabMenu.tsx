@@ -2,11 +2,12 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { addToast, apiFetch } from '../../lib/api';
 import { CloneModal } from './CloneModal';
+import { actOnDesktop, CloseOnDesktopModal } from './CloseOnDesktopModal';
 import { KebabMenu, KebabMenuItem } from './KebabMenu';
 import { Modal } from './Modal';
 import { NewSessionModal } from './NewSessionModal';
+import { ProjectWorktreeModal } from './WorktreeActions';
 
 const DOOIT_DOMAIN = process.env.NEXT_PUBLIC_DOOIT_DOMAIN;
 
@@ -14,18 +15,18 @@ interface Props {
   project: {
     id: string;
     canonicalId: string;
+    worktreeName?: string;
     path: string;
     repo?: string;
     missing: boolean;
     openOnDesktop: boolean;
     urls?: Record<string, string>;
-    githubUrl: string | null;
   };
   /** The tree is dirty: there is something to review. */
   hasChanges: boolean;
-  /** The project's state moved on — cloned, or opened on the desktop. */
+  /** The project's state moved on — cloned, opened on the desktop, or rebased or synced. */
   onChanged: () => void;
-  /** Closed on the desktop; a worktree has no project left to show after that. */
+  /** Closed on the desktop, or merged or removed; a worktree has no project left to show after that. */
   onClosed: () => void;
 }
 
@@ -40,26 +41,11 @@ export default function ProjectKebabMenu({
   const [newSessionOpen, setNewSessionOpen] = useState(false);
   const [cloneOpen, setCloneOpen] = useState(false);
   const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
+  const [wtmanOpen, setWtmanOpen] = useState(false);
 
   const urls = project.urls ?? {};
   const urlEntries = Object.entries(urls);
   const hasUrls = urlEntries.length > 0;
-
-  const actOnDesktop = async (action: 'open' | 'close') => {
-    const res = await apiFetch(`/api/projects/${project.id}/desktop`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action }),
-    });
-    if (!res.ok) return;
-
-    addToast(
-      `${action === 'open' ? 'Opened' : 'Closed'} ${project.id} on the desktop`,
-      'success'
-    );
-    if (action === 'open') onChanged();
-    else onClosed();
-  };
 
   return (
     <>
@@ -77,7 +63,11 @@ export default function ProjectKebabMenu({
           </KebabMenuItem>
         ) : (
           !project.missing && (
-            <KebabMenuItem onSelect={() => actOnDesktop('open')}>
+            <KebabMenuItem
+              onSelect={async () => {
+                if (await actOnDesktop(project.id, 'open')) onChanged();
+              }}
+            >
               Open
             </KebabMenuItem>
           )
@@ -95,14 +85,11 @@ export default function ProjectKebabMenu({
         >
           Open URL
         </KebabMenuItem>
-        <KebabMenuItem
-          onSelect={() => {
-            if (project.githubUrl) window.open(project.githubUrl, '_blank');
-          }}
-          disabled={!project.githubUrl}
-        >
-          {project.githubUrl ? 'Github' : 'Github (not available)'}
-        </KebabMenuItem>
+        {project.worktreeName && (
+          <KebabMenuItem onSelect={() => setWtmanOpen(true)}>
+            Wtman
+          </KebabMenuItem>
+        )}
         <KebabMenuItem onSelect={() => setNewSessionOpen(true)}>
           Claude
         </KebabMenuItem>
@@ -129,6 +116,16 @@ export default function ProjectKebabMenu({
         />
       )}
 
+      {wtmanOpen && (
+        <ProjectWorktreeModal
+          repoId={project.canonicalId}
+          projectId={project.id}
+          onClose={() => setWtmanOpen(false)}
+          onChanged={onChanged}
+          onGone={onClosed}
+        />
+      )}
+
       {newSessionOpen && (
         <NewSessionModal
           projectId={project.id}
@@ -138,34 +135,14 @@ export default function ProjectKebabMenu({
       )}
 
       {closeConfirmOpen && (
-        <Modal
-          heading="Close on the desktop?"
-          subtitle={project.id}
-          onClose={() => setCloseConfirmOpen(false)}
-        >
-          <p className="px-4 py-3 text-sm text-foreground/70">
-            Closes its terminals, IDE and windows, stops its runs, and sends its
-            Claude sessions to purgatory.
-          </p>
-          <div className="px-4 py-3 border-t border-foreground/10 flex justify-end gap-2">
-            <button
-              data-modal-cancel
-              onClick={() => setCloseConfirmOpen(false)}
-              className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => {
-                setCloseConfirmOpen(false);
-                actOnDesktop('close');
-              }}
-              className="px-3 py-1.5 text-sm rounded-lg bg-red-500/15 text-red-500 active:bg-red-500/25"
-            >
-              Close
-            </button>
-          </div>
-        </Modal>
+        <CloseOnDesktopModal
+          projectId={project.id}
+          onCancel={() => setCloseConfirmOpen(false)}
+          onConfirm={async () => {
+            setCloseConfirmOpen(false);
+            if (await actOnDesktop(project.id, 'close')) onClosed();
+          }}
+        />
       )}
 
       {urlModalOpen && (

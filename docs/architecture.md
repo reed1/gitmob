@@ -47,7 +47,7 @@ rworkspaces' business, and nothing here parses one.
 Spawning a process from the server costs far more than the command it runs — tens to hundreds of
 milliseconds each from the dev server, against a few from a shell — so `GET /api/projects` keeps
 spawns off the per-project path. Every sweep — runs, sudo, sessions, monitored sites — is one
-process covering every project. The branch and the GitHub link are read off the git dir on disk,
+process covering every project. The branch is read off the git dir on disk,
 for every project. What still costs a spawn per project is asked only of the projects open on the
 desktop: `git status`, which turns a card green, and the env check. A repository with a worktree open asks
 `wtman status` once, for how far each worktree is ahead of and behind what the main checkout is

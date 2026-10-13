@@ -114,7 +114,6 @@ export async function GET() {
       claudeSessions: desktopSessions[p.id] ?? 0,
       // A warning is raised against the checkout it came from, so a worktree has its own.
       warnings: Object.values(warnings[p.id] ?? {}),
-      githubUrl: checkout?.githubUrl ?? null,
       divergence: p.worktreeName
         ? (divergence.get(p.canonicalId)?.[p.worktreeName] ?? null)
         : null,

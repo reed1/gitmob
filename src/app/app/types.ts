@@ -39,7 +39,6 @@ export interface Project {
   claudeSessions: number;
   /** Warning messages rworkspaces is holding against this project. */
   warnings: string[];
-  githubUrl: string | null;
   /** A worktree's commits ahead of and behind what the main checkout is on. */
   divergence: { into: string; ahead: number; behind: number } | null;
 }
