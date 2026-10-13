@@ -187,6 +187,22 @@ export default function ProjectCard({
                 {project.branch}
               </span>
             )}
+            {project.divergence && project.divergence.ahead > 0 && (
+              <span
+                className="text-[11px] leading-none tabular-nums px-1.5 py-1 rounded-full bg-green-500/15 text-green-400"
+                aria-label={`${project.divergence.ahead} commit(s) ahead of ${project.divergence.into}`}
+              >
+                ↑{project.divergence.ahead}
+              </span>
+            )}
+            {project.divergence && project.divergence.behind > 0 && (
+              <span
+                className="text-[11px] leading-none tabular-nums px-1.5 py-1 rounded-full bg-sky-500/15 text-sky-400"
+                aria-label={`${project.divergence.behind} commit(s) behind ${project.divergence.into}`}
+              >
+                ↓{project.divergence.behind}
+              </span>
+            )}
           </div>
         )}
       </div>

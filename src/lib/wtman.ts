@@ -143,6 +143,33 @@ export async function listWorktrees(
   });
 }
 
+export interface Divergence {
+  into: string;
+  ahead: number;
+  behind: number;
+}
+
+/**
+ * How far each worktree of a project has moved from what the main checkout is on, by worktree
+ * name. One `wtman status` for the whole repo; a worktree with nothing to compare against is
+ * left out.
+ */
+export async function getDivergence(
+  project: Project
+): Promise<Record<string, Divergence>> {
+  const rows = JSON.parse(
+    await run('wtman', ['status', '--json', repoPath(project)])
+  ) as WtmanStatusRow[];
+  return Object.fromEntries(
+    rows
+      .filter((row) => row.into !== null)
+      .map((row) => [
+        row.name,
+        { into: row.into!, ahead: row.ahead, behind: row.behind },
+      ])
+  );
+}
+
 /**
  * Local and remote branches with no worktree, most recently committed first, as `wtman
  * branches --json` sees them. wtman asks each remote where its branches are now, which is what

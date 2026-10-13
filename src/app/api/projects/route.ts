@@ -12,6 +12,7 @@ import { isAway } from '@/lib/afk';
 import { getStaleBuild } from '@/lib/build-version';
 import { listPendingCommits } from '@/lib/pending-commits';
 import { processWithWorkers } from '@/lib/workers';
+import { Divergence, getDivergence } from '@/lib/wtman';
 import { existsSync } from 'fs';
 
 const WORKERS = 4;
@@ -45,6 +46,14 @@ export async function GET() {
   const openCheckouts = projects.filter(
     (p) => openIds.has(p.id) && checkouts.get(p.id)
   );
+  // One wtman call per repo with a worktree open, not one per worktree.
+  const worktreeRepos = [
+    ...new Map(
+      projects
+        .filter((p) => p.worktreeName && checkouts.get(p.id))
+        .map((p) => [p.canonicalId, p])
+    ).values(),
+  ];
   const envCheckFailures = getEnvCheckFailures(openRepos(projectList));
 
   const [
@@ -56,6 +65,7 @@ export async function GET() {
     away,
     staleBuild,
     dirtyResults,
+    divergenceResults,
   ] = await Promise.all([
     getAllRunning(),
     getDownSites(),
@@ -70,7 +80,16 @@ export async function GET() {
         .then((summary) => summary.hasChanges)
         .catch(() => false),
     })),
+    processWithWorkers(worktreeRepos, WORKERS, async (project) => ({
+      canonicalId: project.canonicalId,
+      divergence: await getDivergence(project).catch(
+        (): Record<string, Divergence> => ({})
+      ),
+    })),
   ]);
+  const divergence = new Map(
+    divergenceResults.map((r) => [r.canonicalId, r.divergence])
+  );
 
   const editing = new Set(
     dirtyResults.filter((r) => r.editing).map((r) => r.id)
@@ -96,6 +115,9 @@ export async function GET() {
       // A warning is raised against the checkout it came from, so a worktree has its own.
       warnings: Object.values(warnings[p.id] ?? {}),
       githubUrl: checkout?.githubUrl ?? null,
+      divergence: p.worktreeName
+        ? (divergence.get(p.canonicalId)?.[p.worktreeName] ?? null)
+        : null,
     };
   });
 

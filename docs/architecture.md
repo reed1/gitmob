@@ -49,7 +49,9 @@ milliseconds each from the dev server, against a few from a shell — so `GET /a
 spawns off the per-project path. Every sweep — runs, sudo, sessions, monitored sites — is one
 process covering every project. The branch and the GitHub link are read off the git dir on disk,
 for every project. What still costs a spawn per project is asked only of the projects open on the
-desktop: `git status`, which turns a card green, and the env check.
+desktop: `git status`, which turns a card green, and the env check. A repository with a worktree open asks
+`wtman status` once, for how far each worktree is ahead of and behind what the main checkout is
+on — the ↑ and ↓ badges on its card.
 
 Nor does it wait on the network. The list is reopened all day, going back and forth between
 tabs, and sudo (`pt` asking abubot), monitored sites (upmon) and env checks (`rpass`, which
