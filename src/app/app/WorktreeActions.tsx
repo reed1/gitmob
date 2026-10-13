@@ -28,8 +28,6 @@ type Comparison = Pick<Worktree, 'state' | 'ahead' | 'behind' | 'into'> &
 export type Pending =
   | { kind: 'merge'; worktree: Worktree; squash: boolean }
   | { kind: 'remove'; worktree: Worktree }
-  | { kind: 'rebase'; worktree: Worktree }
-  | { kind: 'abort-rebase'; worktree: Worktree }
   | { kind: 'sync'; worktree: Worktree; propagate: boolean };
 
 interface WorktreeAction {
@@ -41,15 +39,6 @@ interface WorktreeAction {
 
 export function isMerged(worktree: Comparison): boolean {
   return worktree.state === 'merged' || worktree.state === 'no commits';
-}
-
-/** Why wtman would refuse to rebase it, or null when it would go ahead. */
-function rebaseBlocked(worktree: Worktree): string | null {
-  if (worktree.operation !== null) return `${worktree.operation} not finished`;
-  if (worktree.into === null) return 'main checkout is detached';
-  if (worktree.dirty) return 'commit the uncommitted changes first';
-  if (worktree.behind === 0) return `already on top of ${worktree.into}`;
-  return null;
 }
 
 /** Why wtman would refuse to sync it, or null when it would go ahead. The main checkout's own
@@ -70,30 +59,16 @@ function worktreeActions(worktree: Worktree): {
 } {
   // wtman refuses to delete a folder Cursor has open, since the window goes down with it.
   const removeBlocked = worktree.open ? 'close it on the desktop first' : null;
-  // A merge would take the branch as it was before the unfinished rebase began.
+  // A merge would take the branch as it was before the unfinished operation began.
   const mergeBlocked =
     worktree.operation !== null
       ? `finish the ${worktree.operation} first`
       : removeBlocked;
   const into = worktree.into ?? 'main checkout';
   const canMerge = mergeBlocked === null && worktree.into !== null;
-  const notRebasable = rebaseBlocked(worktree);
   const notSyncable = syncBlocked(worktree);
 
   const actions: WorktreeAction[] = [
-    worktree.operation === 'rebase'
-      ? {
-          label: 'Abort rebase',
-          pending: { kind: 'abort-rebase', worktree },
-          disabled: false,
-          danger: true,
-        }
-      : {
-          label: `Rebase onto ${into}`,
-          pending: { kind: 'rebase', worktree },
-          disabled: notRebasable !== null,
-          danger: false,
-        },
     {
       label: `Merge sync with ${into}`,
       pending: { kind: 'sync', worktree, propagate: false },
@@ -127,9 +102,6 @@ function worktreeActions(worktree: Worktree): {
   ];
 
   const reasons: string[] = [];
-  if (worktree.operation === null && notRebasable) {
-    reasons.push(`Rebase: ${notRebasable}`);
-  }
   if (worktree.operation === null && notSyncable) {
     reasons.push(`Merge sync: ${notSyncable}`);
   }
@@ -146,16 +118,11 @@ function worktreeActions(worktree: Worktree): {
 function workingLabel(chosen: Pending): string {
   if (chosen.kind === 'merge') return 'Merging…';
   if (chosen.kind === 'remove') return 'Removing…';
-  if (chosen.kind === 'rebase') return 'Rebasing…';
-  if (chosen.kind === 'abort-rebase') return 'Aborting…';
   if (chosen.kind === 'sync') return 'Syncing…';
   throw new Error(`Unexpected action: ${(chosen as Pending).kind}`);
 }
 
-/**
- * Runs the chosen action through wtman, toasting when it went through. A rebase stopped at a
- * conflict comes back as a warning toast from apiFetch, with the row left mid-rebase.
- */
+/** Runs the chosen action through wtman, toasting when it went through. */
 async function performWorktreeAction(
   repoId: string,
   chosen: Pending
@@ -170,12 +137,6 @@ async function performWorktreeAction(
   } else if (chosen.kind === 'remove') {
     body = { action: 'remove', force: !isMerged(worktree) };
     done = `Removed ${worktree.name}`;
-  } else if (chosen.kind === 'rebase') {
-    body = { action: 'rebase' };
-    done = `Rebased ${worktree.name} onto ${worktree.into}`;
-  } else if (chosen.kind === 'abort-rebase') {
-    body = { action: 'abort-rebase' };
-    done = `Aborted the rebase of ${worktree.name}`;
   } else if (chosen.kind === 'sync') {
     body = { action: 'sync', propagate: chosen.propagate };
     done = chosen.propagate
@@ -271,8 +232,8 @@ export function WorktreeConflicts({
   if (worktree.conflicts.length === 0) return null;
   return (
     <div className={`text-xs text-red-500 break-all ${className}`}>
-      Conflict in {worktree.conflicts.join(', ')}. Resolve it in the worktree
-      and run git rebase --continue, or abort it here.
+      Conflict in {worktree.conflicts.join(', ')}. Resolve it in the
+      worktree.
     </div>
   );
 }
@@ -317,15 +278,6 @@ function WorktreeConfirmModal({
       );
     }
     confirmLabel = 'Remove';
-  } else if (pending.kind === 'rebase') {
-    heading = `Rebase onto ${into}?`;
-    body = `Replays the branch's ${worktree.ahead} commit${worktree.ahead === 1 ? '' : 's'} on top of the ${worktree.behind} ${into} has gained, in the worktree. A conflict stops it there, unfinished, to be resolved in the worktree or aborted from here.`;
-    confirmLabel = 'Rebase';
-  } else if (pending.kind === 'abort-rebase') {
-    heading = 'Abort the rebase?';
-    body =
-      'Puts the branch back where it was before the rebase began. Any conflict already resolved in the worktree is dropped with it.';
-    confirmLabel = 'Abort rebase';
   } else if (pending.kind === 'sync') {
     heading = `Merge sync${pending.propagate ? ' propagate' : ''} with ${into}?`;
     body = `Merges ${into} into the branch in the worktree, then fast-forwards ${into} in the main checkout to it, so both end on the same commit. The worktree stays. All or nothing: both checkouts must have no uncommitted changes, a conflict aborts the merge, and a failed fast-forward puts the branch back.${
@@ -359,9 +311,7 @@ function WorktreeConfirmModal({
         <button
           onClick={onConfirm}
           className={`px-3 py-1.5 text-sm rounded-lg ${
-            pending.kind === 'remove' ||
-            pending.kind === 'abort-rebase' ||
-            warnings.length > 0
+            pending.kind === 'remove' || warnings.length > 0
               ? 'bg-red-500/15 text-red-500 active:bg-red-500/25'
               : 'bg-blue-600 text-white active:opacity-80'
           }`}

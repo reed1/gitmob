@@ -23,7 +23,6 @@ Docs: `rlocal/app/wtman/CLAUDE.md`.
 - `wtman open <repo> --branch <branch>` — Open on a worktree.
 - `wtman new <repo> <branch> [--from-local | --from-remote <remote>]` — Create, Create worktree
   on a branch row, and a session in a new worktree.
-- `wtman rebase [--abort] <repo> <branch>` — Rebase, Abort rebase.
 - `wtman sync [--propagate] <repo> <branch>` — Merge sync, Merge sync propagate.
 - `wtman --interactive merge <repo> <branch> [--squash]` — Merge, Squash merge.
 - `wtman --interactive remove [--remote <remote>] <repo> <branch>` — Remove on a worktree or a

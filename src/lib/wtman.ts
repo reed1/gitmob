@@ -18,11 +18,11 @@ export interface ProjectWorktree {
   open: boolean;
   /** Uncommitted changes in the checkout. */
   dirty: boolean;
-  /** What the main checkout is on: what `merge` merges into and `rebase` rebases onto. */
+  /** What the main checkout is on: what `merge` merges into and `sync` syncs with. */
   into: string | null;
   /** Commits on the branch that `into` does not have. */
   ahead: number;
-  /** Commits on `into` that the branch does not have, which a rebase brings in. */
+  /** Commits on `into` that the branch does not have. */
   behind: number;
   /** Null with no `into` to compare against. */
   state: MergeState | null;
@@ -365,36 +365,6 @@ export async function removeBranch(
 
 export class UnmergedBranch extends Error {}
 
-/** A rebase replays the branch's commits one by one, and a hook may run on each. */
-const REBASE_TIMEOUT_MS = 120000;
-
-/**
- * Rebases the branch onto whatever the main checkout is on, in its own worktree. It asks
- * nothing, so it runs without `--interactive`. A conflict stops it there unfinished, for
- * whoever opens the worktree to resolve or abort — wtman does not abort it on their behalf, and
- * fails saying so. That is told apart from any other failure by reading the worktree again:
- * an unfinished rebase comes back as the worktree, still mid-rebase, rather than as an error.
- */
-export async function rebaseWorktree(
-  project: Project,
-  worktree: ProjectWorktree
-): Promise<{ unfinished: ProjectWorktree | null }> {
-  try {
-    await run(
-      'wtman',
-      ['rebase', repoPath(project), worktree.branch],
-      REBASE_TIMEOUT_MS
-    );
-    return { unfinished: null };
-  } catch (err) {
-    const stopped = (await listWorktrees(project)).find(
-      (w) => w.name === worktree.name
-    );
-    if (stopped?.operation === 'rebase') return { unfinished: stopped };
-    throw err;
-  }
-}
-
 /**
  * Merges whatever the main checkout is on into the branch, in its worktree, then fast-forwards
  * the main checkout to it, leaving both on one commit. wtman does it all or nothing: it refuses
@@ -418,12 +388,4 @@ export async function syncWorktree(
     ],
     MERGE_TIMEOUT_MS
   );
-}
-
-/** Puts the branch back where it was before a rebase that stopped at a conflict. */
-export async function abortRebase(
-  project: Project,
-  worktree: ProjectWorktree
-): Promise<void> {
-  await run('wtman', ['rebase', '--abort', repoPath(project), worktree.branch]);
 }

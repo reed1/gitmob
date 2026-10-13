@@ -24,7 +24,7 @@ interface Props {
   };
   /** The tree is dirty: there is something to review. */
   hasChanges: boolean;
-  /** The project's state moved on — cloned, opened on the desktop, or rebased or synced. */
+  /** The project's state moved on — cloned, opened on the desktop, or synced. */
   onChanged: () => void;
   /** Closed on the desktop, or merged or removed; a worktree has no project left to show after that. */
   onClosed: () => void;
