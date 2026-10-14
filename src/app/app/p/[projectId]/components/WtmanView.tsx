@@ -134,6 +134,59 @@ function BranchKebabMenu({
   );
 }
 
+/** Where a new branch starts: main, or the branch of the worktree this page is for. */
+function BaseModal({
+  branch,
+  current,
+  onCancel,
+  onPick,
+}: {
+  branch: string;
+  current: Worktree;
+  onCancel: () => void;
+  onPick: (base: Worktree | null) => void;
+}) {
+  const choices: { base: Worktree | null; label: string; detail: string }[] = [
+    {
+      base: null,
+      label: 'Off main',
+      detail: 'Uncommitted changes in the main checkout stay there.',
+    },
+    {
+      base: current,
+      label: `Off ${current.branch}`,
+      detail:
+        'The worktree this page is for, at its last commit. Its uncommitted changes stay there.',
+    },
+  ];
+
+  return (
+    <Modal heading="Make the branch off" subtitle={branch} onClose={onCancel}>
+      <div className="divide-y divide-foreground/10">
+        {choices.map((choice) => (
+          <button
+            key={choice.label}
+            onClick={() => onPick(choice.base)}
+            className="w-full text-left px-4 py-3 hover:bg-foreground/5 active:bg-foreground/10"
+          >
+            <div className="text-sm font-medium truncate">{choice.label}</div>
+            <div className="text-xs text-foreground/50">{choice.detail}</div>
+          </button>
+        ))}
+      </div>
+      <div className="px-4 py-3 border-t border-foreground/10 flex justify-end">
+        <button
+          data-modal-cancel
+          onClick={onCancel}
+          className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
+        >
+          Cancel
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
 function RemoveBranchModal({
   row,
   onCancel,
@@ -216,6 +269,7 @@ export function WtmanView({
   const [removing, setRemoving] = useState<BranchRow | null>(null);
   const [newBranch, setNewBranch] = useState('');
   const [creating, setCreating] = useState(false);
+  const [choosingBase, setChoosingBase] = useState(false);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/projects/${projectId}/worktrees`);
@@ -282,12 +336,15 @@ export function WtmanView({
     }
   };
 
-  const create = async () => {
+  const create = async (base: Worktree | null) => {
+    setChoosingBase(false);
     setCreating(true);
     try {
       const { ok, projectId: created } = await post(
         `/api/projects/${projectId}/worktrees`,
-        { from: 'main', branch: newBranch }
+        base
+          ? { from: 'worktree', branch: newBranch, base: base.name }
+          : { from: 'main', branch: newBranch }
       );
       if (ok) {
         setNewBranch('');
@@ -329,21 +386,27 @@ export function WtmanView({
 
   const busy = creating || working !== null;
   const selectedWorktree = worktrees?.find((w) => w.name === selected);
+  const currentWorktree =
+    worktrees?.find((worktree) => worktree.projectId === currentProjectId) ??
+    null;
 
-  // The branch is created off main, and the changes sitting in the main checkout stay there.
-  // A name already taken, locally or on a remote, is refused by wtman.
+  // From a worktree's page the branch can start off main or off that worktree's branch, which
+  // is asked; from the main checkout's it is off main. Uncommitted changes stay where they are,
+  // and a name already taken, locally or on a remote, is refused by wtman.
   const createBox = (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        if (newBranch.trim() !== '' && !busy) create();
+        if (newBranch.trim() === '' || busy) return;
+        if (currentWorktree) setChoosingBase(true);
+        else create(null);
       }}
       className="flex gap-2"
     >
       <input
         value={newBranch}
         onChange={(e) => setNewBranch(e.target.value)}
-        placeholder="New branch, off main"
+        placeholder="New branch"
         autoCapitalize="off"
         autoCorrect="off"
         spellCheck={false}
@@ -498,6 +561,15 @@ export function WtmanView({
           </div>
         ))}
       </div>
+
+      {choosingBase && currentWorktree && (
+        <BaseModal
+          branch={newBranch.trim()}
+          current={currentWorktree}
+          onCancel={() => setChoosingBase(false)}
+          onPick={create}
+        />
+      )}
 
       {removing && (
         <RemoveBranchModal

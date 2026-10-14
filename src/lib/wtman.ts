@@ -227,19 +227,29 @@ async function worktreeOf(
 }
 
 /**
- * Creates a branch off main in a worktree of its own, and opens it, as `wtman new` does. wtman
- * refuses a name already taken by a local branch or on a remote, and that refusal is the
- * request's answer: a new branch is only ever new.
+ * Creates a branch in a worktree of its own, and opens it, as `wtman new` does: off main, or off
+ * the branch of the worktree `base`. wtman refuses a name already taken by a local branch or on
+ * a remote, and that refusal is the request's answer: a new branch is only ever new.
  *
  * No `--interactive`: without it wtman declines its one offer, and the uncommitted changes in
- * the main checkout stay where they are rather than being carried into a branch nobody at this
- * end can see.
+ * the checkout the branch is based on stay where they are rather than being carried into a
+ * branch nobody at this end can see.
  */
 export async function createWorktree(
   project: Project,
-  branch: string
+  branch: string,
+  base: ProjectWorktree | null = null
 ): Promise<ProjectWorktree> {
-  await run('wtman', ['new', repoPath(project), branch], OPEN_TIMEOUT_MS);
+  await run(
+    'wtman',
+    [
+      'new',
+      repoPath(project),
+      branch,
+      ...(base ? ['--base', base.branch] : []),
+    ],
+    OPEN_TIMEOUT_MS
+  );
   return worktreeOf(project, branch);
 }
 

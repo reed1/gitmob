@@ -21,8 +21,9 @@ Docs: `rlocal/app/wtman/CLAUDE.md`.
 - `wtman status --json <repo>` — the worktree list.
 - `wtman branches --json <repo>` — the branches without a worktree, local and remote.
 - `wtman open <repo> --branch <branch>` — Open on a worktree.
-- `wtman new <repo> <branch> [--from-local | --from-remote <remote>]` — Create, Create worktree
-  on a branch row, and a session in a new worktree.
+- `wtman new <repo> <branch> [--base <branch> | --from-local | --from-remote <remote>]` —
+  Create (`--base` when, on a worktree's page, the branch is made off that worktree's branch),
+  Create worktree on a branch row, and a session in a new worktree.
 - `wtman sync [--propagate] <repo> <branch>` — Merge sync, Merge sync propagate.
 - `wtman --interactive merge <repo> <branch> [--squash]` — Merge, Squash merge.
 - `wtman --interactive remove [--remote <remote>] <repo> <branch>` — Remove on a worktree or a

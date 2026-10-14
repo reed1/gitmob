@@ -30,12 +30,13 @@ export async function GET(
 
 type Create =
   | { from: 'main'; branch: string }
+  | { from: 'worktree'; branch: string; base: string }
   | { from: 'branch'; name: string };
 
 /**
- * A worktree for a new branch off main, or for a local or remote branch with none. The
- * existing branch is looked up rather than taken from the request, so only a row the tab listed
- * reaches wtman.
+ * A worktree for a new branch off main or off another worktree's branch, or for a local or
+ * remote branch with none. The base worktree and the existing branch are looked up rather than
+ * taken from the request, so only a row the tab listed reaches wtman.
  */
 export async function POST(
   request: NextRequest,
@@ -53,7 +54,7 @@ export async function POST(
   try {
     let projectId: string;
 
-    if (body.from === 'main') {
+    if (body.from === 'main' || body.from === 'worktree') {
       // Everything else about the name is git's and wtman's to judge, a name already taken
       // included, and their complaint is a better one than any check here would be.
       if (body.branch.trim() === '') {
@@ -62,7 +63,20 @@ export async function POST(
           { status: 400 }
         );
       }
-      projectId = (await createWorktree(project, body.branch.trim())).projectId;
+      let base = null;
+      if (body.from === 'worktree') {
+        base =
+          (await listWorktrees(project)).find((w) => w.name === body.base) ??
+          null;
+        if (!base) {
+          return NextResponse.json(
+            { error: `No worktree ${body.base}` },
+            { status: 404 }
+          );
+        }
+      }
+      projectId = (await createWorktree(project, body.branch.trim(), base))
+        .projectId;
     } else if (body.from === 'branch') {
       const row = (await listBranchRows(project)).find(
         (r) => r.name === body.name
