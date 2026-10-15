@@ -44,11 +44,58 @@ function SkippedRow({ path, reason }: { path: string; reason: SkipReason }) {
   );
 }
 
+type ShownFile = Exclude<ReviewFile, { kind: 'skipped' }>;
+
+function lineChanges(file: ShownFile): { added: number; deleted: number } {
+  if (file.kind === 'added') return { added: file.lineCount, deleted: 0 };
+  let added = 0;
+  let deleted = 0;
+  for (const line of file.diff.split('\n')) {
+    if (line.startsWith('+')) added++;
+    else if (line.startsWith('-')) deleted++;
+  }
+  return { added, deleted };
+}
+
+function LineChanges({ added, deleted }: { added: number; deleted: number }) {
+  return (
+    <span className="shrink-0 text-xs font-mono">
+      <span className="text-green-400">+{added}</span>{' '}
+      <span className="text-red-400">-{deleted}</span>
+    </span>
+  );
+}
+
+function StatsSection({ files }: { files: ShownFile[] }) {
+  const rows = files.map((file) => ({ path: file.path, ...lineChanges(file) }));
+  return (
+    <section className="border-b border-foreground/10">
+      <div className="px-4 py-2 flex items-center gap-2 border-b border-foreground/10">
+        <div className="flex-1 min-w-0 text-sm">Stats</div>
+        <LineChanges
+          added={rows.reduce((sum, row) => sum + row.added, 0)}
+          deleted={rows.reduce((sum, row) => sum + row.deleted, 0)}
+        />
+      </div>
+      <div className="px-4 py-2">
+        {rows.map((row) => (
+          <div key={row.path} className="py-0.5 flex items-start gap-2">
+            <span className="flex-1 min-w-0 text-xs font-mono break-all text-foreground/70">
+              {row.path}
+            </span>
+            <LineChanges added={row.added} deleted={row.deleted} />
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function FileSection({
   file,
   wordWrap,
 }: {
-  file: Exclude<ReviewFile, { kind: 'skipped' }>;
+  file: ShownFile;
   wordWrap: boolean;
 }) {
   return (
@@ -121,6 +168,12 @@ export default function ReviewPage() {
     );
 
   const fileCount = review && !review.tooLarge ? review.files.length : null;
+  const shownFiles =
+    review && !review.tooLarge
+      ? review.files.filter(
+          (file): file is ShownFile => file.kind !== 'skipped'
+        )
+      : [];
 
   return (
     <div className="h-dvh bg-background flex flex-col">
@@ -170,17 +223,20 @@ export default function ReviewPage() {
             {commit === null ? 'Working tree clean' : 'No file changes'}
           </div>
         ) : (
-          review.files.map((file) =>
-            file.kind === 'skipped' ? (
-              <SkippedRow
-                key={file.path}
-                path={file.path}
-                reason={file.reason}
-              />
-            ) : (
-              <FileSection key={file.path} file={file} wordWrap={wordWrap} />
-            )
-          )
+          <>
+            {shownFiles.length > 0 && <StatsSection files={shownFiles} />}
+            {review.files.map((file) =>
+              file.kind === 'skipped' ? (
+                <SkippedRow
+                  key={file.path}
+                  path={file.path}
+                  reason={file.reason}
+                />
+              ) : (
+                <FileSection key={file.path} file={file} wordWrap={wordWrap} />
+              )
+            )}
+          </>
         )}
       </main>
 
