@@ -61,20 +61,20 @@ export function SendTextModal({
       subtitle={title}
       onClose={onClose}
       guardDismiss={uploads.images.length > 0}
+      menu={
+        <KebabMenu label="Send options">
+          <ImageUploadMenuItem uploads={uploads} />
+        </KebabMenu>
+      }
     >
       <div className="px-4 py-3 space-y-2">
-        <div className="flex items-start gap-2">
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            rows={4}
-            placeholder="Text to type into the session"
-            className="flex-1 min-w-0 text-sm border border-foreground/20 rounded-lg px-3 py-2 bg-background resize-none"
-          />
-          <KebabMenu label="Send options">
-            <ImageUploadMenuItem uploads={uploads} />
-          </KebabMenu>
-        </div>
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          rows={4}
+          placeholder="Text to type into the session"
+          className="w-full text-sm border border-foreground/20 rounded-lg px-3 py-2 bg-background resize-none"
+        />
         <ImageUploads uploads={uploads} />
         <label className="flex items-center gap-2 text-sm">
           <input

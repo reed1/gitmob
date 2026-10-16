@@ -14,12 +14,15 @@ export function Modal({
   onClose,
   children,
   guardDismiss,
+  menu,
 }: {
   heading: string;
   subtitle?: string;
   onClose: () => void;
   children: ReactNode;
   guardDismiss?: boolean;
+  /** Sits at the header's right, for a KebabMenu. */
+  menu?: ReactNode;
 }) {
   return (
     <ModalOverlay onClose={onClose} guardDismiss={guardDismiss}>
@@ -27,13 +30,16 @@ export function Modal({
         className="bg-background border border-foreground/20 rounded-lg shadow-xl max-w-sm w-full max-h-full overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-4 py-3 border-b border-foreground/10">
-          <h3 className="font-medium">{heading}</h3>
-          {subtitle && (
-            <div className="text-xs text-foreground/50 truncate">
-              {subtitle}
-            </div>
-          )}
+        <div className="px-4 py-3 border-b border-foreground/10 flex items-center gap-2">
+          <div className="flex-1 min-w-0">
+            <h3 className="font-medium">{heading}</h3>
+            {subtitle && (
+              <div className="text-xs text-foreground/50 truncate">
+                {subtitle}
+              </div>
+            )}
+          </div>
+          {menu}
         </div>
         {children}
       </div>
