@@ -2,9 +2,7 @@
 
 import { saveTextHistory } from '../../lib/text-history';
 
-import { CustomModelPicker } from './CustomModelPicker';
-import { ProviderSelect } from './ProviderSelect';
-import type { CustomModel } from '../../lib/desktop-models';
+import { SessionModelSelect, useSessionModel } from './SessionModelSelect';
 
 import { useCallback, useState } from 'react';
 import Link from 'next/link';
@@ -107,9 +105,7 @@ export function PendingHandoffs({
   const [prompt, setPrompt] = useState('');
   const [initialPrompt, setInitialPrompt] = useState('');
   const { catalog, error: catalogError } = useModelCatalog();
-  const [chosenProvider, setChosenProvider] = useState<string>();
-  const provider = chosenProvider ?? catalog?.providers[0]?.id;
-  const [customModel, setCustomModel] = useState<CustomModel>();
+  const [sessionModel, setSessionModel] = useSessionModel(catalog);
   const [launching, setLaunching] = useState(false);
 
   const open = handoffs.find((handoff) => handoff.id === openId) ?? null;
@@ -126,13 +122,12 @@ export function PendingHandoffs({
   const openHandoff = (handoff: PendingHandoff) => {
     setPrompt(handoff.prompt);
     setInitialPrompt(handoff.prompt);
-    setChosenProvider(undefined);
-    setCustomModel(undefined);
+    setSessionModel(undefined);
     setOpenId(handoff.id);
   };
 
   const launch = async () => {
-    if (!open || !provider) return;
+    if (!open || !sessionModel) return;
     saveTextHistory({
       text: prompt,
       source: 'Handoff',
@@ -146,8 +141,11 @@ export function PendingHandoffs({
         body: JSON.stringify({
           handoffId: open.id,
           prompt,
-          provider,
-          customModel,
+          provider: sessionModel.provider,
+          customModel: {
+            model: sessionModel.model,
+            effort: sessionModel.effort,
+          },
         }),
       });
       // A launch that failed leaves the handoff parked, and the box open on the text to fix.
@@ -259,13 +257,11 @@ export function PendingHandoffs({
               )}
             </div>
             <div className="px-4 py-3 space-y-2">
-              <CustomModelPicker
-                key={open.id}
+              <SessionModelSelect
                 catalog={catalog}
                 error={catalogError}
-                provider={provider}
-                value={customModel}
-                onChange={setCustomModel}
+                value={sessionModel}
+                onChange={setSessionModel}
                 disabled={launching}
               />
               <textarea
@@ -289,25 +285,13 @@ export function PendingHandoffs({
               >
                 Delete
               </button>
-              <div className="flex items-center gap-2">
-                <ProviderSelect
-                  catalog={catalog}
-                  value={provider}
-                  onChange={(next) => {
-                    setChosenProvider(next);
-                    setCustomModel(undefined);
-                  }}
-                  disabled={launching}
-                  className="text-xs bg-foreground/5 border border-foreground/15 rounded-lg px-2 py-1.5"
-                />
-                <button
-                  onClick={launch}
-                  disabled={launching || !provider || !prompt.trim()}
-                  className="px-3 py-1.5 text-sm rounded-lg bg-foreground text-background hover:opacity-90 disabled:opacity-40"
-                >
-                  {launching ? 'Starting...' : 'Launch'}
-                </button>
-              </div>
+              <button
+                onClick={launch}
+                disabled={launching || !sessionModel || !prompt.trim()}
+                className="px-3 py-1.5 text-sm rounded-lg bg-foreground text-background hover:opacity-90 disabled:opacity-40"
+              >
+                {launching ? 'Starting...' : 'Launch'}
+              </button>
             </div>
           </div>
         </ModalOverlay>

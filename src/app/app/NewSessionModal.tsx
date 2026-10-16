@@ -2,9 +2,7 @@
 
 import { saveTextHistory } from '../../lib/text-history';
 
-import { CustomModelPicker } from './CustomModelPicker';
-import { ProviderSelect } from './ProviderSelect';
-import type { CustomModel } from '../../lib/desktop-models';
+import { SessionModelSelect, useSessionModel } from './SessionModelSelect';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -47,13 +45,11 @@ export function NewSessionModal({
 }) {
   const router = useRouter();
   const { catalog, error: catalogError } = useModelCatalog();
-  const [chosenProvider, setChosenProvider] = useState<string>();
-  const provider = chosenProvider ?? catalog?.providers[0]?.id;
+  const [sessionModel, setSessionModel] = useSessionModel(catalog);
   const [inWorktree, setInWorktree] = useState(false);
   const [branch, setBranch] = useState('');
   const [suggesting, setSuggesting] = useState(false);
   const [prompt, setPrompt] = useState(initialPrompt);
-  const [customModel, setCustomModel] = useState<CustomModel>();
   const [launching, setLaunching] = useState(false);
 
   const uploads = useImageUploads();
@@ -75,16 +71,16 @@ export function NewSessionModal({
   };
 
   const launch = async () => {
-    if (!provider || launching || missingBranch || uploads.pending) return;
+    if (!sessionModel || launching || missingBranch || uploads.pending) return;
     saveTextHistory({ text: prompt, source: 'New session', projectId });
     setLaunching(true);
     try {
       const launchedIn = await launchDesktopSession(
         projectId,
-        provider,
+        sessionModel.provider,
         withImagePaths(uploads.images, prompt.trim()),
         inWorktree ? branch.trim() : '',
-        customModel
+        { model: sessionModel.model, effort: sessionModel.effort }
       );
       if (launchedIn === null) return;
 
@@ -105,49 +101,38 @@ export function NewSessionModal({
       subtitle={projectId}
       onClose={onClose}
       guardDismiss={Boolean(prompt || branch || uploads.images.length)}
+      menu={
+        <KebabMenu label="Session options" disabled={launching}>
+          <KebabMenuItem onSelect={() => setInWorktree(!inWorktree)}>
+            <span
+              className={`flex items-center gap-2 ${inWorktree ? 'text-blue-500' : ''}`}
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <circle cx="6" cy="5" r="3" />
+                <circle cx="6" cy="19" r="3" />
+                <circle cx="18" cy="5" r="3" />
+                <path d="M6 8v8m12-8a8 8 0 0 1-8 8H6" />
+              </svg>
+              Worktree{inWorktree ? ' ✓' : ''}
+            </span>
+          </KebabMenuItem>
+          <ImageUploadMenuItem uploads={uploads} />
+        </KebabMenu>
+      }
     >
       <div className="px-4 py-3 space-y-2">
-        <div className="flex gap-2">
-          <ProviderSelect
-            catalog={catalog}
-            value={provider}
-            onChange={(next) => {
-              setChosenProvider(next);
-              setCustomModel(undefined);
-            }}
-            disabled={launching}
-            className="flex-1 min-w-0 text-sm bg-background border border-foreground/20 rounded-lg px-3 py-2"
-          />
-          <KebabMenu label="Session options" disabled={launching}>
-            <KebabMenuItem onSelect={() => setInWorktree(!inWorktree)}>
-              <span
-                className={`flex items-center gap-2 ${inWorktree ? 'text-blue-500' : ''}`}
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <circle cx="6" cy="5" r="3" />
-                  <circle cx="6" cy="19" r="3" />
-                  <circle cx="18" cy="5" r="3" />
-                  <path d="M6 8v8m12-8a8 8 0 0 1-8 8H6" />
-                </svg>
-                Worktree{inWorktree ? ' ✓' : ''}
-              </span>
-            </KebabMenuItem>
-            <ImageUploadMenuItem uploads={uploads} />
-          </KebabMenu>
-        </div>
-        <CustomModelPicker
+        <SessionModelSelect
           catalog={catalog}
           error={catalogError}
-          provider={provider}
-          value={customModel}
-          onChange={setCustomModel}
+          value={sessionModel}
+          onChange={setSessionModel}
           disabled={launching}
         />
         {inWorktree && (
@@ -209,7 +194,7 @@ export function NewSessionModal({
             <button
               onClick={launch}
               disabled={
-                !provider || launching || missingBranch || uploads.pending
+                !sessionModel || launching || missingBranch || uploads.pending
               }
               className="px-3 py-1.5 text-sm rounded-lg bg-foreground text-background hover:opacity-90 disabled:opacity-40"
             >
