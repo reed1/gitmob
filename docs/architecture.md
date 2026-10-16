@@ -196,6 +196,12 @@ the branch name fills it from the opening prompt — `src/lib/branch-name.ts`, o
 is waited on by a tap: `claude -p` spends about twelve seconds starting up before Haiku says a word,
 where this answers in about one. The name is only a suggestion — the box stays editable.
 
+Images reach a session as paths. Each one is uploaded to `/tmp/rlocal/gitmob-images` through
+`/api/session-images`, and the session is handed `image 1: <path>` lines ahead of the text — as
+the opening prompt, or typed into a running session from Send text. Both dialogs take them from the
+same ⋮ → Image item and show them the same way, through `src/app/app/ImageUploads.tsx`: a ring per
+image that fills green once uploaded, and a Backspace button beside them that removes the rightmost.
+
 ## Dictation
 
 The Speak button in the Claude tab's modals dictates into the textarea, POSTing Opus straight to

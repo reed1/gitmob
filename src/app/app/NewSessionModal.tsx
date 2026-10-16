@@ -6,14 +6,20 @@ import { CustomModelPicker } from './CustomModelPicker';
 import { ProviderSelect } from './ProviderSelect';
 import type { CustomModel } from '../../lib/desktop-models';
 
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { addToast, apiFetch } from '../../lib/api';
+import { apiFetch } from '../../lib/api';
 import { launchDesktopSession } from '../../lib/desktop-client';
 import { useModelCatalog } from '../../lib/use-model-catalog';
 import { Modal } from './Modal';
 import { KebabMenu, KebabMenuItem } from './KebabMenu';
 import { SpeakButton, appendSpoken } from './SpeakButton';
+import {
+  ImageUploadMenuItem,
+  ImageUploads,
+  useImageUploads,
+  withImagePaths,
+} from './ImageUploads';
 
 /**
  * The one way a desktop session is started from this app — the project card's menu on the front
@@ -50,61 +56,7 @@ export function NewSessionModal({
   const [customModel, setCustomModel] = useState<CustomModel>();
   const [launching, setLaunching] = useState(false);
 
-  const fileInput = useRef<HTMLInputElement>(null);
-  const [images, setImages] = useState<
-    {
-      id: string;
-      name: string;
-      progress: number;
-      path?: string;
-      error?: string;
-    }[]
-  >([]);
-  const uploadsPending = images.some((image) => !image.path);
-
-  const uploadImages = (files: FileList | null) => {
-    if (!files) return;
-    for (const file of Array.from(files)) {
-      const id = crypto.randomUUID();
-      setImages((previous) => [
-        ...previous,
-        { id, name: file.name, progress: 0 },
-      ]);
-      const update = (changes: Partial<(typeof images)[number]>) =>
-        setImages((previous) =>
-          previous.map((image) =>
-            image.id === id ? { ...image, ...changes } : image
-          )
-        );
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', '/api/session-images');
-      xhr.responseType = 'json';
-      xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable)
-          update({ progress: event.loaded / event.total });
-      };
-      const fail = (message: string) => {
-        update({ error: message });
-        addToast(message);
-      };
-      xhr.onload = () => {
-        if (
-          xhr.status >= 200 &&
-          xhr.status < 300 &&
-          typeof xhr.response?.path === 'string'
-        ) {
-          update({ path: xhr.response.path, progress: 1 });
-        } else {
-          fail(xhr.response?.error || `Upload failed (${xhr.status})`);
-        }
-      };
-      xhr.onerror = () => fail('Image upload failed: network error');
-      xhr.onabort = () => fail('Image upload cancelled');
-      const body = new FormData();
-      body.append('image', file);
-      xhr.send(body);
-    }
-  };
+  const uploads = useImageUploads();
 
   const missingBranch = inWorktree && branch.trim() === '';
 
@@ -123,16 +75,14 @@ export function NewSessionModal({
   };
 
   const launch = async () => {
-    if (!provider || launching || missingBranch || uploadsPending) return;
+    if (!provider || launching || missingBranch || uploads.pending) return;
     saveTextHistory({ text: prompt, source: 'New session', projectId });
     setLaunching(true);
     try {
       const launchedIn = await launchDesktopSession(
         projectId,
         provider,
-        images.length
-          ? `${images.map((image, index) => `image ${index + 1}: ${image.path}`).join('\n')}\n\n${prompt.trim()}`
-          : prompt.trim(),
+        withImagePaths(uploads.images, prompt.trim()),
         inWorktree ? branch.trim() : '',
         customModel
       );
@@ -154,7 +104,7 @@ export function NewSessionModal({
       heading={inWorktree ? 'New session in a worktree' : 'New session'}
       subtitle={projectId}
       onClose={onClose}
-      guardDismiss={Boolean(prompt || branch || images.length)}
+      guardDismiss={Boolean(prompt || branch || uploads.images.length)}
     >
       <div className="px-4 py-3 space-y-2">
         <div className="flex gap-2">
@@ -189,37 +139,8 @@ export function NewSessionModal({
                 Worktree{inWorktree ? ' ✓' : ''}
               </span>
             </KebabMenuItem>
-            <KebabMenuItem onSelect={() => fileInput.current?.click()}>
-              <span className="flex items-center gap-2">
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M12 16V3m-5 5 5-5 5 5M4 16v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"
-                  />
-                </svg>
-                Image
-              </span>
-            </KebabMenuItem>
+            <ImageUploadMenuItem uploads={uploads} />
           </KebabMenu>
-          <input
-            ref={fileInput}
-            type="file"
-            accept="image/*"
-            multiple
-            hidden
-            onChange={(event) => {
-              uploadImages(event.target.files);
-              event.target.value = '';
-            }}
-          />
         </div>
         <CustomModelPicker
           catalog={catalog}
@@ -271,68 +192,7 @@ export function NewSessionModal({
           placeholder="Opening prompt (optional)"
           className="w-full text-sm border border-foreground/20 rounded-lg px-3 py-2 bg-background resize-none"
         />
-        {images.length > 0 && (
-          <div
-            className="flex flex-wrap items-center gap-2"
-            aria-label="Image uploads"
-          >
-            {images.map((image, index) => (
-              <button
-                key={image.id}
-                type="button"
-                disabled={!image.error || launching}
-                onClick={() =>
-                  setImages((previous) =>
-                    previous.filter((entry) => entry.id !== image.id)
-                  )
-                }
-                title={`Image ${index + 1}: ${image.name} — ${image.error ? `${image.error}. Click to remove` : image.path ? 'Uploaded' : `${Math.round(image.progress * 100)}% uploaded`}`}
-                aria-label={`Image ${index + 1}: ${image.name}, ${image.error ? 'upload failed, remove' : image.path ? 'uploaded' : 'uploading'}`}
-                className={`p-1 ${image.path ? 'text-green-500' : image.error ? 'text-red-500' : 'text-foreground/40'}`}
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 16 16"
-                  role="progressbar"
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-valuenow={Math.round(image.progress * 100)}
-                >
-                  <circle
-                    cx="8"
-                    cy="8"
-                    r="6"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    opacity="0.25"
-                  />
-                  <circle
-                    cx="8"
-                    cy="8"
-                    r="6"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeDasharray={2 * Math.PI * 6}
-                    strokeDashoffset={2 * Math.PI * 6 * (1 - image.progress)}
-                    transform="rotate(-90 8 8)"
-                  />
-                  <circle
-                    cx="8"
-                    cy="8"
-                    r="2"
-                    fill="currentColor"
-                    className={
-                      !image.path && !image.error ? 'animate-pulse' : ''
-                    }
-                  />
-                </svg>
-              </button>
-            ))}
-          </div>
-        )}
+        <ImageUploads uploads={uploads} disabled={launching} />
         <div className="flex items-center justify-between gap-2">
           <SpeakButton
             projectId={canonicalId}
@@ -349,7 +209,7 @@ export function NewSessionModal({
             <button
               onClick={launch}
               disabled={
-                !provider || launching || missingBranch || uploadsPending
+                !provider || launching || missingBranch || uploads.pending
               }
               className="px-3 py-1.5 text-sm rounded-lg bg-foreground text-background hover:opacity-90 disabled:opacity-40"
             >

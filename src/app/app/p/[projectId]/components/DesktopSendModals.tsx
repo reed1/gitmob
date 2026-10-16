@@ -11,6 +11,13 @@ import {
 } from '../../../../../lib/desktop-keys';
 import { Modal } from '../../../Modal';
 import { SpeakButton, appendSpoken } from '../../../SpeakButton';
+import { KebabMenu } from '../../../KebabMenu';
+import {
+  ImageUploadMenuItem,
+  ImageUploads,
+  useImageUploads,
+  withImagePaths,
+} from '../../../ImageUploads';
 
 export function SendTextModal({
   projectId,
@@ -27,30 +34,48 @@ export function SendTextModal({
 }) {
   const [text, setText] = useState('');
   const [pressEnter, setPressEnter] = useState(true);
+  const uploads = useImageUploads();
+  const canSend = Boolean(text || uploads.images.length) && !uploads.pending;
 
   const send = async () => {
-    if (!text) return;
-    saveTextHistory({ text, source: 'Send text', projectId });
+    if (!canSend) return;
+    if (text) saveTextHistory({ text, source: 'Send text', projectId });
     onClose();
 
     const res = await apiFetch(`/api/projects/${projectId}/desktop`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ windowId, action: 'type', text, pressEnter }),
+      body: JSON.stringify({
+        windowId,
+        action: 'type',
+        text: withImagePaths(uploads.images, text),
+        pressEnter,
+      }),
     });
-    if (res.ok) addToast('Sent text', 'success');
+    if (res.ok) addToast('Sent', 'success');
   };
 
   return (
-    <Modal heading="Send text" subtitle={title} onClose={onClose}>
+    <Modal
+      heading="Send text"
+      subtitle={title}
+      onClose={onClose}
+      guardDismiss={uploads.images.length > 0}
+    >
       <div className="px-4 py-3 space-y-2">
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          rows={4}
-          placeholder="Text to type into the session"
-          className="w-full text-sm border border-foreground/20 rounded-lg px-3 py-2 bg-background resize-none"
-        />
+        <div className="flex items-start gap-2">
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            rows={4}
+            placeholder="Text to type into the session"
+            className="flex-1 min-w-0 text-sm border border-foreground/20 rounded-lg px-3 py-2 bg-background resize-none"
+          />
+          <KebabMenu label="Send options">
+            <ImageUploadMenuItem uploads={uploads} />
+          </KebabMenu>
+        </div>
+        <ImageUploads uploads={uploads} />
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
@@ -75,7 +100,7 @@ export function SendTextModal({
             </button>
             <button
               onClick={send}
-              disabled={!text}
+              disabled={!canSend}
               className="px-3 py-1.5 text-sm rounded-lg bg-foreground text-background hover:opacity-90 disabled:opacity-40"
             >
               Send
