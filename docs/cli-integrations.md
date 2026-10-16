@@ -75,13 +75,15 @@ Docs: `rlocal/app/claudex/CLAUDE.md`.
 - `claudex desktop screen|send|keys <windowId> ...` — a session's screen and keyboard. `send`
   takes its text after `--`, so text starting with `-` is typed rather than parsed.
 - `claudex kitty --detach --provider <id> --directory <path> [--model <m> --effort <e>]
-  [--resume <sessionId>] [--submit --file <path> --rm-file]` — New session, resume, and handoff
+[--resume <sessionId>] [--submit --file <path> --rm-file]` — New session, resume, and handoff
   launch. The prompt goes in a fresh file under the OS temp dir, handed over for claudex to read
   once and delete, so it is never parsed as an option. Every session runs without permission
   prompts; provider and model are the only choices.
 - `claudex models` — the providers, models and efforts on offer: the provider dropdown (first
-  one by default), the custom model picker, and the server's check of both. Read once per server
-  process, so a catalog edit takes a gitmob restart.
+  one by default), the custom model picker, and the server's check of both. The server runs it
+  on every ask; the browser fetches it once per device and keeps it in localStorage, so a session
+  box opens without a round trip. Reload models in the front page's cog menu fetches it again
+  after a catalog edit.
 - `claudex purgatory send --window <id> --pid <pid>` — closing the session after a commit.
 - `claudex gitlock release --repo <path>` — after a parked commit is accepted or rejected.
 - `claudex usage show --json` — the usage badge and panel.

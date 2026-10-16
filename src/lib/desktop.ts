@@ -305,21 +305,9 @@ export async function acceptSuggestedPrompt(windowId: string): Promise<void> {
   await pressSessionKey(windowId, 'enter');
 }
 
-let modelCatalog: Promise<ModelCatalog> | undefined;
-
-/**
- * The providers, models and efforts a session can open on, read once per server process:
- * the catalog changes when claudex is edited, and gitmob is restarted after that. A failed
- * read is not kept, so the next request asks again.
- */
-export function getModelCatalog(): Promise<ModelCatalog> {
-  modelCatalog ??= run('claudex', ['models'])
-    .then((output): ModelCatalog => JSON.parse(output))
-    .catch((error) => {
-      modelCatalog = undefined;
-      throw error;
-    });
-  return modelCatalog;
+/** The providers, models and efforts a session can open on. */
+export async function getModelCatalog(): Promise<ModelCatalog> {
+  return JSON.parse(await run('claudex', ['models']));
 }
 
 export async function isProvider(value: unknown): Promise<boolean> {
