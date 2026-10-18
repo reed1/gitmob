@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { relativeTime } from '../../../../../lib/relative-time';
 import type { RecallMessage } from './RecallSearch';
+import { TranscriptMarkdown } from './TranscriptMarkdown';
 
 /** Without `foldAt` the message is shown whole. */
 export function TranscriptMessage({
@@ -16,6 +17,9 @@ export function TranscriptMessage({
   const foldable = foldAt !== undefined && message.content.length > foldAt;
   const folded = foldable && !expanded;
   const fromUser = message.role === 'user';
+  const text = folded
+    ? `${message.content.slice(0, foldAt)}…`
+    : message.content;
 
   return (
     <div
@@ -33,8 +37,13 @@ export function TranscriptMessage({
           {relativeTime(message.timestamp)}
         </span>
       </div>
-      <div className="mt-1.5 text-sm whitespace-pre-wrap break-words">
-        {folded ? `${message.content.slice(0, foldAt)}…` : message.content}
+      {/* Prompts are typed or dictated, where a stray asterisk is not meant as formatting. */}
+      <div className="mt-1.5 text-sm break-words">
+        {fromUser ? (
+          <div className="whitespace-pre-wrap">{text}</div>
+        ) : (
+          <TranscriptMarkdown content={text} />
+        )}
       </div>
       {foldable && (
         <button
