@@ -6,6 +6,7 @@ import { DesktopScreenView } from './DesktopScreenView';
 import { DesktopSessions } from './DesktopSessions';
 import { RecallSearch } from './RecallSearch';
 import { RecallTranscript } from './RecallTranscript';
+import { SessionTranscript } from './SessionTranscript';
 import { useAutoRefresh } from '../../../../../lib/use-auto-refresh';
 
 /** What Claude Code itself reports the session's context window to be holding. */
@@ -28,6 +29,11 @@ export interface DesktopSession {
   context: SessionContext | null;
 }
 
+/** recall reads Claude transcripts alone; Codex records its turns its own way. */
+export function transcriptSessionId(session: DesktopSession): string | null {
+  return session.provider === 'claude' ? session.sessionId : null;
+}
+
 export function ClaudeView({
   projectId,
   canonicalId,
@@ -40,6 +46,7 @@ export function ClaudeView({
   const windowParam = searchParams.get('window');
   const searchParam = searchParams.get('recall');
   const sessionParam = searchParams.get('session');
+  const viewParam = searchParams.get('view');
 
   const [sessions, setSessions] = useState<DesktopSession[] | null>(null);
   const [workspaces, setWorkspaces] = useState<string[]>([]);
@@ -64,9 +71,9 @@ export function ClaudeView({
 
   const sessionsUrl = `/app/p/${projectId}?tab=claude`;
 
-  const openScreen = (windowId: string) => {
-    router.push(`${sessionsUrl}&window=${encodeURIComponent(windowId)}`);
-  };
+  const windowUrl = (windowId: string, view: 'terminal' | 'transcript') =>
+    `${sessionsUrl}&window=${encodeURIComponent(windowId)}` +
+    (view === 'transcript' ? '&view=transcript' : '');
 
   if (sessionParam) {
     return (
@@ -100,13 +107,36 @@ export function ClaudeView({
 
   if (windowParam) {
     const session = sessions?.find((s) => s.windowId === windowParam);
+    const title = session?.title || `Window ${windowParam}`;
+    // Switching between the two views of a window replaces rather than pushes, so Back
+    // leaves the window instead of walking every switch.
+    if (viewParam === 'transcript') {
+      return (
+        <SessionTranscript
+          projectId={projectId}
+          sessionId={session ? transcriptSessionId(session) : null}
+          lookingUp={sessions === null}
+          title={title}
+          onBack={() => router.back()}
+          onOpenTerminal={() =>
+            router.replace(windowUrl(windowParam, 'terminal'))
+          }
+        />
+      );
+    }
+    if (viewParam !== null) throw new Error(`Unexpected view: ${viewParam}`);
     return (
       <DesktopScreenView
         projectId={projectId}
         canonicalId={canonicalId}
         windowId={windowParam}
-        title={session?.title || `Window ${windowParam}`}
+        title={title}
         onBack={() => router.back()}
+        onOpenTranscript={
+          session && transcriptSessionId(session)
+            ? () => router.replace(windowUrl(windowParam, 'transcript'))
+            : undefined
+        }
       />
     );
   }
@@ -119,7 +149,7 @@ export function ClaudeView({
       workspaces={workspaces}
       error={error}
       onRetry={fetchSessions}
-      onOpenScreen={openScreen}
+      onOpenWindow={(windowId, view) => router.push(windowUrl(windowId, view))}
       onOpenSearch={() => router.push(`${sessionsUrl}&recall=1`)}
     />
   );

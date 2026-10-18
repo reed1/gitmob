@@ -19,12 +19,15 @@ export function DesktopScreenView({
   windowId,
   title,
   onBack,
+  onOpenTranscript,
 }: {
   projectId: string;
   canonicalId: string;
   windowId: string;
   title: string;
   onBack: () => void;
+  /** Absent for a window recall holds no transcript of. */
+  onOpenTranscript?: () => void;
 }) {
   const [content, setContent] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -152,6 +155,17 @@ export function DesktopScreenView({
                 onClick={() => setMenuOpen(false)}
               />
               <div className="absolute right-0 top-full mt-1 z-20 bg-background border border-foreground/20 rounded-lg shadow-lg py-1 min-w-[140px]">
+                {onOpenTranscript && (
+                  <>
+                    <button
+                      onClick={onOpenTranscript}
+                      className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 whitespace-nowrap"
+                    >
+                      Transcript
+                    </button>
+                    <div className="my-1 border-t border-foreground/10" />
+                  </>
+                )}
                 {[
                   { label: 'Wrap', checked: wrap, setChecked: setWrap },
                   { label: 'Pause', checked: paused, setChecked: setPaused },

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { addToast, apiFetch } from '../../../../../lib/api';
 import { relativeTime } from '../../../../../lib/relative-time';
 import type { RecallMessage } from './RecallSearch';
+import { TranscriptMessage } from './TranscriptMessage';
 
 interface RecallSession {
   sessionId: string;
@@ -14,35 +15,6 @@ interface RecallSession {
 
 /** Past this, a message is folded: one long answer otherwise buries the exchange around it. */
 const FOLD_AT = 900;
-
-function Message({ message }: { message: RecallMessage }) {
-  const [expanded, setExpanded] = useState(false);
-  const folded = !expanded && message.content.length > FOLD_AT;
-
-  return (
-    <div className="p-3 bg-foreground/5 border border-foreground/10 rounded-lg">
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="text-xs uppercase tracking-wide text-foreground/40">
-          {message.role}
-        </span>
-        <span className="text-xs text-foreground/30 tabular-nums">
-          {relativeTime(message.timestamp)}
-        </span>
-      </div>
-      <div className="mt-1.5 text-sm whitespace-pre-wrap break-words">
-        {folded ? `${message.content.slice(0, FOLD_AT)}…` : message.content}
-      </div>
-      {message.content.length > FOLD_AT && (
-        <button
-          onClick={() => setExpanded((open) => !open)}
-          className="mt-2 text-xs text-blue-500 active:opacity-80"
-        >
-          {expanded ? 'Show less' : 'Show more'}
-        </button>
-      )}
-    </div>
-  );
-}
 
 export function RecallTranscript({
   projectId,
@@ -156,7 +128,7 @@ export function RecallTranscript({
         )}
 
         {session?.messages.map((message, index) => (
-          <Message key={index} message={message} />
+          <TranscriptMessage key={index} message={message} foldAt={FOLD_AT} />
         ))}
       </div>
     </div>

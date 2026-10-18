@@ -143,8 +143,17 @@ other way, and nothing else would notice. Contracts in [cli-integrations.md](cli
 ## The Claude tab holds sessions of both kinds
 
 Three views behind one tab, chosen by query parameter: the windows open at the desktop, `?recall=1`
-searching the sessions that came before, and `?session=<id>` reading one of them back. Past sessions
-live there rather than on a page of their own because they answer the same question the list does —
+searching the sessions that came before, and `?session=<id>` reading one of them back.
+
+An open window has two views of its own, offered in each other's kebab menu and in its row's:
+`?window=<id>` is its **Terminal**, the screen as kitty draws it, and `&view=transcript` its
+**Transcript**, the conversation from the top, landed at its end. Switching between them is a
+`replace`, so back leaves the window rather than walking each switch. The transcript is `recall
+read` on the window's session, which indexes a live one on the way; it is keyed by window rather
+than session because `/clear` gives a window a new session. Codex windows have no Transcript,
+because this app asks recall for Claude transcripts alone.
+
+Past sessions live there rather than on a page of their own because they answer the same question the list does —
 what is going on with this project — and a search scoped to the project's path needs no project
 picker of its own. Each view is a `push`, so back walks them the way the screen view already does,
 and the list stops polling while a search box or a transcript is up: a five-second refresh under an
