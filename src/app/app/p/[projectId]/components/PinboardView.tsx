@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useAutoRefresh } from '../../../../../lib/use-auto-refresh';
+import { useAutoRefresh } from '@/lib/use-auto-refresh';
 import {
   PinboardDeleteConfirm,
   PinboardNoteCard,
@@ -9,8 +9,8 @@ import {
   mutatePinboard,
   toastNoteWritten,
   type PinboardNote,
-} from '../../../../../components/PinboardNote';
-import { NewSessionModal } from '../../../NewSessionModal';
+} from '@/components/PinboardNote';
+import { NewSessionModal } from '@/app/app/NewSessionModal';
 
 export function PinboardView({
   projectId,

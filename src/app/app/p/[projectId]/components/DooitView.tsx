@@ -1,12 +1,12 @@
 'use client';
 
-import { saveTextHistory } from '../../../../../lib/text-history';
+import { saveTextHistory } from '@/lib/text-history';
 
 import { useState, useCallback } from 'react';
-import { ModalOverlay } from '../../../../../components/ModalOverlay';
-import { apiFetch } from '../../../../../lib/api';
-import { useAutoRefresh } from '../../../../../lib/use-auto-refresh';
-import { SpeakButton, appendSpoken } from '../../../SpeakButton';
+import { ModalOverlay } from '@/components/ModalOverlay';
+import { apiFetch } from '@/lib/api';
+import { useAutoRefresh } from '@/lib/use-auto-refresh';
+import { SpeakButton, appendSpoken } from '@/app/app/SpeakButton';
 
 interface Todo {
   id: number;

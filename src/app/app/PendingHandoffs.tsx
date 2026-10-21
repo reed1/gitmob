@@ -1,19 +1,19 @@
 'use client';
 
-import { saveTextHistory } from '../../lib/text-history';
+import { saveTextHistory } from '@/lib/text-history';
 
 import { SessionModelSelect, useSessionModel } from './SessionModelSelect';
 
 import { useCallback, useState } from 'react';
 import Link from 'next/link';
-import { ModalOverlay } from '../../components/ModalOverlay';
-import { addToast, apiFetch } from '../../lib/api';
-import { copyText } from '../../lib/clipboard';
-import { relativeTime } from '../../lib/relative-time';
-import { useAutoRefresh } from '../../lib/use-auto-refresh';
+import { ModalOverlay } from '@/components/ModalOverlay';
+import { addToast, apiFetch } from '@/lib/api';
+import { copyText } from '@/lib/clipboard';
+import { relativeTime } from '@/lib/relative-time';
+import { useAutoRefresh } from '@/lib/use-auto-refresh';
 import { CollapsedRows } from './CollapsedRows';
 import { KebabMenu, KebabMenuItem } from './KebabMenu';
-import { useModelCatalog } from '../../lib/use-model-catalog';
+import { useModelCatalog } from '@/lib/use-model-catalog';
 
 interface PendingHandoff {
   id: string;

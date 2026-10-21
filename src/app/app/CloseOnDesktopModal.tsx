@@ -1,6 +1,6 @@
 'use client';
 
-import { addToast, apiFetch } from '../../lib/api';
+import { addToast, apiFetch } from '@/lib/api';
 import { Modal } from './Modal';
 
 /** Opens or closes a project on the desktop, toasting when it went through. */

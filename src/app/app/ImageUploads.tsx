@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { addToast } from '../../lib/api';
+import { addToast } from '@/lib/api';
 import { KebabMenuItem } from './KebabMenu';
 
 interface ImageUpload {

@@ -2,11 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { SendKeysModal, SendTextModal } from './DesktopSendModals';
-import { addToast, apiFetch } from '../../../../../lib/api';
-import {
-  COMMON_COMMANDS,
-  type CommonCommand,
-} from '../../../../../lib/desktop-keys';
+import { addToast, apiFetch } from '@/lib/api';
+import { COMMON_COMMANDS, type CommonCommand } from '@/lib/desktop-keys';
 
 /** A physical keycap: a raised grey box, its thick bottom border reading as the key's side. */
 const keycapClass =

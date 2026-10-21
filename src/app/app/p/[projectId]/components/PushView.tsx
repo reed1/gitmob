@@ -1,14 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { apiFetch } from '../../../../../lib/api';
-import { useAutoRefresh } from '../../../../../lib/use-auto-refresh';
+import { apiFetch } from '@/lib/api';
+import { useAutoRefresh } from '@/lib/use-auto-refresh';
 import {
   ClientJob,
   elapsedSince,
   formatSeconds,
   statusLabel,
-} from '../../../../../lib/job-status';
+} from '@/lib/job-status';
 import {
   buildPushArgv,
   PushConfig,
@@ -16,7 +16,7 @@ import {
   PushScope,
   PushSelection,
   SCOPE_PATTERN,
-} from '../../../../../lib/push-command';
+} from '@/lib/push-command';
 
 /** How long typing settles before the scope is sent to pt. */
 const CHECK_DEBOUNCE_MS = 350;

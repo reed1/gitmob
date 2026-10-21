@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useAutoRefresh } from '../../../../../lib/use-auto-refresh';
+import { useAutoRefresh } from '@/lib/use-auto-refresh';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { GitStatus } from '../types';
-import { ModalOverlay } from '../../../../../components/ModalOverlay';
-import { apiFetch } from '../../../../../lib/api';
+import { GitStatus } from '@/app/app/p/[projectId]/types';
+import { ModalOverlay } from '@/components/ModalOverlay';
+import { apiFetch } from '@/lib/api';
 import { DiffLines } from './DiffLines';
 
 export function ChangesView({

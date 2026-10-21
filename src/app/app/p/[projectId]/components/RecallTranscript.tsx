@@ -1,8 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { addToast, apiFetch } from '../../../../../lib/api';
-import { relativeTime } from '../../../../../lib/relative-time';
+import { addToast, apiFetch } from '@/lib/api';
+import { relativeTime } from '@/lib/relative-time';
 import type { RecallMessage } from './RecallSearch';
 import { TranscriptMessage } from './TranscriptMessage';
 

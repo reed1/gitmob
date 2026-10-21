@@ -1,12 +1,12 @@
 'use client';
 
-import { saveTextHistory } from '../lib/text-history';
+import { saveTextHistory } from '@/lib/text-history';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ModalOverlay } from './ModalOverlay';
-import { addToast, apiFetch } from '../lib/api';
-import { copyText } from '../lib/clipboard';
-import { SpeakButton, appendSpoken } from '../app/app/SpeakButton';
+import { addToast, apiFetch } from '@/lib/api';
+import { copyText } from '@/lib/clipboard';
+import { SpeakButton, appendSpoken } from '@/app/app/SpeakButton';
 
 /** One note as both PWAs read it back: `rv` sends null, not an absent key, for a missing stamp. */
 export interface PinboardNote {

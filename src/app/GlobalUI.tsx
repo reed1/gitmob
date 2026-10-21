@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useSyncExternalStore } from 'react';
-import { subscribe, getSnapshot, dismissToast } from '../lib/api';
-import type { ToastVariant } from '../lib/api';
+import { subscribe, getSnapshot, dismissToast } from '@/lib/api';
+import type { ToastVariant } from '@/lib/api';
 
 const TOAST_STYLES: Record<
   ToastVariant,

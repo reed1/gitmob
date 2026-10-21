@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { addToast } from '../../lib/api';
-import { copyText } from '../../lib/clipboard';
-import { readTextHistory, type TextHistoryEntry } from '../../lib/text-history';
+import { addToast } from '@/lib/api';
+import { copyText } from '@/lib/clipboard';
+import { readTextHistory, type TextHistoryEntry } from '@/lib/text-history';
 import { Modal } from './Modal';
 
 export function TextHistoryModal({ onClose }: { onClose: () => void }) {

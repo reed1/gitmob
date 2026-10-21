@@ -9,12 +9,12 @@ import { PendingCommits } from './PendingCommits';
 import { UncommittedProjects } from './UncommittedProjects';
 import UsagePanel from './UsagePanel';
 import { ClaudeUsage, Project, StaleBuild } from './types';
-import { addToast, apiFetch } from '../../lib/api';
-import { useOutsideClick } from '../../lib/use-outside-click';
-import { useAutoRefresh } from '../../lib/use-auto-refresh';
-import { useBackToDismiss } from '../../lib/use-back-to-dismiss';
-import { needsNotificationSetup } from '../../lib/notifications-client';
-import { useModelCatalog } from '../../lib/use-model-catalog';
+import { addToast, apiFetch } from '@/lib/api';
+import { useOutsideClick } from '@/lib/use-outside-click';
+import { useAutoRefresh } from '@/lib/use-auto-refresh';
+import { useBackToDismiss } from '@/lib/use-back-to-dismiss';
+import { needsNotificationSetup } from '@/lib/notifications-client';
+import { useModelCatalog } from '@/lib/use-model-catalog';
 
 const RESUME_REFRESH_THRESHOLD_MS = 10000;
 

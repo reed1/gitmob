@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { apiFetch } from '../../../../../lib/api';
+import { apiFetch } from '@/lib/api';
 import { RunLogView } from './RunLogView';
-import { useAutoRefresh } from '../../../../../lib/use-auto-refresh';
+import { useAutoRefresh } from '@/lib/use-auto-refresh';
 
 interface RunInfo {
   name: string;

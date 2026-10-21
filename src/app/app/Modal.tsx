@@ -1,7 +1,7 @@
 'use client';
 
 import { type ReactNode } from 'react';
-import { ModalOverlay } from '../../components/ModalOverlay';
+import { ModalOverlay } from '@/components/ModalOverlay';
 
 /**
  * The one dialog shell in the app. Portalled content still bubbles clicks up the React tree

@@ -2,14 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ModalOverlay } from '../../../components/ModalOverlay';
-import { apiFetch, addToast } from '../../../lib/api';
-import { copyText } from '../../../lib/clipboard';
-import { useOutsideClick } from '../../../lib/use-outside-click';
-import { goHome } from '../../../lib/app-depth';
-import { imageTypeFor } from '../../../lib/image-types';
-import { useBackToDismiss } from '../../../lib/use-back-to-dismiss';
-import { ImagePreview } from '../../../components/ImagePreview';
+import { ModalOverlay } from '@/components/ModalOverlay';
+import { apiFetch, addToast } from '@/lib/api';
+import { copyText } from '@/lib/clipboard';
+import { useOutsideClick } from '@/lib/use-outside-click';
+import { goHome } from '@/lib/app-depth';
+import { imageTypeFor } from '@/lib/image-types';
+import { useBackToDismiss } from '@/lib/use-back-to-dismiss';
+import { ImagePreview } from '@/components/ImagePreview';
 
 interface SharedFile {
   name: string;

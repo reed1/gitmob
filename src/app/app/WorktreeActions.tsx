@@ -1,8 +1,8 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { addToast, apiFetch } from '../../lib/api';
-import { useAutoRefresh } from '../../lib/use-auto-refresh';
+import { addToast, apiFetch } from '@/lib/api';
+import { useAutoRefresh } from '@/lib/use-auto-refresh';
 import { Modal } from './Modal';
 
 export interface Worktree {

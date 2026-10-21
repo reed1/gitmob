@@ -2,11 +2,11 @@
 
 import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { KebabMenu, KebabMenuItem } from '../../../KebabMenu';
-import { useAutoRefresh } from '../../../../../lib/use-auto-refresh';
-import { relativeTime } from '../../../../../lib/relative-time';
-import { addToast } from '../../../../../lib/api';
-import { copyText } from '../../../../../lib/clipboard';
+import { KebabMenu, KebabMenuItem } from '@/app/app/KebabMenu';
+import { useAutoRefresh } from '@/lib/use-auto-refresh';
+import { relativeTime } from '@/lib/relative-time';
+import { addToast } from '@/lib/api';
+import { copyText } from '@/lib/clipboard';
 
 interface CommitFileStat {
   path: string;

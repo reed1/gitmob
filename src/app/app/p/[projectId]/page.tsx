@@ -19,9 +19,9 @@ import { PushView } from './components/PushView';
 import { SudoView } from './components/SudoView';
 import { WtmanView } from './components/WtmanView';
 import { WrapToggle } from './components/WrapToggle';
-import ProjectKebabMenu from '../../ProjectKebabMenu';
-import { useAutoRefresh } from '../../../../lib/use-auto-refresh';
-import { goHome } from '../../../../lib/app-depth';
+import ProjectKebabMenu from '@/app/app/ProjectKebabMenu';
+import { useAutoRefresh } from '@/lib/use-auto-refresh';
+import { goHome } from '@/lib/app-depth';
 
 const tabs = [
   { id: 'pinboard', label: 'Pinboard' },

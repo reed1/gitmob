@@ -2,18 +2,13 @@
 
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useState } from 'react';
-import { apiFetch } from '../../../../../lib/api';
-import { useAutoRefresh } from '../../../../../lib/use-auto-refresh';
-import type {
-  Review,
-  ReviewFile,
-  ReviewScope,
-  SkipReason,
-} from '../../../../../lib/review';
-import { Modal } from '../../../Modal';
-import { DiffLines } from '../components/DiffLines';
-import { HighlightedCode } from '../components/HighlightedCode';
-import { WrapToggle } from '../components/WrapToggle';
+import { apiFetch } from '@/lib/api';
+import { useAutoRefresh } from '@/lib/use-auto-refresh';
+import type { Review, ReviewFile, ReviewScope, SkipReason } from '@/lib/review';
+import { Modal } from '@/app/app/Modal';
+import { DiffLines } from '@/app/app/p/[projectId]/components/DiffLines';
+import { HighlightedCode } from '@/app/app/p/[projectId]/components/HighlightedCode';
+import { WrapToggle } from '@/app/app/p/[projectId]/components/WrapToggle';
 
 const KIND_TAGS: Record<Exclude<ReviewFile['kind'], 'skipped'>, string> = {
   added: 'text-green-400 bg-green-400/10',

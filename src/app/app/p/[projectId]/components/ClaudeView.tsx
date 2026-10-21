@@ -7,7 +7,7 @@ import { DesktopSessions } from './DesktopSessions';
 import { RecallSearch } from './RecallSearch';
 import { RecallTranscript } from './RecallTranscript';
 import { SessionTranscript } from './SessionTranscript';
-import { useAutoRefresh } from '../../../../../lib/use-auto-refresh';
+import { useAutoRefresh } from '@/lib/use-auto-refresh';
 
 /** What Claude Code itself reports the session's context window to be holding. */
 export interface SessionContext {

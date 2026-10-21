@@ -1,12 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { addToast, apiFetch } from '../../../../../lib/api';
-import {
-  COMMON_COMMANDS,
-  type CommonCommand,
-} from '../../../../../lib/desktop-keys';
-import { NewSessionModal } from '../../../NewSessionModal';
+import { addToast, apiFetch } from '@/lib/api';
+import { COMMON_COMMANDS, type CommonCommand } from '@/lib/desktop-keys';
+import { NewSessionModal } from '@/app/app/NewSessionModal';
 import { transcriptSessionId, type DesktopSession } from './ClaudeView';
 
 function formatTokens(tokens: number): string {

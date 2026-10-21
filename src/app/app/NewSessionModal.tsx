@@ -1,14 +1,14 @@
 'use client';
 
-import { saveTextHistory } from '../../lib/text-history';
+import { saveTextHistory } from '@/lib/text-history';
 
 import { SessionModelSelect, useSessionModel } from './SessionModelSelect';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiFetch } from '../../lib/api';
-import { launchDesktopSession } from '../../lib/desktop-client';
-import { useModelCatalog } from '../../lib/use-model-catalog';
+import { apiFetch } from '@/lib/api';
+import { launchDesktopSession } from '@/lib/desktop-client';
+import { useModelCatalog } from '@/lib/use-model-catalog';
 import { Modal } from './Modal';
 import { KebabMenu, KebabMenuItem } from './KebabMenu';
 import { SpeakButton, appendSpoken } from './SpeakButton';

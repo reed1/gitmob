@@ -1,12 +1,12 @@
 'use client';
 
-import { saveTextHistory } from '../../lib/text-history';
+import { saveTextHistory } from '@/lib/text-history';
 
 import { useCallback, useState } from 'react';
-import { ModalOverlay } from '../../components/ModalOverlay';
-import { addToast, apiFetch } from '../../lib/api';
-import { relativeTime } from '../../lib/relative-time';
-import { useAutoRefresh } from '../../lib/use-auto-refresh';
+import { ModalOverlay } from '@/components/ModalOverlay';
+import { addToast, apiFetch } from '@/lib/api';
+import { relativeTime } from '@/lib/relative-time';
+import { useAutoRefresh } from '@/lib/use-auto-refresh';
 import { CollapsedRows } from './CollapsedRows';
 
 interface StagedFile {

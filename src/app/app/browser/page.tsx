@@ -2,15 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ModalOverlay } from '../../../components/ModalOverlay';
-import { addToast, apiFetch } from '../../../lib/api';
-import { goHome } from '../../../lib/app-depth';
-import { useBackToDismiss } from '../../../lib/use-back-to-dismiss';
+import { ModalOverlay } from '@/components/ModalOverlay';
+import { addToast, apiFetch } from '@/lib/api';
+import { goHome } from '@/lib/app-depth';
+import { useBackToDismiss } from '@/lib/use-back-to-dismiss';
 import {
   ARROW_KEY_ROWS,
   COMMAND_KEYS,
   type BrowserKey,
-} from '../../../lib/browser-keys';
+} from '@/lib/browser-keys';
 
 /**
  * The agent's Chrome, driven from wherever the phone is.

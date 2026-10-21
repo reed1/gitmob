@@ -2,23 +2,23 @@
 
 import { useRouter } from 'next/navigation';
 import { useCallback, useState } from 'react';
-import { addToast, apiFetch } from '../../../../../lib/api';
-import { goHome } from '../../../../../lib/app-depth';
-import { relativeTime } from '../../../../../lib/relative-time';
-import { useAutoRefresh } from '../../../../../lib/use-auto-refresh';
+import { addToast, apiFetch } from '@/lib/api';
+import { goHome } from '@/lib/app-depth';
+import { relativeTime } from '@/lib/relative-time';
+import { useAutoRefresh } from '@/lib/use-auto-refresh';
 import {
   actOnDesktop,
   CloseOnDesktopModal,
-} from '../../../CloseOnDesktopModal';
-import { KebabMenu, KebabMenuItem } from '../../../KebabMenu';
-import { Modal } from '../../../Modal';
+} from '@/app/app/CloseOnDesktopModal';
+import { KebabMenu, KebabMenuItem } from '@/app/app/KebabMenu';
+import { Modal } from '@/app/app/Modal';
 import {
   MergeBadge,
   Worktree,
   WorktreeActionsModal,
   WorktreeConflicts,
   isMerged,
-} from '../../../WorktreeActions';
+} from '@/app/app/WorktreeActions';
 
 interface BranchRow {
   kind: 'local' | 'remote';

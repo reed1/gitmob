@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { relativeTime } from '../../../../../lib/relative-time';
+import { relativeTime } from '@/lib/relative-time';
 import type { RecallMessage } from './RecallSearch';
 import { TranscriptMarkdown } from './TranscriptMarkdown';
 

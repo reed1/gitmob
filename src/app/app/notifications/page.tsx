@@ -2,15 +2,15 @@
 
 import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { addToast, apiFetch } from '../../../lib/api';
-import { useAutoRefresh } from '../../../lib/use-auto-refresh';
-import { goHome } from '../../../lib/app-depth';
+import { addToast, apiFetch } from '@/lib/api';
+import { useAutoRefresh } from '@/lib/use-auto-refresh';
+import { goHome } from '@/lib/app-depth';
 import {
   currentEndpoint,
   pushSupported,
   subscribeThisDevice,
   unsubscribeThisDevice,
-} from '../../../lib/notifications-client';
+} from '@/lib/notifications-client';
 
 interface DeviceRow {
   endpoint: string;

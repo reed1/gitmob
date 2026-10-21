@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { apiFetch } from '../../../../../lib/api';
-import { imageTypeFor } from '../../../../../lib/image-types';
-import { ImagePreview } from '../../../../../components/ImagePreview';
+import { apiFetch } from '@/lib/api';
+import { imageTypeFor } from '@/lib/image-types';
+import { ImagePreview } from '@/components/ImagePreview';
 import { HighlightedCode } from './HighlightedCode';
 
 interface FileContent {

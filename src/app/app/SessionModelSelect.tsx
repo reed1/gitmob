@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { ModelCatalog } from '../../lib/desktop-models';
+import type { ModelCatalog } from '@/lib/desktop-models';
 
 export interface SessionModel {
   provider: string;

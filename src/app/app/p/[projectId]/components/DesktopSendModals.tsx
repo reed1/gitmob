@@ -1,23 +1,23 @@
 'use client';
 
-import { saveTextHistory } from '../../../../../lib/text-history';
+import { saveTextHistory } from '@/lib/text-history';
 
 import { useState } from 'react';
-import { addToast, apiFetch } from '../../../../../lib/api';
+import { addToast, apiFetch } from '@/lib/api';
 import {
   NAVIGATION_KEY_ROWS,
   COMMAND_KEYS,
   type SpecialKey,
-} from '../../../../../lib/desktop-keys';
-import { Modal } from '../../../Modal';
-import { SpeakButton, appendSpoken } from '../../../SpeakButton';
-import { KebabMenu } from '../../../KebabMenu';
+} from '@/lib/desktop-keys';
+import { Modal } from '@/app/app/Modal';
+import { SpeakButton, appendSpoken } from '@/app/app/SpeakButton';
+import { KebabMenu } from '@/app/app/KebabMenu';
 import {
   ImageUploadMenuItem,
   ImageUploads,
   useImageUploads,
   withImagePaths,
-} from '../../../ImageUploads';
+} from '@/app/app/ImageUploads';
 
 export function SendTextModal({
   projectId,

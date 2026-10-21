@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { ModalOverlay } from '../../../../../components/ModalOverlay';
-import { apiFetch } from '../../../../../lib/api';
+import { ModalOverlay } from '@/components/ModalOverlay';
+import { apiFetch } from '@/lib/api';
 import { RecentCommits } from './RecentCommits';
 
 function ArrowIcon({ direction }: { direction: 'up' | 'down' }) {

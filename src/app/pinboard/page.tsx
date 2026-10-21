@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { addToast } from '../../lib/api';
-import { useAutoRefresh } from '../../lib/use-auto-refresh';
-import { useCachedState } from '../../lib/use-cached-state';
+import { addToast } from '@/lib/api';
+import { useAutoRefresh } from '@/lib/use-auto-refresh';
+import { useCachedState } from '@/lib/use-cached-state';
 import {
   PinboardDeleteConfirm,
   PinboardNoteCard,
@@ -13,8 +13,8 @@ import {
   copyNote,
   toastNoteWritten,
   type PinboardNote,
-} from '../../components/PinboardNote';
-import { NewSessionModal } from '../app/NewSessionModal';
+} from '@/components/PinboardNote';
+import { NewSessionModal } from '@/app/app/NewSessionModal';
 
 interface RecentNote extends PinboardNote {
   projectId: string;

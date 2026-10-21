@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { addToast, apiFetch } from '../../lib/api';
+import { addToast, apiFetch } from '@/lib/api';
 import { CollapsedRows } from './CollapsedRows';
 import { Project } from './types';
 

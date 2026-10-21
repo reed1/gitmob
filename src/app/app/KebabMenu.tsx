@@ -8,7 +8,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import { useOutsideClick } from '../../lib/use-outside-click';
+import { useOutsideClick } from '@/lib/use-outside-click';
 
 const CloseKebabMenu = createContext<() => void>(() => {
   throw new Error('KebabMenuItem rendered outside a KebabMenu');

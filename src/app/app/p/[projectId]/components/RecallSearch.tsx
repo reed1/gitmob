@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { relativeTime } from '../../../../../lib/relative-time';
+import { relativeTime } from '@/lib/relative-time';
 import { highlight, snippetAround } from './recall-text';
 
 export interface RecallMessage {
