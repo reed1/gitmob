@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { KebabMenu, KebabMenuItem } from '../../../KebabMenu';
 import { useAutoRefresh } from '../../../../../lib/use-auto-refresh';
 import { relativeTime } from '../../../../../lib/relative-time';
+import { addToast } from '../../../../../lib/api';
+import { copyText } from '../../../../../lib/clipboard';
 
 interface CommitFileStat {
   path: string;
@@ -19,6 +21,11 @@ interface CommitEntry {
   title: string;
   body: string;
   files: CommitFileStat[];
+}
+
+async function copySha(hash: string) {
+  if (await copyText(hash)) addToast('Copied the SHA', 'success');
+  else addToast('Could not copy to the clipboard');
 }
 
 function CommitCard({
@@ -57,6 +64,9 @@ function CommitCard({
             }
           >
             Review
+          </KebabMenuItem>
+          <KebabMenuItem onSelect={() => copySha(commit.hash)}>
+            Copy SHA
           </KebabMenuItem>
         </KebabMenu>
       </div>
