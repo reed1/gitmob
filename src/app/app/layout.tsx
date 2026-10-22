@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import AppDepthTracker from './AppDepthTracker';
+import { Scratchpad } from './Scratchpad';
 
 export const metadata: Metadata = {
   manifest: '/manifest.json',
@@ -14,6 +15,7 @@ export default function GitMobLayout({
     <>
       <AppDepthTracker />
       {children}
+      <Scratchpad />
     </>
   );
 }

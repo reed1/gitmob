@@ -7,6 +7,7 @@ import { actOnDesktop, CloseOnDesktopModal } from './CloseOnDesktopModal';
 import { KebabMenu, KebabMenuItem } from './KebabMenu';
 import { Modal } from './Modal';
 import { NewSessionModal } from './NewSessionModal';
+import { useScratchpadEnabled } from './Scratchpad';
 import { ProjectWorktreeModal } from './WorktreeActions';
 
 const DOOIT_DOMAIN = process.env.NEXT_PUBLIC_DOOIT_DOMAIN;
@@ -42,6 +43,7 @@ export default function ProjectKebabMenu({
   const [cloneOpen, setCloneOpen] = useState(false);
   const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
   const [wtmanOpen, setWtmanOpen] = useState(false);
+  const [scratchpadEnabled, toggleScratchpad] = useScratchpadEnabled();
 
   const urls = project.urls ?? {};
   const urlEntries = Object.entries(urls);
@@ -50,6 +52,14 @@ export default function ProjectKebabMenu({
   return (
     <>
       <KebabMenu label={`Actions for ${project.id}`}>
+        <KebabMenuItem onSelect={toggleScratchpad}>
+          <span className="flex justify-between gap-4">
+            Scratchpad
+            <span className="text-foreground/50">
+              {scratchpadEnabled ? 'On' : 'Off'}
+            </span>
+          </span>
+        </KebabMenuItem>
         {/* Only ever the way in to a project that has no checkout: everything else on this
             menu, and every tab behind the card, needs one. */}
         {project.missing && project.repo && (

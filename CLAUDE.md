@@ -14,7 +14,7 @@ Web Push.
 
 - [docs/architecture.md](docs/architecture.md) — code layout, where projects come from, detached
   jobs, the guard against resent requests, parked handoffs, parked commits with no project, the
-  session modal, the agent's browser, dictation
+  session modal, the agent's browser, dictation, the scratchpad
 - [docs/pwas.md](docs/pwas.md) — the two hostnames and `src/proxy.ts`, routing rules, icons and
   manifests
 - [docs/notifications.md](docs/notifications.md) — Web Push, subscriptions, the service worker

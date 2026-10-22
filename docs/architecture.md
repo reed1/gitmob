@@ -220,3 +220,12 @@ id as `autocorrect`, which is what makes the server layer that project's phrase 
 global one; a worktree id would match no table. `MediaRecorder` only offers Opus in WebM (Chrome) or
 Ogg (Firefox), and needs a secure origin — the button is dead on the plain HTTP fronts. Contract in
 [cli-integrations.md](cli-integrations.md).
+
+## Scratchpad
+
+Quick notes kept on the device, nowhere else. **Scratchpad** leads every project's kebab menu and
+turns on a button that floats over every GitMob page, dragged wherever it is out of the way; it
+opens one modal of text, typed into localStorage half a second after the typing stops and at once
+when the modal closes. Since nothing typed there can be lost, it is the one modal with text in it
+that a tap outside closes. Whether it is on, where the button sits and the text all outlive a
+reload; turning it off sends the button back to its corner and keeps the text.
