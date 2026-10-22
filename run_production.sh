@@ -15,6 +15,7 @@ BUILD_DIR="$GITMOB_DIST_DIR"
 if [ "$CURRENT_SHA" != "$CACHED_SHA" ] || [ ! -f "$BUILD_DIR/BUILD_ID" ]; then
     echo "Building (sha: $CURRENT_SHA)..."
     rm -rf "$BUILD_DIR"
+    pnpm install --frozen-lockfile
     npm run build
     if [ ! -f "$BUILD_DIR/BUILD_ID" ]; then
         rm -f "$CACHE_FILE"
