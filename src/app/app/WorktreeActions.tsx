@@ -175,11 +175,20 @@ export function MergeBadge({
     });
   }
 
-  if (worktree.state === 'merged') {
+  if (worktree.dirty === true) {
     badges.push({
-      text: 'merged',
+      text: 'dirty',
+      className: 'bg-red-500/15 text-red-500',
+    });
+  } else if (worktree.dirty === false) {
+    badges.push({
+      text: 'clean',
       className: 'bg-green-500/15 text-green-500',
     });
+  }
+
+  if (worktree.state === 'merged') {
+    // Already implied by being 0 ahead.
   } else if (worktree.state === 'no commits') {
     badges.push({
       text: 'no commits',
@@ -198,13 +207,6 @@ export function MergeBadge({
     badges.push({
       text: `${worktree.behind} behind ${worktree.into}`,
       className: 'bg-foreground/10 text-foreground/50',
-    });
-  }
-
-  if (worktree.dirty) {
-    badges.push({
-      text: 'uncommitted',
-      className: 'bg-red-500/15 text-red-500',
     });
   }
 
