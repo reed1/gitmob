@@ -6,6 +6,7 @@ import { copyText } from '@/lib/clipboard';
 import { useCachedState } from '@/lib/use-cached-state';
 import { KebabMenu, KebabMenuItem } from './KebabMenu';
 import { Modal } from './Modal';
+import { SpeakButton, appendSpoken } from './SpeakButton';
 
 const ENABLED_KEY = 'gitmob:scratchpad:enabled';
 const POSITION_KEY = 'gitmob:scratchpad:position';
@@ -159,34 +160,29 @@ function ScratchpadModal({ onClose }: { onClose: () => void }) {
     () => window.localStorage.getItem(TEXT_KEY) ?? ''
   );
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const pendingSave = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const textarea = textareaRef.current!;
     textarea.focus();
     textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    textarea.scrollTop = textarea.scrollHeight;
   }, []);
 
-  const save = (next: string) => {
-    if (pendingSave.current) clearTimeout(pendingSave.current);
-    pendingSave.current = null;
-    window.localStorage.setItem(TEXT_KEY, next);
-  };
-
-  const change = (next: string) => {
-    setText(next);
-    if (pendingSave.current) clearTimeout(pendingSave.current);
-    pendingSave.current = setTimeout(() => save(next), SAVE_DELAY_MS);
-  };
+  useEffect(() => {
+    const timer = setTimeout(
+      () => window.localStorage.setItem(TEXT_KEY, text),
+      SAVE_DELAY_MS
+    );
+    return () => clearTimeout(timer);
+  }, [text]);
 
   const close = () => {
-    save(text);
+    window.localStorage.setItem(TEXT_KEY, text);
     onClose();
   };
 
   const clear = () => {
     setText('');
-    save('');
     textareaRef.current!.focus();
   };
 
@@ -212,7 +208,7 @@ function ScratchpadModal({ onClose }: { onClose: () => void }) {
         <textarea
           ref={textareaRef}
           value={text}
-          onChange={(e) => change(e.target.value)}
+          onChange={(e) => setText(e.target.value)}
           placeholder="Quick notes..."
           rows={12}
           autoCapitalize="off"
@@ -220,20 +216,27 @@ function ScratchpadModal({ onClose }: { onClose: () => void }) {
           className="w-full px-3 py-2 text-sm bg-foreground/5 border border-foreground/10 rounded resize-none"
         />
       </div>
-      <div className="px-4 py-3 border-t border-foreground/10 flex justify-end gap-2">
-        <button
-          onClick={copy}
-          disabled={!text}
-          className="px-3 py-1.5 text-sm rounded-lg bg-foreground/10 hover:bg-foreground/20 disabled:opacity-30"
-        >
-          Copy
-        </button>
-        <button
-          onClick={close}
-          className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
-        >
-          Close
-        </button>
+      <div className="px-4 py-3 border-t border-foreground/10 flex items-center justify-between gap-2">
+        {/* The scratchpad belongs to no project, so dictation takes only the shared phrase table. */}
+        <SpeakButton
+          projectId="global"
+          onText={(spoken) => setText((prev) => appendSpoken(prev, spoken))}
+        />
+        <div className="flex gap-2">
+          <button
+            onClick={copy}
+            disabled={!text}
+            className="px-3 py-1.5 text-sm rounded-lg bg-foreground/10 hover:bg-foreground/20 disabled:opacity-30"
+          >
+            Copy
+          </button>
+          <button
+            onClick={close}
+            className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
+          >
+            Close
+          </button>
+        </div>
       </div>
     </Modal>
   );

@@ -228,4 +228,6 @@ turns on a button that floats over every GitMob page, dragged wherever it is out
 opens one modal of text, typed into localStorage half a second after the typing stops and at once
 when the modal closes. Since nothing typed there can be lost, it is the one modal with text in it
 that a tap outside closes. Whether it is on, where the button sits and the text all outlive a
-reload; turning it off sends the button back to its corner and keeps the text.
+reload; turning it off sends the button back to its corner and keeps the text. The modal opens
+scrolled to the end with the cursor after the last character, and its Speak button dictates against
+the `global` phrase table, the scratchpad belonging to no project.
