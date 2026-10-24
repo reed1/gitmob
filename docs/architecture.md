@@ -218,7 +218,9 @@ The Speak button in the Claude tab's modals dictates into the textarea, POSTing 
 every portman route, so the audio takes one hop instead of two. It sends the project's **canonical**
 id as `autocorrect`, which is what makes the server layer that project's phrase table over the
 global one; a worktree id would match no table. `MediaRecorder` only offers Opus in WebM (Chrome) or
-Ogg (Firefox), and needs a secure origin — the button is dead on the plain HTTP fronts. Contract in
+Ogg (Firefox), and needs a secure origin — the button is dead on the plain HTTP fronts. While it
+records, every other button in its dialog is disabled and dimmed, the ⋮ menu included, so a stray
+tap cannot send or close it mid-sentence; they come back on Stop. Contract in
 [cli-integrations.md](cli-integrations.md).
 
 ## Scratchpad

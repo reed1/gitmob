@@ -27,6 +27,7 @@ export function SpeakButton({
 }) {
   const [phase, setPhase] = useState<Phase>('idle');
   const recorderRef = useRef<MediaRecorder | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   // A phone that dims and locks mid-sentence suspends the recorder, and the tail of what was
   // said never reaches the encoder. Hold the screen awake for as long as we are recording.
@@ -57,6 +58,27 @@ export function SpeakButton({
   }, [phase]);
 
   useEffect(() => letScreenSleep, []);
+
+  // Nothing else in the dialog can be pressed until the recording stops, so a stray tap cannot
+  // send or close it mid-sentence. Buttons already disabled are left to their own modal.
+  useEffect(() => {
+    if (phase !== 'recording') return;
+    const dialog = buttonRef.current?.closest('[role="dialog"]');
+    if (!dialog) return;
+    const held = Array.from(
+      dialog.querySelectorAll<HTMLButtonElement>('button')
+    ).filter((button) => button !== buttonRef.current && !button.disabled);
+    for (const button of held) {
+      button.disabled = true;
+      button.dataset.dictationHeld = '';
+    }
+    return () => {
+      for (const button of held) {
+        button.disabled = false;
+        delete button.dataset.dictationHeld;
+      }
+    };
+  }, [phase]);
 
   const transcribe = async (audio: Blob) => {
     const form = new FormData();
@@ -132,6 +154,7 @@ export function SpeakButton({
   if (phase === 'recording') {
     return (
       <button
+        ref={buttonRef}
         onClick={() => recorderRef.current?.stop()}
         className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-red-500/15 text-red-500 border border-red-500/25 active:opacity-80"
       >
