@@ -12,6 +12,6 @@ why `sw.js` re-registers on `pushsubscriptionchange`. Delivery counts come back 
 `sendNotification`: a send that reached nobody must not report success.
 
 A push subscription dies with its origin's notification permission, which on Android is delegated to
-the installed app's own app-level permission — the reason the two PWAs are on two hostnames, see
+the installed app's own app-level permission — the reason the PWAs are on hostnames of their own, see
 [pwas.md](pwas.md). Eviction of the origin's storage takes it too, so enabling asks for persistent
 storage on the way through.

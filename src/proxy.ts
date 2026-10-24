@@ -3,13 +3,13 @@ import { appForHost, appForPath, homePath, hostForApp } from '@/lib/hosts';
 import { resentRequest } from '@/lib/duplicate-guard';
 
 /**
- * Keeps each app on its own hostname. One server answers both, so without this every page is
- * reachable on either origin — and a Pinboard installed from GitMob's hostname is the whole bug
+ * Keeps each app on its own hostname. One server answers them all, so without this every page is
+ * reachable on every origin — and a Pinboard installed from GitMob's hostname is the whole bug
  * back again, since the install, not the visit, is what claims the origin's notification
  * permission.
  *
  * `/api` is matched only to guard against a request the browser resent — see
- * `src/lib/duplicate-guard.ts`. It is never routed by host: both apps call it on their own origin.
+ * `src/lib/duplicate-guard.ts`. It is never routed by host: every app calls it on its own origin.
  */
 export const config = {
   matcher: [
@@ -18,6 +18,8 @@ export const config = {
     '/app/:path*',
     '/pinboard',
     '/pinboard/:path*',
+    '/checklist',
+    '/checklist/:path*',
     '/api/:path*',
   ],
 };

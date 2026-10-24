@@ -5,12 +5,13 @@
 - `src/lib` — core logic (`git.ts`, `run.ts`, `projects.ts`, `files.ts`, `cli-jobs.ts`,
   `notifications.ts`, `recall.ts`, `browser.ts`, `pending-commits.ts`, `review.ts`)
 - `src/app/api` — API routes (projects, cli jobs, pinboard, dooit todos, the agent's browser)
-- `src/app/app` — the GitMob PWA; `src/app/pinboard` — the pinboard PWA
+- `src/app/app` — the GitMob PWA; `src/app/pinboard` — the pinboard PWA; `src/app/checklist` — the
+  checklist PWA, whose lists are the files in `checklists/`
 - `src/components` — UI shared across pages (`PinboardNote.tsx`, the note card and its modals;
   `ImagePreview.tsx`, the image viewer of both file browsers)
 - `src/app/app/p/[projectId]/components` — project views (FileBrowser, ChangesView, CommitView,
   RunView, CLIView, DooitView, ClaudeView, PushView, SudoView, WtmanView)
-- `src/proxy.ts` — host-based routing between the two PWAs, see [pwas.md](pwas.md)
+- `src/proxy.ts` — host-based routing between the PWAs, see [pwas.md](pwas.md)
 
 ## Review
 

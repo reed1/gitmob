@@ -1,22 +1,25 @@
-# The two PWAs, routing and icons
+# The PWAs, routing and icons
 
-## Two hostnames, one server
+## Three hostnames, one server
 
-Two installable PWAs off one server, on **two hostnames**: `gitmob.<front>` serves `/app`,
-`pinboard.<front>` serves `/pinboard`, the read-and-remove overview of every project's notes. Both
-are one portman registration each pointing at the same port (`static.yaml`), so every front
-follow.
+Three installable PWAs off one server, on **three hostnames**: `gitmob.<front>` serves `/app`,
+`pinboard.<front>` serves `/pinboard`, the read-and-remove overview of every project's notes, and
+`checklist.<front>` serves `/checklist`. Each is one portman registration pointing at the same port
+(`static.yaml`), so every front follows.
 
-They must not share an origin: Android gives every installed PWA its own app-level notification
+No two may share an origin: Android gives every installed PWA its own app-level notification
 permission while Chrome keeps one permission per origin, so opening the app that was never granted
 it revoked the other's — and the revocation takes the origin's push subscription with it. That was
 the whole bug behind "GitMob says it is not subscribed".
 
-`src/proxy.ts` keeps them apart — each host serves only its own app and redirects the other's paths
+`src/proxy.ts` keeps them apart — each host serves only its own app and redirects the others' paths
 to the sibling host, `/` lands on whichever app the host is for, and a host the name does not
-identify (`dev.gitmob.loc`, localhost) serves both untouched, since nothing is installed from those.
-`/api` is never redirected: both apps call it on their own origin, and the two see the same server
-state.
+identify (`dev.gitmob.loc`, localhost) serves them all untouched, since nothing is installed from
+those. `/api` is never redirected: every app calls it on its own origin, and all of them see the
+same server state.
+
+A third app means a third hostname — the Checklist sends no notifications, but sharing GitMob's
+origin would still have its install overwrite GitMob's permission.
 
 Adding notes stays on a project's Pinboard tab; the overview reads all boards through
 `/api/pinboard`, and edits and deletes notes.
@@ -49,6 +52,18 @@ delete passes it to the next note.
 every word must appear in a note's text or project id — and highlights the first match, so `/` then
 Enter shows every note again. Escape leaves the box without applying it.
 
+## The Checklist
+
+Lists of what to bring, as plain text. Each list is one file in this repository,
+`checklists/<name>.json`, holding `{ "items": [...] }` and nothing else: the filename is the list's
+name, so a name is lowercase letters joined by single dashes, and renaming a list renames its file.
+Lists are shown in filename order.
+
+Edit changes nothing until Save. Save sends every list to `/api/checklist`, which writes them, deletes
+the file of each list that is gone — removed or renamed — and commits `checklists/` alone, leaving
+anything else staged where it is; a save that changes nothing commits nothing. The page then reads
+the lists back. Cancel drops the edits.
+
 ## Routing rules
 
 - Keep every GitMob page under `/app`: a page left at the root would fall outside the manifest scope
@@ -60,12 +75,14 @@ Enter shows every note again. Escape leaves the box without applying it.
 
 ## Icons and manifests
 
-All PNGs/ICO in `public/` are generated from `assets/icon.svg` (GitMob) and
-`assets/pinboard-icon.svg` (the pinboard PWA) via `assets/gen-icons.sh`; edit the SVGs and
+All PNGs/ICO in `public/` are generated from `assets/icon.svg` (GitMob),
+`assets/pinboard-icon.svg` (the pinboard PWA) and `assets/checklist-icon.svg` (the checklist PWA)
+via `assets/gen-icons.sh`; edit the SVGs and
 regenerate rather than editing them by hand. Do NOT put an SVG in `src/app/` — it crashes the
 Turbopack build.
 
 Icons and manifests are named in each layout's `metadata`, not dropped into `src/app/` as Next's
 file conventions: a convention file applies to every nested route too, so the root icon and manifest
 would follow `/pinboard` around. Each PWA's manifest is named by its own layout —
-`src/app/app/layout.tsx` and `src/app/pinboard/layout.tsx` — and the root layout names neither.
+`src/app/app/layout.tsx`, `src/app/pinboard/layout.tsx` and `src/app/checklist/layout.tsx` — and the
+root layout names none of them.

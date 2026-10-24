@@ -3,9 +3,10 @@
 Next.js web interface for managing Git operations across multiple projects from mobile devices.
 React 19, Next.js 16, TypeScript, Tailwind CSS 4, simple-git.
 
-It serves two installable PWAs off one server: **GitMob** (`/app`) — per-project browsing, changes,
-commits, pushes, runs, CLI jobs, todos, notes and Claude sessions, plus `/app/browser`, the agent's
-Chrome driven by hand — and **Pinboard** (`/pinboard`), the overview of every project's notes.
+It serves three installable PWAs off one server: **GitMob** (`/app`) — per-project browsing,
+changes, commits, pushes, runs, CLI jobs, todos, notes and Claude sessions, plus `/app/browser`, the
+agent's Chrome driven by hand — **Pinboard** (`/pinboard`), the overview of every project's notes,
+and **Checklist** (`/checklist`), lists of what to bring, kept as JSON in `checklists/`.
 Projects and their per-project state come from the desktop CLIs (`rworkspaces`, `wtman`, `pt`, `rv`,
 `claudex`, `claude-in-chrome`, `gg`); long-running work runs as detached jobs that report back over
 Web Push.
@@ -15,8 +16,8 @@ Web Push.
 - [docs/architecture.md](docs/architecture.md) — code layout, where projects come from, detached
   jobs, the guard against resent requests, parked handoffs, parked commits with no project, the
   session modal, the agent's browser, dictation, the scratchpad
-- [docs/pwas.md](docs/pwas.md) — the two hostnames and `src/proxy.ts`, routing rules, icons and
-  manifests
+- [docs/pwas.md](docs/pwas.md) — the three hostnames and `src/proxy.ts`, the Checklist, routing
+  rules, icons and manifests
 - [docs/notifications.md](docs/notifications.md) — Web Push, subscriptions, the service worker
 - [docs/cli-integrations.md](docs/cli-integrations.md) — which CLI commands each feature calls,
   and where each CLI's own docs are

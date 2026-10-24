@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="100%" height="100%" viewBox="0 0 400 400" version="1.1" xmlns="http://www.w3.org/2000/svg" xml:space="preserve" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+    <rect x="0" y="0" width="400" height="400" style="fill:#000000;"/>
+    <rect x="100" y="84" width="200" height="252" rx="22" style="fill:#10b981;"/>
+    <rect x="118" y="112" width="164" height="206" rx="10" style="fill:#f4f4f5;"/>
+    <rect x="160" y="70" width="80" height="38" rx="12" style="fill:#3f3f46;"/>
+    <rect x="138" y="138" width="34" height="34" rx="8" style="fill:#10b981;"/>
+    <path d="M146,155L153,163L165,147" style="fill:none;stroke:#ffffff;stroke-width:7px;stroke-linecap:round;"/>
+    <rect x="186" y="149" width="76" height="12" rx="6" style="fill:#000000;fill-opacity:0.25;"/>
+    <rect x="138" y="196" width="34" height="34" rx="8" style="fill:#10b981;"/>
+    <path d="M146,213L153,221L165,205" style="fill:none;stroke:#ffffff;stroke-width:7px;stroke-linecap:round;"/>
+    <rect x="186" y="207" width="62" height="12" rx="6" style="fill:#000000;fill-opacity:0.25;"/>
+    <rect x="141" y="257" width="28" height="28" rx="6" style="fill:none;stroke:#a1a1aa;stroke-width:6px;"/>
+    <rect x="186" y="265" width="70" height="12" rx="6" style="fill:#000000;fill-opacity:0.25;"/>
+</svg>
