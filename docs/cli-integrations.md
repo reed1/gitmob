@@ -40,6 +40,7 @@ Docs: `rlocal/app/rofi-vscode/docs/pinboard.md`.
 ## Push and sudo — `pt`
 
 `src/lib/push.ts`, `src/lib/push-command.ts`, `src/lib/sudo.ts` — Push tab, Sudo tab, project list.
+A worktree's Push tab runs every `pt push` in the main checkout and shares its push job.
 Docs: `rlocal/app/push_tool/CLAUDE.md`.
 
 - `pt push config` — the Push tab's servers and targets.

@@ -558,21 +558,23 @@ export function WorktreeSyncNotice({
       ) : (
         <>
           <p className="text-xs text-foreground/60">
-            This checkout is on <code>{worktree.branch}</code>, not {into}.
+            Push runs from the main checkout on {into}: the scope, the commits
+            and the deploy are {into}&apos;s, not <code>{worktree.branch}</code>
+            &apos;s.
           </p>
           {diverged && (
             <>
               <p className="text-xs text-foreground/60">
                 {[
                   worktree.ahead > 0 &&
-                    `${commits(worktree.ahead)} not in ${into}`,
+                    `${commits(worktree.ahead)} here not in ${into}, so not deployed`,
                   worktree.behind > 0 &&
                     `${commits(worktree.behind)} on ${into} not here`,
                 ]
                   .filter(Boolean)
-                  .join(', ')}
-                . Sync merges this branch and {into} both ways, leaving them on
-                one commit.
+                  .join('; ')}
+                . Sync merges this branch into {into} and {into} into this
+                branch, leaving both on one commit.
               </p>
               <WorktreeConflicts worktree={worktree} className="" />
               <div className="flex items-center gap-3">
