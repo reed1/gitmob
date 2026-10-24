@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { addToast } from '@/lib/api';
 import { useAutoRefresh } from '@/lib/use-auto-refresh';
+import { useCachedState } from '@/lib/use-cached-state';
 import { CHECKLIST_NAME, type Checklist } from '@/lib/checklist-name';
 
 const ICONS = {
@@ -10,12 +11,16 @@ const ICONS = {
   down: 'M19 9l-7 7-7-7',
   remove: 'M6 18L18 6M6 6l12 12',
   add: 'M12 4v16m8-8H4',
+  refresh:
+    'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15',
 };
 
-function Icon({ path }: { path: string }) {
+const LISTS_KEY = 'checklist:lists';
+
+function Icon({ path, className }: { path: string; className?: string }) {
   return (
     <svg
-      className="w-4 h-4"
+      className={className ?? 'w-4 h-4'}
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
@@ -185,19 +190,26 @@ function ListEditor({
 }
 
 /**
- * Edits stay on the page until Save, which sends every list to be written to `checklists/` and
- * committed, then reads them back. Cancel drops them.
+ * The cached lists paint on open and are replaced when the server answers. Edit waits for that
+ * answer, since Save sends every list and would otherwise write back a stale one. Edits stay on
+ * the page until Save, which sends every list to be written to `checklists/` and committed, then
+ * reads them back. Cancel drops them.
  */
 export default function ChecklistPage() {
-  const [lists, setLists] = useState<Checklist[] | null>(null);
+  const [lists, setLists, restored] = useCachedState<Checklist[]>(LISTS_KEY);
+  const [loaded, setLoaded] = useState(false);
+  const [refreshing, setRefreshing] = useState(true);
   const [draft, setDraft] = useState<Checklist[] | null>(null);
   const [addedIndex, setAddedIndex] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
+    setRefreshing(true);
     const res = await fetch('/api/checklist');
     setLists((await res.json()).checklists);
-  }, []);
+    setLoaded(true);
+    setRefreshing(false);
+  }, [setLists]);
 
   useAutoRefresh(load);
 
@@ -237,16 +249,30 @@ export default function ChecklistPage() {
             )}
           </div>
           {draft === null ? (
-            <button
-              onClick={() => {
-                setDraft(lists);
-                setAddedIndex(null);
-              }}
-              disabled={lists === null}
-              className="px-3 py-1.5 text-sm rounded-lg bg-foreground/10 hover:bg-foreground/20 disabled:opacity-30 active:opacity-80"
-            >
-              Edit
-            </button>
+            <>
+              <button
+                onClick={load}
+                className="p-2 rounded-lg hover:bg-foreground/10 active:opacity-80"
+                aria-label="Refresh"
+              >
+                <Icon
+                  path={ICONS.refresh}
+                  className={`w-5 h-5 text-foreground/60 ${
+                    refreshing ? 'animate-spin' : ''
+                  }`}
+                />
+              </button>
+              <button
+                onClick={() => {
+                  setDraft(lists);
+                  setAddedIndex(null);
+                }}
+                disabled={!loaded}
+                className="px-3 py-1.5 text-sm rounded-lg bg-foreground/10 hover:bg-foreground/20 disabled:opacity-30 active:opacity-80"
+              >
+                Edit
+              </button>
+            </>
           ) : (
             <>
               <button
@@ -269,7 +295,7 @@ export default function ChecklistPage() {
       </header>
 
       <main className="p-3 space-y-3">
-        {lists === null && (
+        {restored && lists === null && (
           <div className="text-center text-foreground/50 py-8">Loading...</div>
         )}
 

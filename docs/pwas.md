@@ -59,6 +59,11 @@ Lists of what to bring, as plain text. Each list is one file in this repository,
 name, so a name is lowercase letters joined by single dashes, and renaming a list renames its file.
 Lists are shown in filename order.
 
+Like the Pinboard overview, the page paints the lists it last read, kept in localStorage through
+`useCachedState`, and replaces them when `/api/checklist` answers; the spinning refresh icon shows
+the read in flight. Edit stays disabled until that read lands, since Save sends every list and would
+otherwise write a stale one back.
+
 Edit changes nothing until Save. Save sends every list to `/api/checklist`, which writes them, deletes
 the file of each list that is gone — removed or renamed — and commits `checklists/` alone, leaving
 anything else staged where it is; a save that changes nothing commits nothing. The page then reads
