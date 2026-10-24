@@ -138,7 +138,7 @@ export default function ReviewPage() {
   const commit = useSearchParams().get('commit');
   const [review, setReview] = useState<Review | null>(null);
   const [failed, setFailed] = useState(false);
-  const [wordWrap, setWordWrap] = useState(true);
+  const [wordWrap, setWordWrap] = useState(false);
 
   // Past the line limit, the first answer is only that; Continue asks again with force.
   const [force, setForce] = useState(false);

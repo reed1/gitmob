@@ -66,7 +66,7 @@ export default function ProjectPage() {
   const [branch, setBranch] = useState<string>('');
   const [status, setStatus] = useState<GitStatus | null>(null);
   const [loading, setLoading] = useState(true);
-  const [wordWrap, setWordWrap] = useState(true);
+  const [wordWrap, setWordWrap] = useState(false);
   const [commitTitle, setCommitTitle] = useState('');
   const [commitBody, setCommitBody] = useState('');
   const [pending, setPending] = useState<PendingMessage>(NO_PENDING_MESSAGE);
