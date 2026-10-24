@@ -14,8 +14,8 @@ Docs: `rlocal/app/rworkspaces/CLAUDE.md`, `rlocal/lib/python/rworktree/README.md
 
 ## Worktrees on disk — `wtman`
 
-`src/lib/wtman.ts` — Wtman tab, the Wtman item on a worktree's kebab menu, and the session modal's
-Worktree toggle.
+`src/lib/wtman.ts` — Wtman tab, the Wtman item on a worktree's kebab menu, the session modal's
+Worktree toggle, and the not-on-the-main-worktree warning on a worktree's Push tab.
 Docs: `rlocal/app/wtman/CLAUDE.md`.
 
 - `wtman status --json <repo>` — the worktree list.
@@ -24,7 +24,8 @@ Docs: `rlocal/app/wtman/CLAUDE.md`.
 - `wtman new <repo> <branch> [--base <branch> | --from-local | --from-remote <remote>]` —
   Create (`--base` when, on a worktree's page, the branch is made off that worktree's branch),
   Create worktree on a branch row, and a session in a new worktree.
-- `wtman sync [--propagate] <repo> <branch>` — Merge sync, Merge sync propagate.
+- `wtman sync [--propagate] <repo> <branch>` — Merge sync, Merge sync propagate, and Sync on a
+  worktree's Push tab when its branch and main have moved apart.
 - `wtman --interactive merge <repo> <branch> [--squash]` — Merge, Squash merge.
 - `wtman --interactive remove [--remote <remote>] <repo> <branch>` — Remove on a worktree or a
   branch row.

@@ -490,3 +490,116 @@ export function ProjectWorktreeModal({
     />
   );
 }
+
+function commits(n: number): string {
+  return `${n} commit${n === 1 ? '' : 's'}`;
+}
+
+/**
+ * On a worktree's page: a warning that this is not the main checkout, and, once the branch and
+ * what the main checkout is on have moved apart, a sync through wtman.
+ */
+export function WorktreeSyncNotice({
+  repoId,
+  projectId,
+}: {
+  repoId: string;
+  projectId: string;
+}) {
+  const [worktree, setWorktree] = useState<Worktree | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState<Pending | null>(null);
+  const [syncing, setSyncing] = useState(false);
+
+  const pick = useCallback(
+    (worktrees: Worktree[]) =>
+      setWorktree(worktrees.find((w) => w.projectId === projectId) ?? null),
+    [projectId]
+  );
+
+  const load = useCallback(async () => {
+    const res = await fetch(`/api/projects/${repoId}/worktrees`);
+    const data = await res.json();
+    if (res.ok) {
+      pick(data.worktrees);
+      setError(null);
+    } else {
+      setError(data.error || 'Could not read worktrees');
+    }
+  }, [repoId, pick]);
+
+  useAutoRefresh(load, 10000);
+
+  const sync = async (chosen: Pending) => {
+    setPending(null);
+    setSyncing(true);
+    try {
+      const { worktrees } = await performWorktreeAction(repoId, chosen);
+      if (worktrees) pick(worktrees);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const into = worktree?.into ?? 'main';
+  const diverged =
+    worktree !== null && (worktree.ahead > 0 || worktree.behind > 0);
+  const blocked = worktree ? syncBlocked(worktree) : null;
+
+  return (
+    <section className="p-3 space-y-2 text-sm border border-amber-500/40 bg-amber-500/10 rounded-lg">
+      <p className="font-medium text-amber-500">
+        Warning: you are not on the main worktree.
+      </p>
+      {error ? (
+        <p className="text-xs text-red-500 break-all">{error}</p>
+      ) : !worktree ? (
+        <p className="text-xs text-foreground/50">Asking wtman…</p>
+      ) : (
+        <>
+          <p className="text-xs text-foreground/60">
+            This checkout is on <code>{worktree.branch}</code>, not {into}.
+          </p>
+          {diverged && (
+            <>
+              <p className="text-xs text-foreground/60">
+                {[
+                  worktree.ahead > 0 &&
+                    `${commits(worktree.ahead)} not in ${into}`,
+                  worktree.behind > 0 &&
+                    `${commits(worktree.behind)} on ${into} not here`,
+                ]
+                  .filter(Boolean)
+                  .join(', ')}
+                . Sync merges this branch and {into} both ways, leaving them on
+                one commit.
+              </p>
+              <WorktreeConflicts worktree={worktree} className="" />
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() =>
+                    setPending({ kind: 'sync', worktree, propagate: false })
+                  }
+                  disabled={blocked !== null || syncing}
+                  className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded-lg active:opacity-80 disabled:opacity-40"
+                >
+                  {syncing ? 'Syncing…' : 'Sync'}
+                </button>
+                {blocked && (
+                  <span className="text-xs text-foreground/50">{blocked}</span>
+                )}
+              </div>
+            </>
+          )}
+        </>
+      )}
+      {pending && (
+        <WorktreeConfirmModal
+          pending={pending}
+          onCancel={() => setPending(null)}
+          onConfirm={() => sync(pending)}
+        />
+      )}
+    </section>
+  );
+}

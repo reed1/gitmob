@@ -20,6 +20,7 @@ import { SudoView } from './components/SudoView';
 import { WtmanView } from './components/WtmanView';
 import { WrapToggle } from './components/WrapToggle';
 import ProjectKebabMenu from '@/app/app/ProjectKebabMenu';
+import { WorktreeSyncNotice } from '@/app/app/WorktreeActions';
 import { useAutoRefresh } from '@/lib/use-auto-refresh';
 import { goHome } from '@/lib/app-depth';
 
@@ -330,6 +331,15 @@ export default function ProjectPage() {
             the canonical id, and a worktree id makes no legal table name. */}
         {tab === 'dooit' && project && (
           <DooitView projectId={project.canonicalId} />
+        )}
+        {/* A worktree's push deploys from its own branch, not from the main checkout's. */}
+        {tab === 'push' && project?.worktreeName && (
+          <div className="px-4 pt-4">
+            <WorktreeSyncNotice
+              repoId={project.canonicalId}
+              projectId={project.id}
+            />
+          </div>
         )}
         {tab === 'push' && <PushView projectId={projectId} />}
         {tab === 'sudo' && <SudoView projectId={projectId} />}
