@@ -3,8 +3,6 @@ import { getProject } from '@/lib/projects';
 import {
   getStatus,
   getDiff,
-  getFileDiff,
-  getUntrackedFileDiff,
   getBranch,
   getLog,
   getRecentCommits,
@@ -36,21 +34,6 @@ export async function GET(
   switch (action) {
     case 'status':
       return NextResponse.json(await getStatus(project.path));
-    case 'diff': {
-      const staged = searchParams.get('staged') === 'true';
-      const full = searchParams.get('full') === 'true';
-      const untracked = searchParams.get('untracked') === 'true';
-      const file = searchParams.get('file');
-      if (file && untracked) {
-        return NextResponse.json({
-          diff: await getUntrackedFileDiff(project.path, file),
-        });
-      }
-      const diff = file
-        ? await getFileDiff(project.path, file, staged, full)
-        : await getDiff(project.path, staged);
-      return NextResponse.json({ diff });
-    }
     case 'branch':
       return NextResponse.json({ branch: await getBranch(project.path) });
     case 'log': {

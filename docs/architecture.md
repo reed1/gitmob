@@ -37,3 +37,6 @@ and across projects, from the front page:
   network off the request path (`src/lib/background-cache.ts`).
 - Work that outlives a request runs as a detached job (`src/lib/cli-jobs.ts`).
 - Every way into a new session goes through the one session modal (`src/app/app/NewSessionModal.tsx`).
+- A diff opened from a list is laid over that list, keyed by the URL, rather than navigated to:
+  the list stays mounted, so back finds it scrolled and expanded as it was. Both the Commit tab's
+  cards and the Changes tab open `ReviewScreen` this way, each passing its own actions.

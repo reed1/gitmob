@@ -62,7 +62,6 @@ export default function ProjectPage() {
   const [project, setProject] = useState<Project | null>(null);
   const tab = getInitialTab(searchParams);
   const fileParam = searchParams.get('file');
-  const showingDiff = tab === 'changes' && fileParam !== null;
   const showingFile = tab === 'files' && fileParam !== null;
   const commitParam = searchParams.get('commit');
   const [branch, setBranch] = useState<string>('');
@@ -213,8 +212,7 @@ export default function ProjectPage() {
               )}
             </div>
           </div>
-          {(tab === 'changes' && showingDiff) ||
-          (tab === 'files' && showingFile) ? (
+          {showingFile ? (
             <WrapToggle wordWrap={wordWrap} setWordWrap={setWordWrap} />
           ) : (
             project && (
@@ -306,7 +304,6 @@ export default function ProjectPage() {
             projectId={projectId}
             status={status}
             onRefresh={refreshStatus}
-            wordWrap={wordWrap}
             goBack={goBack}
           />
         )}

@@ -76,55 +76,6 @@ export async function getDiff(
   return git.diff();
 }
 
-export async function getFileDiff(
-  cwd: string,
-  filePath: string,
-  staged: boolean = false,
-  full: boolean = false
-): Promise<string> {
-  const git = getGit(cwd);
-  const contextArgs = full ? ['-U99999'] : [];
-
-  if (staged) {
-    const diff = await git.diff([...contextArgs, '--cached', '--', filePath]);
-    if (diff.trim()) {
-      return diff;
-    }
-    const content = await git.show([`:${filePath}`]).catch(() => null);
-    if (content !== null) {
-      const lines = content.split('\n');
-      return [
-        `diff --git a/${filePath} b/${filePath}`,
-        'new file mode 100644',
-        '--- /dev/null',
-        `+++ b/${filePath}`,
-        `@@ -0,0 +1,${lines.length} @@`,
-        ...lines.map((line) => '+' + line),
-      ].join('\n');
-    }
-    return '';
-  }
-  return git.diff([...contextArgs, '--', filePath]);
-}
-
-export async function getUntrackedFileDiff(
-  cwd: string,
-  filePath: string
-): Promise<string> {
-  const fs = await import('fs/promises');
-  const path = await import('path');
-  const content = await fs.readFile(path.join(cwd, filePath), 'utf-8');
-  const lines = content.split('\n');
-  return [
-    `diff --git a/${filePath} b/${filePath}`,
-    'new file mode 100644',
-    '--- /dev/null',
-    `+++ b/${filePath}`,
-    `@@ -0,0 +1,${lines.length} @@`,
-    ...lines.map((line) => '+' + line),
-  ].join('\n');
-}
-
 export async function stageFile(cwd: string, filePath: string): Promise<void> {
   const git = getGit(cwd);
   await git.add(filePath);

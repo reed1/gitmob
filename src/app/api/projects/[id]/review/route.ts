@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getProject } from '@/lib/projects';
-import { getReview } from '@/lib/review';
+import { getReview, type ReviewSide } from '@/lib/review';
+
+const SIDES = new Set<string>(['staged', 'unstaged', 'untracked']);
 
 export async function GET(
   request: NextRequest,
@@ -19,7 +21,18 @@ export async function GET(
     return NextResponse.json({ error: 'Invalid commit' }, { status: 400 });
   }
 
-  const force = searchParams.get('force') === '1';
-  const path = searchParams.get('path');
-  return NextResponse.json(await getReview(project.path, force, commit, path));
+  const side = searchParams.get('side');
+  if (side !== null && (commit !== null || !SIDES.has(side))) {
+    return NextResponse.json({ error: 'Invalid side' }, { status: 400 });
+  }
+
+  return NextResponse.json(
+    await getReview(project.path, {
+      commit,
+      side: side as ReviewSide | null,
+      path: searchParams.get('path'),
+      full: searchParams.get('full') === '1',
+      force: searchParams.get('force') === '1',
+    })
+  );
 }

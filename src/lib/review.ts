@@ -8,7 +8,27 @@ import { loadDiffExclude } from './diff-exclude';
 /** Past this many changed lines, one page of diffs is slow enough to ask first. */
 export const REVIEW_LINE_LIMIT = 2000;
 
-export type ReviewScope = 'staged' | 'all' | 'commit';
+export type ReviewScope =
+  | 'staged'
+  | 'all'
+  | 'commit'
+  | 'unstaged'
+  | 'untracked';
+
+/** Which side of a dirty tree to read, where the next commit's own choice is not wanted. */
+export type ReviewSide = 'staged' | 'unstaged' | 'untracked';
+
+export interface ReviewRequest {
+  /** A commit already made; otherwise the dirty tree. */
+  commit: string | null;
+  side: ReviewSide | null;
+  /** One file's change alone, shown even when the exclude list would skip it. */
+  path: string | null;
+  /** The whole file around each change, not just the lines near it. */
+  full: boolean;
+  /** Past REVIEW_LINE_LIMIT anyway. */
+  force: boolean;
+}
 
 export type SkipReason = 'excluded' | 'binary' | 'symlink' | 'repository';
 
@@ -116,34 +136,67 @@ interface Source {
   readAdded: (path: string) => Promise<string>;
 }
 
-/** What the next commit would be: what is staged when anything is, otherwise the dirty tree. */
-async function nextCommit(git: SimpleGit, cwd: string): Promise<Source> {
-  const staged = parseNameStatus(
+async function stagedChanges(git: SimpleGit): Promise<Change[]> {
+  return parseNameStatus(
     await git.raw([...STAGED_DIFF, '--name-status', '-z'])
   );
-  // An unmerged file sits in the index without being staged.
-  if (staged.some((change) => change.status !== 'U')) {
-    return {
-      scope: 'staged',
-      diffArgs: STAGED_DIFF,
-      tracked: staged,
-      untracked: [],
-      readAdded: (path) => git.show([`:${path}`]),
-    };
-  }
+}
+
+function stagedSource(git: SimpleGit, staged: Change[]): Source {
   return {
-    scope: 'all',
+    scope: 'staged',
+    diffArgs: STAGED_DIFF,
+    tracked: staged,
+    untracked: [],
+    readAdded: (path) => git.show([`:${path}`]),
+  };
+}
+
+async function worktreeSource(
+  git: SimpleGit,
+  cwd: string,
+  scope: 'all' | 'unstaged' | 'untracked'
+): Promise<Source> {
+  return {
+    scope,
     diffArgs: WORKTREE_DIFF,
-    tracked: parseNameStatus(
-      await git.raw([...WORKTREE_DIFF, '--name-status', '-z'])
-    ),
-    untracked: (
-      await git.raw(['ls-files', '--others', '--exclude-standard', '-z'])
-    )
-      .split('\0')
-      .filter(Boolean),
+    tracked:
+      scope === 'untracked'
+        ? []
+        : parseNameStatus(
+            await git.raw([...WORKTREE_DIFF, '--name-status', '-z'])
+          ),
+    untracked:
+      scope === 'unstaged'
+        ? []
+        : (await git.raw(['ls-files', '--others', '--exclude-standard', '-z']))
+            .split('\0')
+            .filter(Boolean),
     readAdded: (path) => readFile(join(cwd, path), 'utf-8'),
   };
+}
+
+/** What the next commit would be: what is staged when anything is, otherwise the dirty tree. */
+async function nextCommit(git: SimpleGit, cwd: string): Promise<Source> {
+  const staged = await stagedChanges(git);
+  // An unmerged file sits in the index without being staged.
+  if (staged.some((change) => change.status !== 'U')) {
+    return stagedSource(git, staged);
+  }
+  return worktreeSource(git, cwd, 'all');
+}
+
+async function dirtyTree(
+  git: SimpleGit,
+  cwd: string,
+  side: ReviewSide | null
+): Promise<Source> {
+  if (side === null) return nextCommit(git, cwd);
+  else if (side === 'staged')
+    return stagedSource(git, await stagedChanges(git));
+  else if (side === 'unstaged' || side === 'untracked') {
+    return worktreeSource(git, cwd, side);
+  } else throw new Error(`Unexpected review side: ${side}`);
 }
 
 /** A merge is diffed against its first parent, a root commit against the empty tree. */
@@ -171,6 +224,7 @@ async function pastCommit(git: SimpleGit, hash: string): Promise<Source> {
 async function renderTracked(
   git: SimpleGit,
   source: Source,
+  contextArgs: string[],
   { status, path, from }: Change
 ): Promise<ReviewFile> {
   if (status === 'A') return added(path, await source.readAdded(path));
@@ -178,7 +232,9 @@ async function renderTracked(
   // A conflicted file's markers are only in the working tree, whatever the scope.
   const diffArgs = status === 'U' ? WORKTREE_DIFF : source.diffArgs;
   const paths = from === undefined ? [path] : [from, path];
-  const diff = hunks(await git.raw([...diffArgs, '--', ...paths]));
+  const diff = hunks(
+    await git.raw([...diffArgs, ...contextArgs, '--', ...paths])
+  );
   if (status === 'M' || status === 'T' || status === 'U') {
     return { kind: 'modified', path, diff };
   } else if (status === 'D') {
@@ -191,22 +247,23 @@ async function renderTracked(
 }
 
 /**
- * Every change on one page: the commit `hash` when given, otherwise what the next commit would
- * be, untracked files included — or with `only`, the change to that one path. Changed lines are
- * counted before any diff is read, and past REVIEW_LINE_LIMIT the answer is only that — unless
- * `force`.
+ * Every change on one page: a commit already made, or by default what the next commit would be,
+ * untracked files included. Changed lines are counted before any diff is read, and past
+ * REVIEW_LINE_LIMIT the answer is only that — unless `force`.
  */
 export async function getReview(
   cwd: string,
-  force: boolean,
-  hash: string | null,
-  only: string | null
+  { commit, side, path: only, full, force }: ReviewRequest
 ): Promise<Review> {
   const git = simpleGit(cwd);
-  const isExcluded = await loadDiffExclude();
+  // A file asked for by name is wanted, whatever the exclude list says.
+  const isExcluded = only === null ? await loadDiffExclude() : () => false;
+  const contextArgs = full ? ['-U99999'] : [];
 
   const source =
-    hash === null ? await nextCommit(git, cwd) : await pastCommit(git, hash);
+    commit === null
+      ? await dirtyTree(git, cwd, side)
+      : await pastCommit(git, commit);
   const { scope } = source;
   if (only !== null) {
     source.tracked = source.tracked.filter((change) => change.path === only);
@@ -241,7 +298,7 @@ export async function getReview(
     }
     if (overLimit(lines))
       return { scope, tooLarge: true, limit: REVIEW_LINE_LIMIT };
-    renders.push(() => renderTracked(git, source, change));
+    renders.push(() => renderTracked(git, source, contextArgs, change));
   }
 
   for (const path of source.untracked) {

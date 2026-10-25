@@ -1,9 +1,15 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { apiFetch } from '@/lib/api';
 import { useAutoRefresh } from '@/lib/use-auto-refresh';
-import type { Review, ReviewFile, ReviewScope, SkipReason } from '@/lib/review';
+import type {
+  Review,
+  ReviewFile,
+  ReviewScope,
+  ReviewSide,
+  SkipReason,
+} from '@/lib/review';
 import { Modal } from '@/app/app/Modal';
 import { DiffLines } from '@/app/app/p/[projectId]/components/DiffLines';
 import { HighlightedCode } from '@/app/app/p/[projectId]/components/HighlightedCode';
@@ -127,20 +133,31 @@ function FileSection({
 function scopeLabel(scope: ReviewScope, commit: string | null): string {
   if (scope === 'staged') return 'staged';
   else if (scope === 'all') return 'all changes';
+  else if (scope === 'unstaged') return 'unstaged';
+  else if (scope === 'untracked') return 'untracked';
   else if (scope === 'commit' && commit !== null) return commit.slice(0, 7);
   else throw new Error(`Unexpected review scope: ${scope}`);
 }
 
-/** Every change on one page, or with `path` the change to that one file alone. */
+/**
+ * Every change on one page, or with `path` the change to that one file alone. What the caller
+ * can do with what is shown — stage it, step to the next file — goes in `actions`.
+ */
 export function ReviewScreen({
   projectId,
   commit,
+  side = null,
   path,
+  full = false,
+  actions,
   onBack,
 }: {
   projectId: string;
   commit: string | null;
+  side?: ReviewSide | null;
   path: string | null;
+  full?: boolean;
+  actions?: ReactNode;
   onBack: () => void;
 }) {
   const [review, setReview] = useState<Review | null>(null);
@@ -153,7 +170,9 @@ export function ReviewScreen({
   const load = useCallback(async () => {
     const query = new URLSearchParams();
     if (commit !== null) query.set('commit', commit);
+    if (side !== null) query.set('side', side);
     if (path !== null) query.set('path', path);
+    if (full) query.set('full', '1');
     if (force) query.set('force', '1');
     const res = await apiFetch(`/api/projects/${projectId}/review?${query}`);
     if (!res.ok) {
@@ -161,7 +180,7 @@ export function ReviewScreen({
       return;
     }
     setReview(await res.json());
-  }, [projectId, commit, path, force]);
+  }, [projectId, commit, side, path, full, force]);
 
   useAutoRefresh(load);
 
@@ -176,7 +195,7 @@ export function ReviewScreen({
 
   return (
     <div className="h-dvh bg-background flex flex-col">
-      <header className="border-b border-foreground/10 bg-background/95 backdrop-blur">
+      <header className="relative z-10 border-b border-foreground/10 bg-background/95 backdrop-blur">
         <div className="px-4 py-3 flex items-center gap-3">
           <button
             onClick={onBack}
@@ -207,6 +226,7 @@ export function ReviewScreen({
             </div>
           </div>
           <WrapToggle wordWrap={wordWrap} setWordWrap={setWordWrap} />
+          {actions}
         </div>
       </header>
 

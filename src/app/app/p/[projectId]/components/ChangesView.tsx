@@ -1,24 +1,22 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useAutoRefresh } from '@/lib/use-auto-refresh';
+import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { GitStatus } from '@/app/app/p/[projectId]/types';
+import { KebabMenu, KebabMenuItem } from '@/app/app/KebabMenu';
 import { ModalOverlay } from '@/components/ModalOverlay';
 import { apiFetch } from '@/lib/api';
-import { DiffLines } from './DiffLines';
+import { ReviewScreen } from './ReviewScreen';
 
 export function ChangesView({
   projectId,
   status,
   onRefresh,
-  wordWrap,
   goBack,
 }: {
   projectId: string;
   status: GitStatus | null;
   onRefresh: () => Promise<void>;
-  wordWrap: boolean;
   goBack: (fallback: string) => void;
 }) {
   const router = useRouter();
@@ -27,15 +25,11 @@ export function ChangesView({
   const isStaged = searchParams.get('staged') === '1';
   const isUntracked = searchParams.get('untracked') === '1';
   const diffKey = `${selectedFile}:${isStaged}:${isUntracked}`;
-  const [diff, setDiff] = useState<string>('');
   // Keyed by the file it was turned on for, so opening another file drops back
   // to the contextual diff.
   const [fullDiffKey, setFullDiffKey] = useState<string | null>(null);
   const isFullDiff = fullDiffKey === diffKey;
-  const [menuOpen, setMenuOpen] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const diffScrollRef = useRef<HTMLDivElement>(null);
 
   const openFile = (
     file: string,
@@ -47,41 +41,11 @@ export function ChangesView({
     if (staged) params.set('staged', '1');
     if (untracked) params.set('untracked', '1');
     const url = `/app/p/${projectId}?${params}`;
-    if (replace) router.replace(url);
-    else router.push(url);
+    if (replace) router.replace(url, { scroll: false });
+    else router.push(url, { scroll: false });
   };
 
   const closeFile = () => goBack(`/app/p/${projectId}?tab=changes`);
-
-  const loadDiff = useCallback(async () => {
-    if (!selectedFile) return;
-    const params = new URLSearchParams({ action: 'diff', file: selectedFile });
-    if (isUntracked) params.set('untracked', 'true');
-    else {
-      params.set('staged', String(isStaged));
-      params.set('full', String(isFullDiff));
-    }
-    const res = await fetch(`/api/projects/${projectId}/git?${params}`);
-    const data = await res.json();
-    setDiff(data.diff);
-  }, [projectId, selectedFile, isStaged, isUntracked, isFullDiff]);
-
-  useAutoRefresh(loadDiff);
-
-  useEffect(() => {
-    diffScrollRef.current?.scrollTo(0, 0);
-  }, [diffKey]);
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [menuOpen]);
 
   const allFiles = status
     ? [
@@ -113,7 +77,6 @@ export function ChangesView({
 
   const navigateTo = (index: number) => {
     const file = allFiles[index];
-    setMenuOpen(false);
     openFile(file.path, file.isStaged, file.isUntracked, true);
   };
 
@@ -123,168 +86,134 @@ export function ChangesView({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action, file }),
     });
-    setDiff('');
     closeFile();
     onRefresh();
   };
 
-  if (selectedFile) {
-    return (
-      <div className="flex flex-col h-full">
-        <div className="sticky top-0 bg-background border-b border-foreground/10 px-4 py-2 flex items-center justify-between">
-          <button
-            onClick={closeFile}
-            className="text-foreground/50 hover:text-foreground"
+  const diffActions = selectedFile !== null && (
+    <>
+      {isStaged ? (
+        <button
+          onClick={() => handleAction('unstage', selectedFile)}
+          className="shrink-0 px-3 py-1 text-sm bg-yellow-600 text-white rounded active:opacity-80"
+        >
+          Unstage
+        </button>
+      ) : (
+        <button
+          onClick={() => handleAction('stage', selectedFile)}
+          className="shrink-0 px-3 py-1 text-sm bg-green-600 text-white rounded active:opacity-80"
+        >
+          Stage
+        </button>
+      )}
+      <KebabMenu label={`Actions for ${selectedFile}`}>
+        <KebabMenuItem
+          onSelect={() =>
+            // A sideways jump into the same file, not a step deeper: back belongs to
+            // the change list this diff was opened from.
+            router.replace(
+              `/app/p/${projectId}?tab=files&file=${encodeURIComponent(selectedFile)}`
+            )
+          }
+        >
+          View
+        </KebabMenuItem>
+        {!isUntracked && (
+          <KebabMenuItem
+            onSelect={() => setFullDiffKey(isFullDiff ? null : diffKey)}
           >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-          </button>
-          <span className="text-sm truncate flex-1 mx-2">{selectedFile}</span>
-          <div className="flex gap-2 items-center">
-            {isStaged ? (
+            {isFullDiff ? 'Contextual Diff' : 'Full Diff'}
+          </KebabMenuItem>
+        )}
+        {!isStaged && (
+          <KebabMenuItem danger onSelect={() => setConfirmDiscard(true)}>
+            {isUntracked ? 'Delete' : 'Discard'}
+          </KebabMenuItem>
+        )}
+        <KebabMenuItem
+          disabled={!hasPrev}
+          onSelect={() => navigateTo(currentIndex - 1)}
+        >
+          Previous File
+        </KebabMenuItem>
+        <KebabMenuItem
+          disabled={!hasNext}
+          onSelect={() => navigateTo(currentIndex + 1)}
+        >
+          Next File
+        </KebabMenuItem>
+      </KebabMenu>
+    </>
+  );
+
+  // Laid over the change list instead of replacing it: the list stays mounted underneath,
+  // scrolled where it was, for back to uncover.
+  const diff = selectedFile !== null && (
+    <div className="fixed inset-0 z-20">
+      <ReviewScreen
+        key={diffKey}
+        projectId={projectId}
+        commit={null}
+        side={isUntracked ? 'untracked' : isStaged ? 'staged' : 'unstaged'}
+        path={selectedFile}
+        full={isFullDiff}
+        actions={diffActions}
+        onBack={closeFile}
+      />
+      {confirmDiscard && (
+        <ModalOverlay
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+          onClose={() => setConfirmDiscard(false)}
+        >
+          <div
+            className="bg-background border border-foreground/20 rounded-lg shadow-xl max-w-sm w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-4 py-3 border-b border-foreground/10">
+              <h3 className="font-medium">
+                {isUntracked ? 'Delete file?' : 'Discard changes?'}
+              </h3>
+            </div>
+            <div className="px-4 py-3 text-sm text-foreground/80">
+              {isUntracked ? 'Delete untracked file ' : 'Discard changes to '}
+              <span className="font-mono break-all">{selectedFile}</span>? This
+              cannot be undone.
+            </div>
+            <div className="px-4 py-3 border-t border-foreground/10 flex justify-end gap-2">
               <button
-                onClick={() => handleAction('unstage', selectedFile)}
-                className="px-3 py-1 text-sm bg-yellow-600 text-white rounded active:opacity-80"
+                data-modal-cancel
+                onClick={() => setConfirmDiscard(false)}
+                className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
               >
-                Unstage
+                Cancel
               </button>
-            ) : (
               <button
-                onClick={() => handleAction('stage', selectedFile)}
-                className="px-3 py-1 text-sm bg-green-600 text-white rounded active:opacity-80"
+                onClick={() => {
+                  setConfirmDiscard(false);
+                  handleAction(
+                    isUntracked ? 'discard-untracked' : 'discard',
+                    selectedFile
+                  );
+                }}
+                className="px-3 py-1.5 text-sm rounded-lg bg-red-600 text-white hover:opacity-90"
               >
-                Stage
+                {isUntracked ? 'Delete' : 'Discard'}
               </button>
-            )}
-            <div className="relative" ref={menuRef}>
-              <button
-                onClick={() => setMenuOpen(!menuOpen)}
-                className="px-2 py-1 text-lg text-foreground/70 hover:text-foreground active:opacity-80"
-              >
-                &#8942;
-              </button>
-              {menuOpen && (
-                <div className="absolute right-0 top-full mt-1 bg-background border border-foreground/20 rounded shadow-lg z-50 min-w-40">
-                  <button
-                    onClick={() => {
-                      setMenuOpen(false);
-                      // A sideways jump into the same file, not a step deeper: back belongs to
-                      // the change list this diff was opened from.
-                      router.replace(
-                        `/app/p/${projectId}?tab=files&file=${encodeURIComponent(selectedFile)}`
-                      );
-                    }}
-                    className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 active:bg-foreground/15"
-                  >
-                    View
-                  </button>
-                  {!isUntracked && (
-                    <button
-                      onClick={() => {
-                        setFullDiffKey(isFullDiff ? null : diffKey);
-                        setMenuOpen(false);
-                      }}
-                      className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 active:bg-foreground/15"
-                    >
-                      {isFullDiff ? 'Contextual Diff' : 'Full Diff'}
-                    </button>
-                  )}
-                  {!isStaged && (
-                    <button
-                      onClick={() => {
-                        setConfirmDiscard(true);
-                        setMenuOpen(false);
-                      }}
-                      className="w-full px-4 py-2 text-sm text-left text-red-400 hover:bg-foreground/10 active:bg-foreground/15"
-                    >
-                      {isUntracked ? 'Delete' : 'Discard'}
-                    </button>
-                  )}
-                  <button
-                    onClick={() => navigateTo(currentIndex - 1)}
-                    disabled={!hasPrev}
-                    className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 active:bg-foreground/15 disabled:opacity-30"
-                  >
-                    Previous File
-                  </button>
-                  <button
-                    onClick={() => navigateTo(currentIndex + 1)}
-                    disabled={!hasNext}
-                    className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 active:bg-foreground/15 disabled:opacity-30"
-                  >
-                    Next File
-                  </button>
-                </div>
-              )}
             </div>
           </div>
-        </div>
-        <div
-          ref={diffScrollRef}
-          className="flex-1 min-h-0 overflow-auto p-4 text-xs font-mono"
-        >
-          <DiffLines diff={diff} wordWrap={wordWrap} />
-        </div>
-        {confirmDiscard && (
-          <ModalOverlay
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
-            onClose={() => setConfirmDiscard(false)}
-          >
-            <div
-              className="bg-background border border-foreground/20 rounded-lg shadow-xl max-w-sm w-full"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="px-4 py-3 border-b border-foreground/10">
-                <h3 className="font-medium">
-                  {isUntracked ? 'Delete file?' : 'Discard changes?'}
-                </h3>
-              </div>
-              <div className="px-4 py-3 text-sm text-foreground/80">
-                {isUntracked ? 'Delete untracked file ' : 'Discard changes to '}
-                <span className="font-mono break-all">{selectedFile}</span>?
-                This cannot be undone.
-              </div>
-              <div className="px-4 py-3 border-t border-foreground/10 flex justify-end gap-2">
-                <button
-                  data-modal-cancel
-                  onClick={() => setConfirmDiscard(false)}
-                  className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => {
-                    setConfirmDiscard(false);
-                    handleAction(
-                      isUntracked ? 'discard-untracked' : 'discard',
-                      selectedFile
-                    );
-                  }}
-                  className="px-3 py-1.5 text-sm rounded-lg bg-red-600 text-white hover:opacity-90"
-                >
-                  {isUntracked ? 'Delete' : 'Discard'}
-                </button>
-              </div>
-            </div>
-          </ModalOverlay>
-        )}
-      </div>
-    );
-  }
+        </ModalOverlay>
+      )}
+    </div>
+  );
 
   if (!status) {
-    return <div className="p-4 text-foreground/50">Loading...</div>;
+    return (
+      <>
+        <div className="p-4 text-foreground/50">Loading...</div>
+        {diff}
+      </>
+    );
   }
 
   const hasChanges =
@@ -394,5 +323,10 @@ export function ChangesView({
     </div>
   );
 
-  return content;
+  return (
+    <>
+      {content}
+      {diff}
+    </>
+  );
 }
