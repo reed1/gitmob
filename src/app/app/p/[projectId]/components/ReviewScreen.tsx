@@ -14,6 +14,7 @@ import { Modal } from '@/app/app/Modal';
 import { DiffLines } from '@/app/app/p/[projectId]/components/DiffLines';
 import { HighlightedCode } from '@/app/app/p/[projectId]/components/HighlightedCode';
 import { WrapToggle } from '@/app/app/p/[projectId]/components/WrapToggle';
+import { projectApiPath } from '@/lib/project-paths';
 
 const KIND_TAGS: Record<Exclude<ReviewFile['kind'], 'skipped'>, string> = {
   added: 'text-green-400 bg-green-400/10',
@@ -174,7 +175,7 @@ export function ReviewScreen({
     if (path !== null) query.set('path', path);
     if (full) query.set('full', '1');
     if (force) query.set('force', '1');
-    const res = await apiFetch(`/api/projects/${projectId}/review?${query}`);
+    const res = await apiFetch(`${projectApiPath(projectId)}/review?${query}`);
     if (!res.ok) {
       setFailed(true);
       return;

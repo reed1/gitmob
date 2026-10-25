@@ -18,6 +18,7 @@ import {
   useImageUploads,
   withImagePaths,
 } from '@/app/app/ImageUploads';
+import { projectApiPath } from '@/lib/project-paths';
 
 export function SendTextModal({
   projectId,
@@ -42,7 +43,7 @@ export function SendTextModal({
     if (text) saveTextHistory({ text, source: 'Send text', projectId });
     onClose();
 
-    const res = await apiFetch(`/api/projects/${projectId}/desktop`, {
+    const res = await apiFetch(`${projectApiPath(projectId)}/desktop`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -126,7 +127,7 @@ export function SendKeysModal({
   // The modal stays open on a key press: answering a dialog is usually Down, Down, Enter.
   // Only failures are worth a toast; apiFetch raises those on its own.
   const pressKey = async (key: SpecialKey) => {
-    await apiFetch(`/api/projects/${projectId}/desktop/keys`, {
+    await apiFetch(`${projectApiPath(projectId)}/desktop/keys`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ windowId, key }),

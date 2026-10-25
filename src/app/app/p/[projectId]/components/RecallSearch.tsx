@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { relativeTime } from '@/lib/relative-time';
 import { highlight, snippetAround } from './recall-text';
+import { projectApiPath } from '@/lib/project-paths';
 
 export interface RecallMessage {
   role: string;
@@ -42,7 +43,7 @@ export function RecallSearch({
       setSearching(true);
       try {
         const res = await fetch(
-          `/api/projects/${projectId}/recall?q=${encodeURIComponent(text)}`
+          `${projectApiPath(projectId)}/recall?q=${encodeURIComponent(text)}`
         );
         const data = await res.json();
         if (res.ok) {

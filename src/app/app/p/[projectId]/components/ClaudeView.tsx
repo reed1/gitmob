@@ -8,6 +8,7 @@ import { RecallSearch } from './RecallSearch';
 import { RecallTranscript } from './RecallTranscript';
 import { SessionTranscript } from './SessionTranscript';
 import { useAutoRefresh } from '@/lib/use-auto-refresh';
+import { projectApiPath, projectPagePath } from '@/lib/project-paths';
 
 /** What Claude Code itself reports the session's context window to be holding. */
 export interface SessionContext {
@@ -53,7 +54,7 @@ export function ClaudeView({
   const [error, setError] = useState<string | null>(null);
 
   const fetchSessions = useCallback(async () => {
-    const res = await fetch(`/api/projects/${projectId}/desktop`);
+    const res = await fetch(`${projectApiPath(projectId)}/desktop`);
     const data = await res.json();
     if (res.ok) {
       setSessions(data.sessions);
@@ -69,7 +70,7 @@ export function ClaudeView({
   const showingList = !windowParam && !searchParam && !sessionParam;
   useAutoRefresh(fetchSessions, showingList ? 5000 : undefined);
 
-  const sessionsUrl = `/app/p/${projectId}?tab=claude`;
+  const sessionsUrl = `${projectPagePath(projectId)}?tab=claude`;
 
   const windowUrl = (windowId: string, view: 'terminal' | 'transcript') =>
     `${sessionsUrl}&window=${encodeURIComponent(windowId)}` +

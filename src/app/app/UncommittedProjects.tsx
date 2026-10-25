@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { addToast, apiFetch } from '@/lib/api';
 import { CollapsedRows } from './CollapsedRows';
 import { Project } from './types';
+import { projectApiPath, projectPagePath } from '@/lib/project-paths';
 
 /**
  * What the scan found: closed projects with work still in the tree. A project is closed once
@@ -25,7 +26,7 @@ export function UncommittedProjects({
   const router = useRouter();
 
   const openOnDesktop = async (project: Project) => {
-    const res = await apiFetch(`/api/projects/${project.id}/desktop`, {
+    const res = await apiFetch(`${projectApiPath(project.id)}/desktop`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'open' }),
@@ -80,7 +81,9 @@ export function UncommittedProjects({
         renderItem={(project) => (
           <div
             key={project.id}
-            onClick={() => router.push(`/app/p/${project.id}?tab=changes`)}
+            onClick={() =>
+              router.push(`${projectPagePath(project.id)}?tab=changes`)
+            }
             className="flex items-center gap-3 p-3 rounded-lg border border-green-500/40 bg-green-500/10 cursor-pointer active:opacity-80"
           >
             <div className="flex-1 min-w-0">

@@ -9,6 +9,7 @@ import {
 } from 'react';
 import type { RecallMessage } from './RecallSearch';
 import { TranscriptMessage } from './TranscriptMessage';
+import { projectApiPath } from '@/lib/project-paths';
 
 /** How close to the end still counts as reading the end, so a refresh keeps following it. */
 const FOLLOW_SLACK_PX = 80;
@@ -42,7 +43,7 @@ export function SessionTranscript({
     setLoading(true);
     try {
       const res = await fetch(
-        `/api/projects/${projectId}/recall?session=${encodeURIComponent(sessionId)}`
+        `${projectApiPath(projectId)}/recall?session=${encodeURIComponent(sessionId)}`
       );
       const data = await res.json();
       if (res.ok) {

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { RunLogView } from './RunLogView';
 import { useAutoRefresh } from '@/lib/use-auto-refresh';
+import { projectApiPath, projectPagePath } from '@/lib/project-paths';
 
 interface RunInfo {
   name: string;
@@ -38,7 +39,7 @@ export function RunView({
   const logRun = searchParams.get('logs');
 
   const fetchStatus = useCallback(async () => {
-    const res = await fetch(`/api/projects/${projectId}/run?action=status`);
+    const res = await fetch(`${projectApiPath(projectId)}/run?action=status`);
     const data = await res.json();
     if (res.ok) {
       setRuns(data.runs || []);
@@ -53,7 +54,7 @@ export function RunView({
   useAutoRefresh(fetchStatus, 5000);
 
   useEffect(() => {
-    fetch(`/api/projects/${projectId}/upmon`)
+    fetch(`${projectApiPath(projectId)}/upmon`)
       .then((res) => res.json())
       .then((data) => setMonitors(data))
       .catch(() => {});
@@ -61,7 +62,7 @@ export function RunView({
 
   const openLogs = (runName: string) => {
     router.push(
-      `/app/p/${projectId}?tab=run&logs=${encodeURIComponent(runName)}`
+      `${projectPagePath(projectId)}?tab=run&logs=${encodeURIComponent(runName)}`
     );
   };
 
@@ -69,7 +70,7 @@ export function RunView({
     action: 'start' | 'stop' | 'restart',
     runName: string
   ) => {
-    await apiFetch(`/api/projects/${projectId}/run`, {
+    await apiFetch(`${projectApiPath(projectId)}/run`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action, runName }),

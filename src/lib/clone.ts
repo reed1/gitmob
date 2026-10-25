@@ -1,5 +1,6 @@
 import { CliJob, readJob, startJob } from './cli-jobs';
 import { Project } from './projects';
+import { projectPagePath } from './project-paths';
 
 /**
  * One job id per project, so a clone found still running is this project's and a second attempt
@@ -29,6 +30,6 @@ export function startClone(project: Project, repo: string): CliJob {
     jobId: cloneJobId(project.id),
     notify: true,
     notifyLabel: `Clone ${project.id}`,
-    notifyUrl: `/app/p/${project.id}`,
+    notifyUrl: projectPagePath(project.id),
   });
 }

@@ -2,13 +2,14 @@
 
 import { addToast, apiFetch } from '@/lib/api';
 import { Modal } from './Modal';
+import { projectApiPath } from '@/lib/project-paths';
 
 /** Opens or closes a project on the desktop, toasting when it went through. */
 export async function actOnDesktop(
   projectId: string,
   action: 'open' | 'close'
 ): Promise<boolean> {
-  const res = await apiFetch(`/api/projects/${projectId}/desktop`, {
+  const res = await apiFetch(`${projectApiPath(projectId)}/desktop`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action }),

@@ -10,6 +10,7 @@ import { Modal } from './Modal';
 import { NewSessionModal } from './NewSessionModal';
 import { useScratchpadEnabled } from './Scratchpad';
 import { ProjectWorktreeModal } from './WorktreeActions';
+import { projectPagePath } from '@/lib/project-paths';
 
 const DOOIT_DOMAIN = process.env.NEXT_PUBLIC_DOOIT_DOMAIN;
 
@@ -87,7 +88,9 @@ export default function ProjectKebabMenu({
         )}
         {hasChanges && (
           <KebabMenuItem
-            onSelect={() => router.push(`/app/p/${project.id}/review`)}
+            onSelect={() =>
+              router.push(`${projectPagePath(project.id)}/review`)
+            }
           >
             Review
           </KebabMenuItem>

@@ -15,6 +15,7 @@ import {
   type PinboardNote,
 } from '@/components/PinboardNote';
 import { NewSessionModal } from '@/app/app/NewSessionModal';
+import { projectApiPath, projectPagePath } from '@/lib/project-paths';
 
 interface RecentNote extends PinboardNote {
   projectId: string;
@@ -60,7 +61,7 @@ async function postPinboard(
   body: Record<string, unknown>
 ): Promise<boolean> {
   try {
-    const res = await fetch(`/api/projects/${projectId}/pinboard`, {
+    const res = await fetch(`${projectApiPath(projectId)}/pinboard`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -176,7 +177,9 @@ export default function PinboardOverviewPage() {
       } else if (e.key === 'y') {
         copyNote(notes[highlighted]);
       } else if (e.key === 'o') {
-        router.push(`/app/p/${notes[highlighted].projectId}?tab=pinboard`);
+        router.push(
+          `${projectPagePath(notes[highlighted].projectId)}?tab=pinboard`
+        );
       } else if (e.key === 'e') {
         if (actionsReady) {
           e.preventDefault();
@@ -346,7 +349,7 @@ export default function PinboardOverviewPage() {
               note={note}
               label={
                 <Link
-                  href={`/app/p/${note.projectId}?tab=pinboard`}
+                  href={`${projectPagePath(note.projectId)}?tab=pinboard`}
                   onClick={(e) => e.stopPropagation()}
                   className="font-mono text-blue-400/80 active:text-blue-300"
                 >

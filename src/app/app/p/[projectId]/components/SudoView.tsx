@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
+import { projectApiPath } from '@/lib/project-paths';
 
 interface SudoTarget {
   name: string;
@@ -38,7 +39,7 @@ export function SudoView({ projectId }: { projectId: string }) {
   );
 
   const fetchTargets = useCallback(async () => {
-    const res = await fetch(`/api/projects/${projectId}/sudo`);
+    const res = await fetch(`${projectApiPath(projectId)}/sudo`);
     const data = await res.json();
     if (res.ok) {
       setTargets(data.targets);
@@ -56,7 +57,7 @@ export function SudoView({ projectId }: { projectId: string }) {
     setBusy({ target, action });
     setOutput(null);
     try {
-      const res = await apiFetch(`/api/projects/${projectId}/sudo`, {
+      const res = await apiFetch(`${projectApiPath(projectId)}/sudo`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ target, action }),

@@ -19,6 +19,7 @@ import {
   WorktreeConflicts,
   isMerged,
 } from '@/app/app/WorktreeActions';
+import { projectApiPath, projectPagePath } from '@/lib/project-paths';
 
 interface BranchRow {
   kind: 'local' | 'remote';
@@ -272,7 +273,7 @@ export function WtmanView({
   const [choosingBase, setChoosingBase] = useState(false);
 
   const load = useCallback(async () => {
-    const res = await fetch(`/api/projects/${projectId}/worktrees`);
+    const res = await fetch(`${projectApiPath(projectId)}/worktrees`);
     const data = await res.json();
     if (res.ok) {
       setWorktrees(data.worktrees);
@@ -286,7 +287,7 @@ export function WtmanView({
   useAutoRefresh(load, 10000);
 
   const loadBranches = useCallback(async () => {
-    const res = await fetch(`/api/projects/${projectId}/branches`);
+    const res = await fetch(`${projectApiPath(projectId)}/branches`);
     const data = await res.json();
     if (res.ok) {
       setBranches(data.branches);
@@ -314,10 +315,10 @@ export function WtmanView({
     setWorking({ name: worktree.name, label: 'Opening…' });
     try {
       const { ok, projectId: opened } = await post(
-        `/api/projects/${projectId}/worktrees/${encodeURIComponent(worktree.name)}`,
+        `${projectApiPath(projectId)}/worktrees/${encodeURIComponent(worktree.name)}`,
         { action: 'open' }
       );
-      if (ok) router.push(`/app/p/${opened}?tab=pinboard`);
+      if (ok) router.push(`${projectPagePath(opened)}?tab=pinboard`);
     } finally {
       setWorking(null);
     }
@@ -341,14 +342,14 @@ export function WtmanView({
     setCreating(true);
     try {
       const { ok, projectId: created } = await post(
-        `/api/projects/${projectId}/worktrees`,
+        `${projectApiPath(projectId)}/worktrees`,
         base
           ? { from: 'worktree', branch: newBranch, base: base.name }
           : { from: 'main', branch: newBranch }
       );
       if (ok) {
         setNewBranch('');
-        router.push(`/app/p/${created}?tab=pinboard`);
+        router.push(`${projectPagePath(created)}?tab=pinboard`);
       }
     } finally {
       setCreating(false);
@@ -359,10 +360,10 @@ export function WtmanView({
     setWorking({ name: row.name, label: 'Creating…' });
     try {
       const { ok, projectId: opened } = await post(
-        `/api/projects/${projectId}/worktrees`,
+        `${projectApiPath(projectId)}/worktrees`,
         { from: 'branch', name: row.name }
       );
-      if (ok) router.push(`/app/p/${opened}?tab=pinboard`);
+      if (ok) router.push(`${projectPagePath(opened)}?tab=pinboard`);
       else loadBranches();
     } finally {
       setWorking(null);
@@ -373,7 +374,7 @@ export function WtmanView({
     setRemoving(null);
     setWorking({ name: row.name, label: 'Removing…' });
     try {
-      const { ok } = await post(`/api/projects/${projectId}/branches`, {
+      const { ok } = await post(`${projectApiPath(projectId)}/branches`, {
         name: row.name,
         force: row.kind === 'local' && !isMerged(row),
       });
@@ -489,7 +490,9 @@ export function WtmanView({
                   isCurrent={isCurrent}
                   disabled={busy}
                   onGoTo={() =>
-                    router.push(`/app/p/${worktree.projectId}?tab=pinboard`)
+                    router.push(
+                      `${projectPagePath(worktree.projectId)}?tab=pinboard`
+                    )
                   }
                   onOpen={() => open(worktree)}
                   onClose={() => setClosing(worktree)}

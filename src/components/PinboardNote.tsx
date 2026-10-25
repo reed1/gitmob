@@ -7,6 +7,7 @@ import { ModalOverlay } from './ModalOverlay';
 import { addToast, apiFetch } from '@/lib/api';
 import { copyText } from '@/lib/clipboard';
 import { SpeakButton, appendSpoken } from '@/app/app/SpeakButton';
+import { projectApiPath } from '@/lib/project-paths';
 
 /** One note as both PWAs read it back: `rv` sends null, not an absent key, for a missing stamp. */
 export interface PinboardNote {
@@ -21,7 +22,7 @@ export async function mutatePinboard(
   projectId: string,
   body: Record<string, unknown>
 ): Promise<PinboardNote[] | null> {
-  const res = await apiFetch(`/api/projects/${projectId}/pinboard`, {
+  const res = await apiFetch(`${projectApiPath(projectId)}/pinboard`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),

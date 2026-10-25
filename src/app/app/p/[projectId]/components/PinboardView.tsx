@@ -11,6 +11,7 @@ import {
   type PinboardNote,
 } from '@/components/PinboardNote';
 import { NewSessionModal } from '@/app/app/NewSessionModal';
+import { projectApiPath } from '@/lib/project-paths';
 
 export function PinboardView({
   projectId,
@@ -30,7 +31,7 @@ export function PinboardView({
   const [claudeNote, setClaudeNote] = useState<PinboardNote | null>(null);
 
   const fetchNotes = useCallback(async () => {
-    const res = await fetch(`/api/projects/${canonicalId}/pinboard`);
+    const res = await fetch(`${projectApiPath(canonicalId)}/pinboard`);
     const data = await res.json();
     if (!res.ok) {
       setError(data.error || 'Failed to load the pinboard');

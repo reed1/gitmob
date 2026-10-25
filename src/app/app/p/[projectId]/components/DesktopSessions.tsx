@@ -5,6 +5,7 @@ import { addToast, apiFetch } from '@/lib/api';
 import { COMMON_COMMANDS, type CommonCommand } from '@/lib/desktop-keys';
 import { NewSessionModal } from '@/app/app/NewSessionModal';
 import { transcriptSessionId, type DesktopSession } from './ClaudeView';
+import { projectApiPath } from '@/lib/project-paths';
 
 function formatTokens(tokens: number): string {
   if (tokens >= 1000000) {
@@ -48,7 +49,7 @@ export function DesktopSessions({
   const sendCommand = async (windowId: string, command: CommonCommand) => {
     setMenuWindowId(null);
 
-    const res = await apiFetch(`/api/projects/${projectId}/desktop`, {
+    const res = await apiFetch(`${projectApiPath(projectId)}/desktop`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ windowId, action: 'command', command }),

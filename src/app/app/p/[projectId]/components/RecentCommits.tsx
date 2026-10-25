@@ -8,6 +8,7 @@ import { useAutoRefresh } from '@/lib/use-auto-refresh';
 import { relativeTime } from '@/lib/relative-time';
 import { addToast } from '@/lib/api';
 import { copyText } from '@/lib/clipboard';
+import { projectApiPath, projectPagePath } from '@/lib/project-paths';
 
 interface CommitFileStat {
   path: string;
@@ -61,7 +62,9 @@ function CommitCard({
         <KebabMenu label={`Actions for ${commit.hash.slice(0, 7)}`}>
           <KebabMenuItem
             onSelect={() =>
-              router.push(`/app/p/${projectId}/review?commit=${commit.hash}`)
+              router.push(
+                `${projectPagePath(projectId)}/review?commit=${commit.hash}`
+              )
             }
           >
             Review
@@ -85,7 +88,7 @@ function CommitCard({
             {commit.files.map((file) => (
               <Link
                 key={file.path}
-                href={`/app/p/${projectId}?tab=commit&commit=${commit.hash}&file=${encodeURIComponent(file.path)}`}
+                href={`${projectPagePath(projectId)}?tab=commit&commit=${commit.hash}&file=${encodeURIComponent(file.path)}`}
                 scroll={false}
                 className="flex items-center gap-2 text-xs font-mono active:opacity-80"
               >
@@ -120,7 +123,7 @@ export function RecentCommits({ projectId }: { projectId: string }) {
 
   const load = useCallback(async () => {
     const res = await fetch(
-      `/api/projects/${projectId}/git?action=commits&count=${count}`
+      `${projectApiPath(projectId)}/git?action=commits&count=${count}`
     );
     const data = await res.json();
     setLoaded({ count, commits: data.commits ?? [] });

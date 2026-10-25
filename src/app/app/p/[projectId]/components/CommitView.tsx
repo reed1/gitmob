@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { ModalOverlay } from '@/components/ModalOverlay';
 import { apiFetch } from '@/lib/api';
 import { RecentCommits } from './RecentCommits';
+import { projectApiPath } from '@/lib/project-paths';
 
 function ArrowIcon({ direction }: { direction: 'up' | 'down' }) {
   return (
@@ -85,7 +86,7 @@ export function CommitView({
     if (draft.pending.source) return;
     if (draft.commitTitle.trim() || draft.commitBody.trim()) return;
     async function checkPending() {
-      const res = await fetch(`/api/projects/${projectId}/pending-commit`);
+      const res = await fetch(`${projectApiPath(projectId)}/pending-commit`);
       const data = await res.json();
       if (!data.pending) return;
       const { title, body } = splitMessage(data.pending.message);
@@ -103,7 +104,7 @@ export function CommitView({
   // Dropping the message leaves the session alone: nothing was committed, so there is
   // nothing it is finished with.
   const clearPendingMessage = async () => {
-    await apiFetch(`/api/projects/${projectId}/pending-commit`, {
+    await apiFetch(`${projectApiPath(projectId)}/pending-commit`, {
       method: 'DELETE',
     });
     setCommitTitle('');
@@ -112,7 +113,7 @@ export function CommitView({
   };
 
   const handleAction = async (action: string, body?: object) => {
-    const res = await apiFetch(`/api/projects/${projectId}/git`, {
+    const res = await apiFetch(`${projectApiPath(projectId)}/git`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action, ...body }),
@@ -125,11 +126,11 @@ export function CommitView({
       if (pending.source) {
         // The delete hands back the repo's commit lock, so it goes first: a session
         // parked with the lock still held would take it to the grave.
-        await apiFetch(`/api/projects/${projectId}/pending-commit`, {
+        await apiFetch(`${projectApiPath(projectId)}/pending-commit`, {
           method: 'DELETE',
         });
         if (pending.session && pending.closeSession) {
-          await apiFetch(`/api/projects/${projectId}/desktop`, {
+          await apiFetch(`${projectApiPath(projectId)}/desktop`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -147,7 +148,7 @@ export function CommitView({
 
   const generateCommitMessage = async () => {
     const res = await apiFetch(
-      `/api/projects/${projectId}/git?action=diff-summary`
+      `${projectApiPath(projectId)}/git?action=diff-summary`
     );
     if (!res.ok) return;
     const data = await res.json();
@@ -160,7 +161,7 @@ export function CommitView({
 
   const shortenCommitTitle = async () => {
     const res = await apiFetch(
-      `/api/projects/${projectId}/git?action=shorten-message&message=${encodeURIComponent(commitTitle)}`
+      `${projectApiPath(projectId)}/git?action=shorten-message&message=${encodeURIComponent(commitTitle)}`
     );
     const data = await res.json();
     if (data.variants) {

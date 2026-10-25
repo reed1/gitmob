@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Project } from './types';
 import ProjectKebabMenu from './ProjectKebabMenu';
 import { HoldBadge } from './GgHold';
+import { projectPagePath } from '@/lib/project-paths';
 
 // 'reed' is the trunk on forks of other people's repositories.
 const DEFAULT_BRANCHES = new Set(['main', 'master', 'reed']);
@@ -29,7 +30,9 @@ export default function ProjectCard({
   return (
     <div
       onClick={() =>
-        router.push(`/app/p/${project.id}?tab=${getDefaultTab(project)}`)
+        router.push(
+          `${projectPagePath(project.id)}?tab=${getDefaultTab(project)}`
+        )
       }
       className={`p-4 rounded-lg border flex items-center gap-3 cursor-pointer ${
         project.warnings.length > 0

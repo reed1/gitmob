@@ -1,5 +1,6 @@
 import type { CustomModel } from './desktop-models';
 import { addToast, apiFetch } from './api';
+import { projectApiPath } from './project-paths';
 
 /**
  * Starts a session and answers with the project it landed on, or null when it failed. With a
@@ -12,7 +13,7 @@ export async function launchDesktopSession(
   branch = '',
   customModel?: CustomModel
 ): Promise<string | null> {
-  const res = await apiFetch(`/api/projects/${projectId}/desktop`, {
+  const res = await apiFetch(`${projectApiPath(projectId)}/desktop`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

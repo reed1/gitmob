@@ -14,6 +14,7 @@ import { useAutoRefresh } from '@/lib/use-auto-refresh';
 import { CollapsedRows } from './CollapsedRows';
 import { KebabMenu, KebabMenuItem } from './KebabMenu';
 import { useModelCatalog } from '@/lib/use-model-catalog';
+import { projectPagePath } from '@/lib/project-paths';
 
 interface PendingHandoff {
   id: string;
@@ -236,7 +237,7 @@ export function PendingHandoffs({
                     handoff waits parked either way; only the edits in the box are lost. */}
               {open.clean === false && (
                 <Link
-                  href={`/app/p/${open.projectId}?tab=changes`}
+                  href={`${projectPagePath(open.projectId)}?tab=changes`}
                   className="mt-2 inline-flex items-center gap-1 text-xs text-yellow-400 active:opacity-80"
                 >
                   Uncommitted changes here — open Changes

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { SendKeysModal, SendTextModal } from './DesktopSendModals';
 import { addToast, apiFetch } from '@/lib/api';
 import { COMMON_COMMANDS, type CommonCommand } from '@/lib/desktop-keys';
+import { projectApiPath } from '@/lib/project-paths';
 
 /** A physical keycap: a raised grey box, its thick bottom border reading as the key's side. */
 const keycapClass =
@@ -40,7 +41,7 @@ export function DesktopScreenView({
   const fetchScreen = useCallback(
     async (signal: AbortSignal) => {
       const res = await fetch(
-        `/api/projects/${projectId}/desktop?window=${encodeURIComponent(windowId)}`
+        `${projectApiPath(projectId)}/desktop?window=${encodeURIComponent(windowId)}`
       );
       const data = await res.json();
       if (signal.aborted) return;
@@ -76,7 +77,7 @@ export function DesktopScreenView({
   const acceptPrompt = async () => {
     setMenuOpen(false);
 
-    const res = await apiFetch(`/api/projects/${projectId}/desktop`, {
+    const res = await apiFetch(`${projectApiPath(projectId)}/desktop`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ windowId, action: 'accept-prompt' }),
@@ -87,7 +88,7 @@ export function DesktopScreenView({
   const sendCommand = async (command: CommonCommand) => {
     setMenuOpen(false);
 
-    const res = await apiFetch(`/api/projects/${projectId}/desktop`, {
+    const res = await apiFetch(`${projectApiPath(projectId)}/desktop`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ windowId, action: 'command', command }),

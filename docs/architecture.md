@@ -37,6 +37,9 @@ and across projects, from the front page:
 - The project list is reopened all day: keep process spawns off the per-project path and the
   network off the request path (`src/lib/background-cache.ts`).
 - Work that outlives a request runs as a detached job (`src/lib/cli-jobs.ts`).
+- A project id is plain text everywhere — worktree ids hold `::` — and is encoded only where a
+  URL is built, through `src/lib/project-paths.ts`. The `[projectId]` pages decode the route
+  param on read.
 - Every way into a new session goes through the one session modal (`src/app/app/NewSessionModal.tsx`).
 - A diff opened from a list is laid over that list, keyed by the URL, rather than navigated to:
   the list stays mounted, so back finds it scrolled and expanded as it was. Both the Commit tab's

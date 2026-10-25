@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAutoRefresh } from '@/lib/use-auto-refresh';
+import { projectApiPath } from '@/lib/project-paths';
 
 export function RunLogView({
   projectId,
@@ -20,7 +21,7 @@ export function RunLogView({
 
   const fetchLog = useCallback(async () => {
     const res = await fetch(
-      `/api/projects/${projectId}/run?action=logs&name=${encodeURIComponent(runName)}`
+      `${projectApiPath(projectId)}/run?action=logs&name=${encodeURIComponent(runName)}`
     );
     const data = await res.json();
     setOutput(data.output ?? '');

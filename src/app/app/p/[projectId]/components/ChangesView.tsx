@@ -7,6 +7,7 @@ import { KebabMenu, KebabMenuItem } from '@/app/app/KebabMenu';
 import { ModalOverlay } from '@/components/ModalOverlay';
 import { apiFetch } from '@/lib/api';
 import { ReviewScreen } from './ReviewScreen';
+import { projectApiPath, projectPagePath } from '@/lib/project-paths';
 
 export function ChangesView({
   projectId,
@@ -40,12 +41,12 @@ export function ChangesView({
     const params = new URLSearchParams({ tab: 'changes', file });
     if (staged) params.set('staged', '1');
     if (untracked) params.set('untracked', '1');
-    const url = `/app/p/${projectId}?${params}`;
+    const url = `${projectPagePath(projectId)}?${params}`;
     if (replace) router.replace(url, { scroll: false });
     else router.push(url, { scroll: false });
   };
 
-  const closeFile = () => goBack(`/app/p/${projectId}?tab=changes`);
+  const closeFile = () => goBack(`${projectPagePath(projectId)}?tab=changes`);
 
   const allFiles = status
     ? [
@@ -81,7 +82,7 @@ export function ChangesView({
   };
 
   const handleAction = async (action: string, file: string) => {
-    await apiFetch(`/api/projects/${projectId}/git`, {
+    await apiFetch(`${projectApiPath(projectId)}/git`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action, file }),
@@ -113,7 +114,7 @@ export function ChangesView({
             // A sideways jump into the same file, not a step deeper: back belongs to
             // the change list this diff was opened from.
             router.replace(
-              `/app/p/${projectId}?tab=files&file=${encodeURIComponent(selectedFile)}`
+              `${projectPagePath(projectId)}?tab=files&file=${encodeURIComponent(selectedFile)}`
             )
           }
         >

@@ -10,6 +10,7 @@ import {
   statusLabel,
 } from '@/lib/job-status';
 import { Modal } from './Modal';
+import { projectApiPath } from '@/lib/project-paths';
 
 /**
  * Cloning a configured project nobody has checked out here. The clone is a detached job, so
@@ -35,7 +36,7 @@ export function CloneModal({
   const announced = useRef(false);
 
   const load = useCallback(async () => {
-    const res = await fetch(`/api/projects/${projectId}/clone`);
+    const res = await fetch(`${projectApiPath(projectId)}/clone`);
     const data = await res.json();
     setJob(data.job);
   }, [projectId]);
@@ -61,7 +62,7 @@ export function CloneModal({
   const clone = async () => {
     setStarting(true);
     try {
-      const res = await apiFetch(`/api/projects/${projectId}/clone`, {
+      const res = await apiFetch(`${projectApiPath(projectId)}/clone`, {
         method: 'POST',
       });
       const data = await res.json();

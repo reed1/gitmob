@@ -2,9 +2,12 @@
 
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { ReviewScreen } from '@/app/app/p/[projectId]/components/ReviewScreen';
+import { projectPagePath } from '@/lib/project-paths';
 
 export default function ReviewPage() {
-  const { projectId } = useParams<{ projectId: string }>();
+  const projectId = decodeURIComponent(
+    useParams<{ projectId: string }>().projectId
+  );
   const router = useRouter();
   const commit = useSearchParams().get('commit');
 
@@ -15,7 +18,7 @@ export default function ReviewPage() {
       path={null}
       onBack={() =>
         router.replace(
-          `/app/p/${projectId}?tab=${commit === null ? 'changes' : 'commit'}`
+          `${projectPagePath(projectId)}?tab=${commit === null ? 'changes' : 'commit'}`
         )
       }
     />

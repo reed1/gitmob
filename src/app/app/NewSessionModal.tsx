@@ -18,6 +18,7 @@ import {
   useImageUploads,
   withImagePaths,
 } from './ImageUploads';
+import { projectPagePath } from '@/lib/project-paths';
 
 /**
  * The one way a desktop session is started from this app — the project card's menu on the front
@@ -88,7 +89,7 @@ export function NewSessionModal({
       if (launchedIn === projectId) {
         onLaunched?.();
       } else {
-        router.push(`/app/p/${launchedIn}?tab=claude`);
+        router.push(`${projectPagePath(launchedIn)}?tab=claude`);
       }
     } finally {
       setLaunching(false);

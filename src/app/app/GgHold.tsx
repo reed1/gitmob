@@ -2,6 +2,7 @@
 
 import { addToast, apiFetch } from '@/lib/api';
 import { Modal } from './Modal';
+import { projectApiPath } from '@/lib/project-paths';
 
 export function HoldBadge() {
   return (
@@ -35,7 +36,7 @@ export function ReleaseHoldModal({
   onReleased: () => void;
 }) {
   const release = async () => {
-    const res = await apiFetch(`/api/projects/${projectId}/hold`, {
+    const res = await apiFetch(`${projectApiPath(projectId)}/hold`, {
       method: 'DELETE',
     });
     if (!res.ok) return;

@@ -17,6 +17,7 @@ import {
   PushSelection,
   SCOPE_PATTERN,
 } from '@/lib/push-command';
+import { projectApiPath } from '@/lib/project-paths';
 
 /** How long typing settles before the scope is sent to pt. */
 const CHECK_DEBOUNCE_MS = 350;
@@ -58,7 +59,7 @@ export function PushView({ projectId }: { projectId: string }) {
   const checkRequest = useRef(0);
 
   const load = useCallback(async () => {
-    const res = await fetch(`/api/projects/${projectId}/push`);
+    const res = await fetch(`${projectApiPath(projectId)}/push`);
     const data = await res.json();
     if (!res.ok) {
       setError(data.error || 'Could not read the push config');
@@ -76,7 +77,7 @@ export function PushView({ projectId }: { projectId: string }) {
 
   const pollJob = useCallback(async () => {
     if (!running) return;
-    const res = await fetch(`/api/projects/${projectId}/push?action=job`);
+    const res = await fetch(`${projectApiPath(projectId)}/push?action=job`);
     const data = await res.json();
     setJob(data.job);
   }, [projectId, running]);
@@ -108,7 +109,7 @@ export function PushView({ projectId }: { projectId: string }) {
         servers: serverWords,
         scope: scopeValue,
       });
-      const res = await fetch(`/api/projects/${projectId}/push?${query}`);
+      const res = await fetch(`${projectApiPath(projectId)}/push?${query}`);
       const data = await res.json();
       // A slower earlier answer must not land on top of a later one it has been overtaken by.
       if (request !== checkRequest.current) return;
@@ -135,7 +136,7 @@ export function PushView({ projectId }: { projectId: string }) {
   const commandLine = buildPushArgv(selection).join(' ');
 
   const run = async () => {
-    const res = await apiFetch(`/api/projects/${projectId}/push`, {
+    const res = await apiFetch(`${projectApiPath(projectId)}/push`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...selection, notify }),

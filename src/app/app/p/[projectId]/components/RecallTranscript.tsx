@@ -5,6 +5,7 @@ import { addToast, apiFetch } from '@/lib/api';
 import { relativeTime } from '@/lib/relative-time';
 import type { RecallMessage } from './RecallSearch';
 import { TranscriptMessage } from './TranscriptMessage';
+import { projectApiPath } from '@/lib/project-paths';
 
 interface RecallSession {
   sessionId: string;
@@ -35,7 +36,7 @@ export function RecallTranscript({
 
   const load = useCallback(async () => {
     const res = await fetch(
-      `/api/projects/${projectId}/recall?session=${encodeURIComponent(sessionId)}`
+      `${projectApiPath(projectId)}/recall?session=${encodeURIComponent(sessionId)}`
     );
     const data = await res.json();
     if (res.ok) {
@@ -53,7 +54,7 @@ export function RecallTranscript({
   const resume = async () => {
     setResuming(true);
     try {
-      const res = await apiFetch(`/api/projects/${projectId}/recall`, {
+      const res = await apiFetch(`${projectApiPath(projectId)}/recall`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId }),

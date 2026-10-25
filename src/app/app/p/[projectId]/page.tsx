@@ -25,6 +25,7 @@ import { HoldBadge } from '@/app/app/GgHold';
 import { WorktreeSyncNotice } from '@/app/app/WorktreeActions';
 import { useAutoRefresh } from '@/lib/use-auto-refresh';
 import { goHome } from '@/lib/app-depth';
+import { projectApiPath, projectPagePath } from '@/lib/project-paths';
 
 const tabs = [
   { id: 'pinboard', label: 'Pinboard' },
@@ -57,7 +58,9 @@ function depthInTab(searchParams: URLSearchParams): number {
 }
 
 export default function ProjectPage() {
-  const { projectId } = useParams<{ projectId: string }>();
+  const projectId = decodeURIComponent(
+    useParams<{ projectId: string }>().projectId
+  );
   const router = useRouter();
   const searchParams = useSearchParams();
   const [project, setProject] = useState<Project | null>(null);
@@ -78,7 +81,7 @@ export default function ProjectPage() {
   const loadedDepth = useRef(depthInTab(searchParams));
 
   const goToTab = (id: Tab) => {
-    const url = `/app/p/${projectId}?tab=${id}`;
+    const url = `${projectPagePath(projectId)}?tab=${id}`;
     const unwind = depthInTab(searchParams) - loadedDepth.current;
     loadedDepth.current = 0;
     if (unwind <= 0) {
@@ -135,9 +138,9 @@ export default function ProjectPage() {
   useEffect(() => {
     async function load() {
       const [projRes, branchRes, statusRes] = await Promise.all([
-        fetch(`/api/projects/${projectId}`),
-        fetch(`/api/projects/${projectId}/git?action=branch`),
-        fetch(`/api/projects/${projectId}/git?action=status`),
+        fetch(projectApiPath(projectId)),
+        fetch(`${projectApiPath(projectId)}/git?action=branch`),
+        fetch(`${projectApiPath(projectId)}/git?action=status`),
       ]);
 
       setProject(await projRes.json());
@@ -149,7 +152,7 @@ export default function ProjectPage() {
   }, [projectId]);
 
   const refreshStatus = useCallback(async () => {
-    const res = await fetch(`/api/projects/${projectId}/git?action=status`);
+    const res = await fetch(`${projectApiPath(projectId)}/git?action=status`);
     setStatus(await res.json());
   }, [projectId]);
 
@@ -362,7 +365,7 @@ export default function ProjectPage() {
             projectId={projectId}
             commit={commitParam}
             path={fileParam}
-            onBack={() => goBack(`/app/p/${projectId}?tab=commit`)}
+            onBack={() => goBack(`${projectPagePath(projectId)}?tab=commit`)}
           />
         </div>
       )}

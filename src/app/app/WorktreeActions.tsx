@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 import { addToast, apiFetch } from '@/lib/api';
 import { useAutoRefresh } from '@/lib/use-auto-refresh';
 import { Modal } from './Modal';
+import { projectApiPath } from '@/lib/project-paths';
 
 export interface Worktree {
   name: string;
@@ -147,7 +148,7 @@ async function performWorktreeAction(
   }
 
   const res = await apiFetch(
-    `/api/projects/${repoId}/worktrees/${encodeURIComponent(worktree.name)}`,
+    `${projectApiPath(repoId)}/worktrees/${encodeURIComponent(worktree.name)}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -460,7 +461,7 @@ export function ProjectWorktreeModal({
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const res = await fetch(`/api/projects/${repoId}/worktrees`);
+    const res = await fetch(`${projectApiPath(repoId)}/worktrees`);
     const data = await res.json();
     if (res.ok) setWorktrees(data.worktrees);
     else setError(data.error || 'Could not read worktrees');
@@ -518,7 +519,7 @@ export function WorktreeSyncNotice({
   );
 
   const load = useCallback(async () => {
-    const res = await fetch(`/api/projects/${repoId}/worktrees`);
+    const res = await fetch(`${projectApiPath(repoId)}/worktrees`);
     const data = await res.json();
     if (res.ok) {
       pick(data.worktrees);

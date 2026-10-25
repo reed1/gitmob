@@ -8,6 +8,7 @@ import {
   PushResolution,
   PushSelection,
 } from './push-command';
+import { projectPagePath } from './project-paths';
 
 interface PtPushJson {
   servers: { name: string; ssh: string; path: string | null }[];
@@ -94,6 +95,6 @@ export function startPush(
     jobId: pushJobId(project.id),
     notify,
     notifyLabel: `Push ${project.id}`,
-    notifyUrl: `/app/p/${project.id}`,
+    notifyUrl: projectPagePath(project.id),
   });
 }

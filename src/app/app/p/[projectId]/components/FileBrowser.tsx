@@ -6,6 +6,7 @@ import { apiFetch } from '@/lib/api';
 import { imageTypeFor } from '@/lib/image-types';
 import { ImagePreview } from '@/components/ImagePreview';
 import { HighlightedCode } from './HighlightedCode';
+import { projectApiPath, projectPagePath } from '@/lib/project-paths';
 
 interface FileContent {
   content: string;
@@ -83,7 +84,7 @@ function ImageViewer({
       />
       <div className="flex-1 min-h-0">
         <ImagePreview
-          src={`/api/projects/${projectId}/files/image?path=${encodeURIComponent(filePath)}`}
+          src={`${projectApiPath(projectId)}/files/image?path=${encodeURIComponent(filePath)}`}
           alt={filePath}
           onSize={setSize}
         />
@@ -116,7 +117,7 @@ function FileViewer({
       setLoading(true);
       setError(null);
       const res = await fetch(
-        `/api/projects/${projectId}/files/content?path=${encodeURIComponent(filePath)}`
+        `${projectApiPath(projectId)}/files/content?path=${encodeURIComponent(filePath)}`
       );
       if (res.ok) {
         setContent(await res.json());
@@ -134,7 +135,7 @@ function FileViewer({
     setSaving(true);
     try {
       const res = await apiFetch(
-        `/api/projects/${projectId}/files/content?path=${encodeURIComponent(filePath)}`,
+        `${projectApiPath(projectId)}/files/content?path=${encodeURIComponent(filePath)}`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -237,14 +238,14 @@ export function FileBrowser({
     const params = new URLSearchParams({ tab: 'files' });
     if (dir) params.set('path', dir);
     if (file) params.set('file', file);
-    return `/app/p/${projectId}?${params}`;
+    return `${projectPagePath(projectId)}?${params}`;
   };
 
   useEffect(() => {
     async function load() {
       setLoading(true);
       const res = await fetch(
-        `/api/projects/${projectId}/files?path=${encodeURIComponent(path)}`
+        `${projectApiPath(projectId)}/files?path=${encodeURIComponent(path)}`
       );
       setEntries(await res.json());
       setLoading(false);
