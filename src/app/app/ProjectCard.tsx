@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Project } from './types';
 import ProjectKebabMenu from './ProjectKebabMenu';
+import { HoldBadge } from './GgHold';
 
 // 'reed' is the trunk on forks of other people's repositories.
 const DEFAULT_BRANCHES = new Set(['main', 'master', 'reed']);
@@ -53,6 +54,7 @@ export default function ProjectCard({
               not cloned
             </span>
           )}
+          {project.hold && <HoldBadge />}
           {project.claudeSessions > 0 && (
             <span
               className="flex items-center gap-0.5 text-[11px] leading-none tabular-nums px-1.5 py-0.5 rounded-full border border-[#d97757]/40 bg-[#d97757]/15 text-[#d97757]"

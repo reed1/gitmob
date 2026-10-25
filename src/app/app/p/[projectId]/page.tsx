@@ -21,6 +21,7 @@ import { WtmanView } from './components/WtmanView';
 import { WrapToggle } from './components/WrapToggle';
 import { ReviewScreen } from './components/ReviewScreen';
 import ProjectKebabMenu from '@/app/app/ProjectKebabMenu';
+import { HoldBadge } from '@/app/app/GgHold';
 import { WorktreeSyncNotice } from '@/app/app/WorktreeActions';
 import { useAutoRefresh } from '@/lib/use-auto-refresh';
 import { goHome } from '@/lib/app-depth';
@@ -210,6 +211,7 @@ export default function ProjectPage() {
                   {branch}
                 </span>
               )}
+              {project?.hold && <HoldBadge />}
             </div>
           </div>
           {showingFile ? (

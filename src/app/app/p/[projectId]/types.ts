@@ -8,6 +8,8 @@ export interface Project {
   missing: boolean;
   /** Open on the desktop right now: its IDE and terminals are up. */
   openOnDesktop: boolean;
+  /** Rewinds `gg hold` recorded while holding autopush and auto-pull; null when not held. */
+  hold: string[] | null;
   urls?: Record<string, string>;
   push?: Record<string, { ssh: string; path?: string }>;
 }

@@ -15,6 +15,7 @@ docs; how it is called is in the module. Paths under `rlocal/` are in `~/.dotfil
 | `claudex`                         | sessions, handoffs, models, usage             | `src/lib/desktop.ts`, `handoffs.ts`, `claude-usage.ts` | `rlocal/app/claudex/CLAUDE.md`              |
 | `recall`                          | past sessions                                 | `src/lib/recall.ts`                                    | https://github.com/zippoxer/recall          |
 | `gg kitty-commit`                 | parked commits                                | `src/lib/pending-commits.ts`                           | `rlocal/app/gg/CLAUDE.md`                   |
+| `gg hold`                         | the hold on autopush and auto-pull            | `src/lib/gg-hold.ts`                                   | `rlocal/app/gg/gg-hold`                     |
 | `gh`                              | cloning a missing checkout                    | `src/lib/clone.ts`                                     | https://cli.github.com/manual/gh_repo_clone |
 | `am-i-afk`                        | the AFK badge                                 | `src/lib/afk.ts`                                       | `rlocal/bin/am-i-afk`                       |
 | `rbak`                            | "Move all to rbak" on the Files page          | `src/app/api/files/rbak/route.ts`                      | `rlocal/app/rbak/CLAUDE.md`                 |

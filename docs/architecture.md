@@ -9,6 +9,7 @@
 - Run CLI commands as detached jobs that notify when they finish
 - Start, watch, type into and resume Claude and Codex sessions; search past ones
 - Manage worktrees, todos and pinboard notes
+- See when `gg hold` is holding its autopush and auto-pull, and release it
 
 and across projects, from the front page:
 

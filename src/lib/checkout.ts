@@ -16,6 +16,14 @@ function resolveGitDir(path: string): string {
   return resolve(path, pointer[1].trim());
 }
 
+/** A linked worktree's git dir names the repository's shared one in `commondir`. */
+export function resolveCommonDir(path: string): string {
+  const gitDir = resolveGitDir(path);
+  const pointer = resolve(gitDir, 'commondir');
+  if (!existsSync(pointer)) return gitDir;
+  return resolve(gitDir, readFileSync(pointer, 'utf-8').trim());
+}
+
 function readBranch(gitDir: string): string {
   const head = readFileSync(resolve(gitDir, 'HEAD'), 'utf-8').trim();
   const ref = head.match(/^ref:\s*refs\/heads\/(.+)$/);

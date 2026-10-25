@@ -7,6 +7,7 @@ import { getEnvCheckFailures } from '@/lib/env-check';
 import { getSudoEnabledProjects } from '@/lib/sudo';
 import { getClaudeSessionCounts } from '@/lib/desktop';
 import { readCheckout } from '@/lib/checkout';
+import { readHold } from '@/lib/gg-hold';
 import { getClaudeUsage } from '@/lib/claude-usage';
 import { isAway } from '@/lib/afk';
 import { getStaleBuild } from '@/lib/build-version';
@@ -103,6 +104,7 @@ export async function GET() {
       missing: !existsSync(p.path),
       openOnDesktop: openIds.has(p.id),
       branch: checkout?.branch ?? null,
+      hold: checkout ? readHold(p.path) : null,
       editing: editing.has(p.id),
       hasPendingMessage: pendingRepos.has(p.path),
       hasRunningProcess: !!allRunningProcesses[p.id],

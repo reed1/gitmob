@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CloneModal } from './CloneModal';
+import { ReleaseHoldModal } from './GgHold';
 import { actOnDesktop, CloseOnDesktopModal } from './CloseOnDesktopModal';
 import { KebabMenu, KebabMenuItem } from './KebabMenu';
 import { Modal } from './Modal';
@@ -21,6 +22,7 @@ interface Props {
     repo?: string;
     missing: boolean;
     openOnDesktop: boolean;
+    hold: string[] | null;
     urls?: Record<string, string>;
   };
   /** The tree is dirty: there is something to review. */
@@ -43,6 +45,7 @@ export default function ProjectKebabMenu({
   const [cloneOpen, setCloneOpen] = useState(false);
   const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
   const [wtmanOpen, setWtmanOpen] = useState(false);
+  const [releaseHoldOpen, setReleaseHoldOpen] = useState(false);
   const [scratchpadEnabled, toggleScratchpad] = useScratchpadEnabled();
 
   const urls = project.urls ?? {};
@@ -89,6 +92,11 @@ export default function ProjectKebabMenu({
             Review
           </KebabMenuItem>
         )}
+        {project.hold && (
+          <KebabMenuItem onSelect={() => setReleaseHoldOpen(true)}>
+            Release hold
+          </KebabMenuItem>
+        )}
         <KebabMenuItem
           onSelect={() => setUrlModalOpen(true)}
           disabled={!hasUrls}
@@ -133,6 +141,18 @@ export default function ProjectKebabMenu({
           onClose={() => setWtmanOpen(false)}
           onChanged={onChanged}
           onGone={onClosed}
+        />
+      )}
+
+      {releaseHoldOpen && project.hold && (
+        <ReleaseHoldModal
+          projectId={project.id}
+          hold={project.hold}
+          onCancel={() => setReleaseHoldOpen(false)}
+          onReleased={() => {
+            setReleaseHoldOpen(false);
+            onChanged();
+          }}
         />
       )}
 
