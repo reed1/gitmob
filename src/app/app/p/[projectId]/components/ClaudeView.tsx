@@ -115,6 +115,8 @@ export function ClaudeView({
       return (
         <SessionTranscript
           projectId={projectId}
+          canonicalId={canonicalId}
+          windowId={windowParam}
           sessionId={session ? transcriptSessionId(session) : null}
           lookingUp={sessions === null}
           title={title}

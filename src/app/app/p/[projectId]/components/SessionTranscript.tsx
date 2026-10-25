@@ -9,6 +9,7 @@ import {
 } from 'react';
 import type { RecallMessage } from './RecallSearch';
 import { TranscriptMessage } from './TranscriptMessage';
+import { SendTextModal } from './DesktopSendModals';
 import { projectApiPath } from '@/lib/project-paths';
 
 /** How close to the end still counts as reading the end, so a refresh keeps following it. */
@@ -17,6 +18,8 @@ const FOLLOW_SLACK_PX = 80;
 /** An open window's conversation, read back through `recall`, which indexes it on the way. */
 export function SessionTranscript({
   projectId,
+  canonicalId,
+  windowId,
   sessionId,
   lookingUp,
   title,
@@ -24,6 +27,8 @@ export function SessionTranscript({
   onOpenTerminal,
 }: {
   projectId: string;
+  canonicalId: string;
+  windowId: string;
   sessionId: string | null;
   /** The window's session is not known yet, so neither is whether it has one. */
   lookingUp: boolean;
@@ -35,6 +40,7 @@ export function SessionTranscript({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [textOpen, setTextOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const followEnd = useRef(true);
 
@@ -149,6 +155,29 @@ export function SessionTranscript({
                 >
                   Refresh
                 </button>
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setTextOpen(true);
+                  }}
+                  aria-label="Send text"
+                  className="flex w-full items-center gap-1.5 px-4 py-2 text-sm hover:bg-foreground/10 whitespace-nowrap"
+                >
+                  Send
+                  <svg
+                    className="w-5 h-5 text-foreground/70"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 7V5h14v2M12 5v14M9 19h6"
+                    />
+                  </svg>
+                </button>
               </div>
             </>
           )}
@@ -186,6 +215,16 @@ export function SessionTranscript({
           <TranscriptMessage key={index} message={message} />
         ))}
       </div>
+
+      {textOpen && (
+        <SendTextModal
+          projectId={projectId}
+          canonicalId={canonicalId}
+          windowId={windowId}
+          title={title}
+          onClose={() => setTextOpen(false)}
+        />
+      )}
     </div>
   );
 }
