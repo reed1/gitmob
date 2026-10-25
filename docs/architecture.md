@@ -36,7 +36,9 @@ and across projects, from the front page:
   its caches or redo its lookups here. See [cli-integrations.md](cli-integrations.md).
 - The project list is reopened all day: keep process spawns off the per-project path and the
   network off the request path (`src/lib/background-cache.ts`).
-- Work that outlives a request runs as a detached job (`src/lib/cli-jobs.ts`).
+- Work that outlives a request runs as a detached job (`src/lib/cli-jobs.ts`). A tab's job has
+  one id per project (`cli-`, `push-`, `clone-`), so a reload finds it again and the next run
+  replaces its log rather than adding one.
 - A project id is plain text everywhere — worktree ids hold `::` — and is encoded only where a
   URL is built, through `src/lib/project-paths.ts`. The `[projectId]` pages decode the route
   param on read.

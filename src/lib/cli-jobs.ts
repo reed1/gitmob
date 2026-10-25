@@ -184,8 +184,3 @@ export function stopJob(jobId: string): boolean {
     throw err;
   }
 }
-
-export function deleteJob(jobId: string) {
-  if (existsSync(jobPath(jobId))) unlinkSync(jobPath(jobId));
-  if (existsSync(outputPath(jobId))) unlinkSync(outputPath(jobId));
-}

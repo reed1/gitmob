@@ -327,7 +327,7 @@ export default function ProjectPage() {
         {tab === 'run' && (
           <RunView projectId={projectId} urls={project?.urls} />
         )}
-        {tab === 'cli' && project && <CLIView projectPath={project.path} />}
+        {tab === 'cli' && project && <CLIView projectId={projectId} />}
         {tab === 'claude' && project && (
           <ClaudeView projectId={projectId} canonicalId={project.canonicalId} />
         )}

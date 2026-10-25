@@ -1,84 +1,76 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch } from '@/lib/api';
+import { useAutoRefresh } from '@/lib/use-auto-refresh';
+import {
+  ClientJob,
+  elapsedSince,
+  formatSeconds,
+  statusLabel,
+} from '@/lib/job-status';
+import { projectApiPath } from '@/lib/project-paths';
 
-export function CLIView({ projectPath }: { projectPath: string }) {
+export function CLIView({ projectId }: { projectId: string }) {
   const [command, setCommand] = useState('');
-  const [output, setOutput] = useState<string | null>(null);
-  const [exitCode, setExitCode] = useState<number | null>(null);
-  const [signal, setSignal] = useState<string | null>(null);
-  const [duration, setDuration] = useState<number | null>(null);
   const [notify, setNotify] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [jobId, setJobId] = useState<string | null>(null);
+  const [job, setJob] = useState<ClientJob | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [starting, setStarting] = useState(false);
   const [stopping, setStopping] = useState(false);
-  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const logRef = useRef<HTMLPreElement>(null);
+
+  // The last command comes back into the input, so a reload leaves it one tap from a re-run.
+  const load = useCallback(async () => {
+    const res = await fetch(`${projectApiPath(projectId)}/cli`);
+    const data = await res.json();
+    setJob(data.job);
+    if (data.job) setCommand(data.job.command);
+  }, [projectId]);
+
+  useAutoRefresh(load);
+
+  const running = job?.status === 'running';
+
+  const pollJob = useCallback(async () => {
+    if (!running) return;
+    const res = await fetch(`${projectApiPath(projectId)}/cli`);
+    const data = await res.json();
+    setJob(data.job);
+    if (data.job?.status !== 'running') setStopping(false);
+  }, [projectId, running]);
+
+  useAutoRefresh(pollJob, 500);
 
   useEffect(() => {
-    return () => {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-      }
-    };
-  }, []);
-
-  const pollJob = async (id: string) => {
-    const res = await fetch(`/api/cli?jobId=${id}`);
-    if (!res.ok) return;
-
-    const data = await res.json();
-    setOutput(data.output);
-
-    if (data.status !== 'running') {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-        pollIntervalRef.current = null;
-      }
-      setExitCode(data.exitCode);
-      setSignal(data.signal);
-      setDuration(data.duration);
-      setLoading(false);
-      setJobId(null);
-      setStopping(false);
-    }
-  };
+    if (running) logRef.current?.scrollTo({ top: logRef.current.scrollHeight });
+  }, [job?.output, running]);
 
   const runCommand = async () => {
-    if (!command.trim()) return;
-    setLoading(true);
-    setOutput(null);
-    setExitCode(null);
-    setSignal(null);
-    setDuration(null);
-
-    const res = await apiFetch('/api/cli', {
+    if (!command.trim() || running || starting) return;
+    setStarting(true);
+    setError(null);
+    const res = await apiFetch(`${projectApiPath(projectId)}/cli`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ command, cwd: projectPath, notify }),
+      body: JSON.stringify({ command, notify }),
     });
     const data = await res.json();
-
-    setJobId(data.jobId);
-    pollJob(data.jobId);
-    pollIntervalRef.current = setInterval(() => pollJob(data.jobId), 500);
+    setStarting(false);
+    if (!res.ok) setError(data.error || 'Could not start the command');
+    if (data.job) setJob(data.job);
   };
 
   const stopCommand = async () => {
-    if (jobId === null) return;
     setStopping(true);
-    const res = await apiFetch('/api/cli/stop', {
+    const res = await apiFetch(`${projectApiPath(projectId)}/cli/stop`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jobId }),
     });
     if (!res.ok) setStopping(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !loading) {
-      runCommand();
-    }
+    if (e.key === 'Enter') runCommand();
   };
 
   return (
@@ -106,7 +98,7 @@ export function CLIView({ projectPath }: { projectPath: string }) {
           Notify
         </label>
         <div className="flex items-center gap-2">
-          {jobId !== null && (
+          {running && (
             <button
               onClick={stopCommand}
               disabled={stopping}
@@ -117,40 +109,41 @@ export function CLIView({ projectPath }: { projectPath: string }) {
           )}
           <button
             onClick={runCommand}
-            disabled={loading || !command.trim()}
+            disabled={running || starting || !command.trim()}
             className="px-4 py-2 bg-foreground text-background font-medium rounded-lg active:opacity-80 disabled:opacity-50"
           >
-            {loading ? 'Running...' : 'Run'}
+            {running || starting ? 'Running...' : 'Run'}
           </button>
         </div>
       </div>
 
-      {(loading || output !== null) && (
-        <pre className="mt-4 flex-1 min-h-0 p-3 bg-foreground/5 border border-foreground/10 rounded-lg text-xs font-mono whitespace-pre-wrap overflow-auto">
-          {loading && !output ? 'Running...' : output || '(no output)'}
-        </pre>
-      )}
+      {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
 
-      {(exitCode !== null || signal !== null) && (
-        <div className="mt-2 text-sm">
-          {signal !== null ? (
-            <span className="text-amber-500">Stopped ({signal})</span>
-          ) : (
-            <>
-              <span className="font-medium">Return Code: </span>
-              <span
-                className={exitCode === 0 ? 'text-green-600' : 'text-red-600'}
-              >
-                {exitCode}
-              </span>
-            </>
-          )}
-          {duration !== null && (
-            <span className="ml-4 text-foreground/60">
-              {(duration / 1000).toFixed(2)}s
+      {job && (
+        <>
+          <div className="mt-4 flex items-baseline justify-between gap-3 text-sm">
+            <span className={statusLabel(job).className}>
+              {statusLabel(job).text}
             </span>
+            <span className="text-xs text-foreground/50">
+              {job.duration !== null
+                ? formatSeconds(job.duration)
+                : elapsedSince(job.startTime)}
+            </span>
+          </div>
+          <pre
+            ref={logRef}
+            className="mt-2 flex-1 min-h-0 p-3 bg-foreground/5 border border-foreground/10 rounded-lg text-xs font-mono whitespace-pre-wrap overflow-auto"
+          >
+            {job.output || (running ? 'Running...' : '(no output)')}
+          </pre>
+          {job.status === 'lost' && (
+            <p className="mt-2 text-xs text-foreground/40">
+              GitMob restarted while this ran, so its exit code went with the
+              process that was watching it. The log above is what it wrote.
+            </p>
           )}
-        </div>
+        </>
       )}
     </div>
   );
