@@ -19,6 +19,7 @@ import { PushView } from './components/PushView';
 import { SudoView } from './components/SudoView';
 import { WtmanView } from './components/WtmanView';
 import { WrapToggle } from './components/WrapToggle';
+import { ReviewScreen } from './components/ReviewScreen';
 import ProjectKebabMenu from '@/app/app/ProjectKebabMenu';
 import { WorktreeSyncNotice } from '@/app/app/WorktreeActions';
 import { useAutoRefresh } from '@/lib/use-auto-refresh';
@@ -63,6 +64,7 @@ export default function ProjectPage() {
   const fileParam = searchParams.get('file');
   const showingDiff = tab === 'changes' && fileParam !== null;
   const showingFile = tab === 'files' && fileParam !== null;
+  const commitParam = searchParams.get('commit');
   const [branch, setBranch] = useState<string>('');
   const [status, setStatus] = useState<GitStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -352,6 +354,19 @@ export default function ProjectPage() {
           />
         )}
       </main>
+
+      {/* Laid over the Commit tab instead of replacing it: the tab stays mounted underneath,
+          its cards expanded and scrolled as they were, for back to uncover. */}
+      {tab === 'commit' && commitParam !== null && fileParam !== null && (
+        <div className="fixed inset-0 z-20">
+          <ReviewScreen
+            projectId={projectId}
+            commit={commitParam}
+            path={fileParam}
+            onBack={() => goBack(`/app/p/${projectId}?tab=commit`)}
+          />
+        </div>
+      )}
     </div>
   );
 }

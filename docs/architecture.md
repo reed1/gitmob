@@ -26,6 +26,13 @@ The same page reviews a commit already made, from the kebab menu on each of the 
 recent commits: `?commit=<hash>` diffs it against its first parent — a merge shows what it brought
 in — and a root commit against the empty tree.
 
+Each file listed on an expanded commit card links to that one file's diff,
+`?tab=commit&commit=<hash>&file=<path>` on the project page. It is the same review screen,
+narrowed by `path`, laid over the Commit tab rather than navigated to: the tab stays mounted
+underneath, so back — the gesture or the screen's own arrow — uncovers the cards exactly as they
+were, expanded, scrolled and with every page Load more added. A link opening a new tab would do
+the same in a browser, but an installed PWA has no tabs to open.
+
 A new file is shown as itself, highlighted as the Files tab would, not as a column of `+` lines;
 a deleted one stays a diff. Files on the shared exclude list — see
 [cli-integrations.md](cli-integrations.md) — and binaries keep a row naming them and nothing more,

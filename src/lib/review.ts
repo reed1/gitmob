@@ -192,13 +192,15 @@ async function renderTracked(
 
 /**
  * Every change on one page: the commit `hash` when given, otherwise what the next commit would
- * be, untracked files included. Changed lines are counted before any diff is read, and past
- * REVIEW_LINE_LIMIT the answer is only that — unless `force`.
+ * be, untracked files included — or with `only`, the change to that one path. Changed lines are
+ * counted before any diff is read, and past REVIEW_LINE_LIMIT the answer is only that — unless
+ * `force`.
  */
 export async function getReview(
   cwd: string,
   force: boolean,
-  hash: string | null
+  hash: string | null,
+  only: string | null
 ): Promise<Review> {
   const git = simpleGit(cwd);
   const isExcluded = await loadDiffExclude();
@@ -206,6 +208,10 @@ export async function getReview(
   const source =
     hash === null ? await nextCommit(git, cwd) : await pastCommit(git, hash);
   const { scope } = source;
+  if (only !== null) {
+    source.tracked = source.tracked.filter((change) => change.path === only);
+    source.untracked = source.untracked.filter((path) => path === only);
+  }
   const lineCounts = parseNumstat(
     await git.raw([...source.diffArgs, '--numstat', '-z'])
   );

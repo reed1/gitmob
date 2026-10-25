@@ -20,5 +20,6 @@ export async function GET(
   }
 
   const force = searchParams.get('force') === '1';
-  return NextResponse.json(await getReview(project.path, force, commit));
+  const path = searchParams.get('path');
+  return NextResponse.json(await getReview(project.path, force, commit, path));
 }

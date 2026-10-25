@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { KebabMenu, KebabMenuItem } from '@/app/app/KebabMenu';
 import { useAutoRefresh } from '@/lib/use-auto-refresh';
@@ -79,19 +80,23 @@ function CommitCard({
             </pre>
           )}
           <div className="space-y-1">
+            {/* The diff opens over this tab rather than in place of it, so back finds the
+                cards still expanded and scrolled where they were. */}
             {commit.files.map((file) => (
-              <div
+              <Link
                 key={file.path}
-                className="flex items-center gap-2 text-xs font-mono"
+                href={`/app/p/${projectId}?tab=commit&commit=${commit.hash}&file=${encodeURIComponent(file.path)}`}
+                scroll={false}
+                className="flex items-center gap-2 text-xs font-mono active:opacity-80"
               >
-                <span className="break-all text-foreground/70">
+                <span className="break-all text-foreground/70 underline decoration-foreground/30 underline-offset-2">
                   {file.path}
                 </span>
                 <span className="ml-auto shrink-0 flex items-center gap-1.5">
                   <span className="text-green-400">+{file.insertions}</span>
                   <span className="text-red-400">-{file.deletions}</span>
                 </span>
-              </div>
+              </Link>
             ))}
             {commit.files.length === 0 && (
               <div className="text-xs text-foreground/40">No file changes</div>
