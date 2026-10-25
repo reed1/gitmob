@@ -1,243 +1,39 @@
 # Architecture
 
+## What it does
+
+**GitMob** (`/app`), for each project:
+
+- Browse files, review changes, commit, push and deploy
+- Start, stop and watch the project's run commands; toggle sudo
+- Run CLI commands as detached jobs that notify when they finish
+- Start, watch, type into and resume Claude and Codex sessions; search past ones
+- Manage worktrees, todos and pinboard notes
+
+and across projects, from the front page:
+
+- See every project's state at a glance; scan closed ones for uncommitted work
+- Read and launch handoffs, and accept commits, parked from the desktop
+- Keep a scratchpad on the device
+- Drive the agent's Chrome by hand (`/app/browser`)
+
+**Pinboard** (`/pinboard`) — every project's notes on one page.
+**Checklist** (`/checklist`) — lists of what to bring.
+
 ## Layout
 
-- `src/lib` — core logic (`git.ts`, `run.ts`, `projects.ts`, `files.ts`, `cli-jobs.ts`,
-  `notifications.ts`, `recall.ts`, `browser.ts`, `pending-commits.ts`, `review.ts`)
-- `src/app/api` — API routes (projects, cli jobs, pinboard, dooit todos, the agent's browser)
-- `src/app/app` — the GitMob PWA; `src/app/pinboard` — the pinboard PWA; `src/app/checklist` — the
-  checklist PWA, whose lists are the files in `checklists/`
-- `src/components` — UI shared across pages (`PinboardNote.tsx`, the note card and its modals;
-  `ImagePreview.tsx`, the image viewer of both file browsers)
-- `src/app/app/p/[projectId]/components` — project views (FileBrowser, ChangesView, CommitView,
-  RunView, CLIView, DooitView, ClaudeView, PushView, SudoView, WtmanView)
-- `src/proxy.ts` — host-based routing between the PWAs, see [pwas.md](pwas.md)
+- `src/lib` — core logic, one module per concern
+- `src/app/api` — API routes
+- `src/app/app`, `src/app/pinboard`, `src/app/checklist` — the three PWAs; a project's tabs are in
+  `src/app/app/p/[projectId]/components`
+- `src/components` — UI shared across the PWAs
+- `src/proxy.ts` — host routing between the PWAs and the guard against resent requests
 
-## Review
+## Rules
 
-`/app/p/<projectId>/review` is every change on one page to scroll through, instead of opening each
-diff on the Changes tab in turn. It is reached from the project's kebab menu — on its card and in
-its header, whichever tab is open — which offers it only while the tree is dirty. What it shows
-is what the next commit would be: the staged files when anything is staged, otherwise the whole
-dirty tree, untracked files included. A conflicted file is not staged: its markers are in the
-working tree, and that is where they are read from.
-
-The same page reviews a commit already made, from the kebab menu on each of the Commit tab's
-recent commits: `?commit=<hash>` diffs it against its first parent — a merge shows what it brought
-in — and a root commit against the empty tree.
-
-Each file listed on an expanded commit card links to that one file's diff,
-`?tab=commit&commit=<hash>&file=<path>` on the project page. It is the same review screen,
-narrowed by `path`, laid over the Commit tab rather than navigated to: the tab stays mounted
-underneath, so back — the gesture or the screen's own arrow — uncovers the cards exactly as they
-were, expanded, scrolled and with every page Load more added. A link opening a new tab would do
-the same in a browser, but an installed PWA has no tabs to open.
-
-A new file is shown as itself, highlighted as the Files tab would, not as a column of `+` lines;
-a deleted one stays a diff. Files on the shared exclude list — see
-[cli-integrations.md](cli-integrations.md) — and binaries keep a row naming them and nothing more,
-so a change nobody reads is still a change nobody misses.
-
-Changed lines are counted from `--numstat` before a single diff is read, and past 2,000 the page
-asks first: that is about where one page of diffs starts to stall a phone. The count stops at the
-first file that crosses the line, so a tree with a stray generated file costs no more to refuse
-than a small one.
-
-## Projects
-
-Projects are loaded from `~/.cache/rlocal/rofi-vscode/projects.generated.json`, plus the worktrees
-open on the desktop — see [cli-integrations.md](cli-integrations.md). A worktree project carries
-`canonicalId` and `worktreeName` as fields, published by rworkspaces: how an id encodes them is
-rworkspaces' business, and nothing here parses one.
-
-## The project list spawns for open projects only
-
-Spawning a process from the server costs far more than the command it runs — tens to hundreds of
-milliseconds each from the dev server, against a few from a shell — so `GET /api/projects` keeps
-spawns off the per-project path. Every sweep — runs, sudo, sessions, monitored sites — is one
-process covering every project. The branch is read off the git dir on disk,
-for every project. What still costs a spawn per project is asked only of the projects open on the
-desktop: `git status`, which turns a card green, and the env check. A repository with a worktree open asks
-`wtman status` once, for how far each worktree is ahead of and behind what the main checkout is
-on — the ↑ and ↓ badges on its card.
-
-Nor does it wait on the network. The list is reopened all day, going back and forth between
-tabs, and sudo (`pt` asking abubot), monitored sites (upmon) and env checks (`rpass`, which
-decrypts) are slow to answer and slow to change. `src/lib/background-cache.ts` answers them from
-memory and, once an answer is past its age — an hour for sudo and env checks, five minutes for
-sites — fetches the next one behind the request that found it stale. A fetch that fails keeps the
-last answer. Toggling sudo from the Sudo tab refreshes the sudo answer at once, and **Refresh sudo,
-sites and env checks** in the front page's menu refreshes all three and says which could not be.
-The Sudo tab and the Run tab's sites still ask live.
-
-A project is closed once its work is committed, so a closed one is listed as clean. **Scan for
-uncommitted changes**, in the front page's menu, asks `git status` of every closed checkout and
-lists the dirty ones above the project list to open and commit; their cards go green as an open
-one's would. The answer lives in the page and nowhere else — a reload forgets it, and a project
-opened on the desktop is answered live again.
-
-## Per-project state belongs to its CLI
-
-Sudo, runs and desktop sessions belong to the CLI that owns them — `pt`, `rv`, `claudex`. Shell out
-to those commands and surface their failures; never read their caches or redo their lookups here.
-Contracts in [cli-integrations.md](cli-integrations.md).
-
-## Detached jobs
-
-CLI commands and deploys run as detached processes through `src/lib/cli-jobs.ts`, output to
-`~/.local/share/gitmob/cli-jobs/{jobId}.log` — they outlive the request and the tab that started
-them. A job with `notify` set pushes its result to every subscribed browser; see
-[notifications.md](notifications.md).
-
-## A resent request must not run twice
-
-The phone's connection drops, and a browser that loses one mid-POST resends it byte for byte. The
-resend happens below `fetch`, so the client never hears about it: what reaches the server is a
-second `claudex kitty`, a second commit, a second push.
-
-`src/lib/duplicate-guard.ts` catches those in `src/proxy.ts`, ahead of every `/api` route rather
-than inside each handler — so an endpoint is covered by the shape of its request, and a new one is
-guarded the day it is written. Non-GET only. It keeps the last five requests that got through, one
-history for the whole API rather than one per URL, and answers 400 to a sixth that matches on
-method, path, query and a hash of the body.
-
-Nothing in that comparison separates a resend from a repeat that was meant, so it only holds for
-two seconds: a connection that dies on the way out is resent at once, a second tap is slower. What
-is genuinely meant to repeat faster than that is exempt by path, in `REPEATABLE` — Send Keys, which
-is a keyboard, where pressing Down twice is one request sent twice, and `/api/browser/input`, which
-is a keyboard and a mouse both. That is why a key press has its own route,
-`/api/projects/[id]/desktop/keys`, instead of being another action on `/desktop`: the exemption is
-read off the path, and `launch` on the endpoint next to it stays guarded. `/api/browser` is split
-the same way — driving a tab repeats, opening one must not.
-
-Reading the body in the proxy costs the handler nothing: Next hands it the original request, not
-the one the proxy drained.
-
-## Parked work from the desktop
-
-`claudex handoff` opens no window of its own, wherever the user is: the briefing goes to
-`~/.local/share/gitmob/pending-handoffs`, one file per handoff, announced at the top of the front
-page — above the project list, whichever project it names — to read, edit and launch from there. A
-handoff hands a whole workspace to a session acting alone on a prompt nobody has read yet, so it
-waits for the user; this is where they read it when the desktop is not where they are, and rofi
-behind the chord c l h is where they read it when it is. Both ends say whether the target tree is
-clean before it is launched, because a session turned loose on uncommitted work leaves changes
-nobody can tell apart afterwards. The same trade gg makes when it sends a commit message to the
-Commit tab rather than a review overlay nobody is sitting in front of. A handoff that can wait goes to its project's pinboard instead,
-from the kebab menu on its row or in its modal. Contracts in [cli-integrations.md](cli-integrations.md).
-
-Handoffs and pending commits each show their oldest two, with the rest behind a toggle, so a pile of
-parked work never pushes the project list off the screen. Both step aside while the search box has
-text: a search is a look for one project.
-
-## Parked commits with no project
-
-A commit `gg` parked belongs to a repository, not to a project, and the two are not always the
-same thing: a dataset repository, a submodule, anything `gg c` ran in that rworkspaces holds no
-entry for. Where the path matches a project exactly, the commit is announced as that project —
-the card goes blue and the Commit tab loads the message. Where nothing matches, the front page
-announces it in **Pending Commits**, beside the parked handoffs, to accept or reject from there.
-
-The match is exact and never a prefix. `gloss/datasets/oss` sits inside `gloss` and is not it;
-committing one from the other would commit the wrong repository. Being underneath a project is
-worth a line in the row and nothing more.
-
-These rows carry the staged file list and its `+/-`, which the project ones have no need of:
-there is no Changes tab behind a repository with no project, so this is the only look at the
-tree the message is describing. And accepting refuses on an empty index — a parked commit
-outlives its work, the message staying put whether or not those changes were committed some
-other way, and nothing else would notice. Contracts in [cli-integrations.md](cli-integrations.md).
-
-## The Claude tab holds sessions of both kinds
-
-Three views behind one tab, chosen by query parameter: the windows open at the desktop, `?recall=1`
-searching the sessions that came before, and `?session=<id>` reading one of them back.
-
-An open window has two views of its own, offered in each other's kebab menu and in its row's:
-`?window=<id>` is its **Terminal**, the screen as kitty draws it, and `&view=transcript` its
-**Transcript**, the conversation from the top, landed at its end. Switching between them is a
-`replace`, so back leaves the window rather than walking each switch. The transcript is `recall
-read` on the window's session, which indexes a live one on the way; it is keyed by window rather
-than session because `/clear` gives a window a new session. Codex windows have no Transcript,
-because this app asks recall for Claude transcripts alone.
-
-Past sessions live there rather than on a page of their own because they answer the same question the list does —
-what is going on with this project — and a search scoped to the project's path needs no project
-picker of its own. Each view is a `push`, so back walks them the way the screen view already does,
-and the list stops polling while a search box or a transcript is up: a five-second refresh under an
-input box is a keystroke lost every five seconds.
-
-Resuming one is `claudex kitty --provider claude --resume <id>`, refused when the conversation is
-already open in a window. The search covers Claude transcripts alone, so every resume is a Claude
-one. Commands in [cli-integrations.md](cli-integrations.md).
-
-## The agent's browser, from the phone
-
-`/app/browser` is the Chrome the Claude extension drives, driven by hand instead: a JPEG of one
-tab refetched on a loop, with every tap sent back as the coordinate it landed on. It is there for
-the sign-in an agent cannot do for itself — a login page standing between a session and the work,
-on a desktop nobody is sitting at.
-
-Three things make it work, and each is the reason for the one after it. The frame comes from
-Chrome's own DevTools protocol rather than from a screenshot of the window, because nothing
-composites on the desktop and X answers for an unfocused workspace with garbage — which is why the
-desktop's own answer, `chrome-attach`, has to focus that window and put the workspace back
-afterwards. Nothing here moves the desktop at all. The frame is captured **sized in CSS pixels**,
-so the coordinate a finger landed on is already the coordinate to send: neither end rescales
-anything, and the page's zoom, the phone's screen and the display's device ratio all drop out.
-And the tab is brought to the front of its own window before each capture, because Chrome
-composites the visible tab and no other — a capture aimed at a background one never answers.
-
-The page carries none of GitMob's furniture. A frame that has to share a phone with a header and
-a footer is a frame nobody can read, and this is the one page in the app whose whole content is
-somewhere else. Its own controls collapse too.
-
-It drives the page and not Chrome: no omnibox behind the URL box, no extension popup, no file
-picker, no HTTP-auth dialog. Contract in [cli-integrations.md](cli-integrations.md).
-
-## One session modal
-
-Starting a session goes through the same modal as everything else sent to one: provider (Claude or
-Codex), model, opening prompt and dictation are composed together, then launched. The tab's button
-only opens it. A launcher that fired on its own click had nowhere to dictate into. There is exactly one such modal —
-`src/app/app/NewSessionModal.tsx`, opened by the Claude tab, the project card's menu on the front
-page and a pinboard note's Claude button, sharing the dialog shell in `src/app/app/Modal.tsx`. A
-note opens it on the project whose board it sits on — the owning project on the overview, the
-project being browsed on its Pinboard tab — with the note's text as the opening prompt. A second
-copy of it on the front page is what left half the app without a Speak button.
-
-Its Worktree toggle opens the session in a new worktree instead, on a branch forked off main,
-which is why it lives in the modal and not on either button: both ways in get it. The box beside
-the branch name fills it from the opening prompt — `src/lib/branch-name.ts`, one call to OpenAI's
-`gpt-5.4-mini` with reasoning off, on `OPENAI_API_KEY` from `.env.local`. Not Claude, because it
-is waited on by a tap: `claude -p` spends about twelve seconds starting up before Haiku says a word,
-where this answers in about one. The name is only a suggestion — the box stays editable.
-
-Images reach a session as paths. Each one is uploaded to `/tmp/rlocal/gitmob-images` through
-`/api/session-images`, and the session is handed `image 1: <path>` lines ahead of the text — as
-the opening prompt, or typed into a running session from Send text. Both dialogs take them from the
-same ⋮ → Image item and show them the same way, through `src/app/app/ImageUploads.tsx`: a ring per
-image that fills green once uploaded, and a Backspace button beside them that removes the rightmost.
-
-## Dictation
-
-The Speak button in the Claude tab's modals dictates into the textarea, POSTing Opus straight to
-`rvoice-stt.zerotail.r-mulyadi.com/transcribe` — not through `/api`. Caddy already answers CORS on
-every portman route, so the audio takes one hop instead of two. It sends the project's **canonical**
-id as `autocorrect`, which is what makes the server layer that project's phrase table over the
-global one; a worktree id would match no table. `MediaRecorder` only offers Opus in WebM (Chrome) or
-Ogg (Firefox), and needs a secure origin — the button is dead on the plain HTTP fronts. While it
-records, every other button in its dialog is disabled and dimmed, the ⋮ menu included, so a stray
-tap cannot send or close it mid-sentence; they come back on Stop. Contract in
-[cli-integrations.md](cli-integrations.md).
-
-## Scratchpad
-
-Quick notes kept on the device, nowhere else. **Scratchpad** leads every project's kebab menu and
-turns on a button that floats over every GitMob page, dragged wherever it is out of the way; it
-opens one modal of text, typed into localStorage half a second after the typing stops and at once
-when the modal closes. Since nothing typed there can be lost, it is the one modal with text in it
-that a tap outside closes. Whether it is on, where the button sits and the text all outlive a
-reload; turning it off sends the button back to its corner and keeps the text. The modal opens
-scrolled to the end with the cursor after the last character, and its Speak button dictates against
-the `global` phrase table, the scratchpad belonging to no project.
+- Per-project state belongs to the CLI that owns it. Shell out and surface its failures; never read
+  its caches or redo its lookups here. See [cli-integrations.md](cli-integrations.md).
+- The project list is reopened all day: keep process spawns off the per-project path and the
+  network off the request path (`src/lib/background-cache.ts`).
+- Work that outlives a request runs as a detached job (`src/lib/cli-jobs.ts`).
+- Every way into a new session goes through the one session modal (`src/app/app/NewSessionModal.tsx`).

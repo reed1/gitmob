@@ -13,12 +13,10 @@ Web Push.
 
 ## Docs
 
-- [docs/architecture.md](docs/architecture.md) — code layout, where projects come from, detached
-  jobs, the guard against resent requests, parked handoffs, parked commits with no project, the
-  session modal, the agent's browser, dictation, the scratchpad
-- [docs/pwas.md](docs/pwas.md) — the three hostnames and `src/proxy.ts`, the Checklist, routing
-  rules, icons and manifests
-- [docs/notifications.md](docs/notifications.md) — Web Push, subscriptions, the service worker
-- [docs/cli-integrations.md](docs/cli-integrations.md) — which CLI commands each feature calls,
-  and where each CLI's own docs are
+- [docs/architecture.md](docs/architecture.md) — what the app does, code layout, the rules the
+  code follows
+- [docs/pwas.md](docs/pwas.md) — the three hostnames, routing rules, icons and manifests
+- [docs/notifications.md](docs/notifications.md) — Web Push and why subscriptions die
+- [docs/cli-integrations.md](docs/cli-integrations.md) — which CLI each feature calls, and where
+  its docs are
 - [docs/development.md](docs/development.md) — dev servers, build dirs, the production service

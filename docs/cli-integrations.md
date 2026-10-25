@@ -1,153 +1,23 @@
 # CLI integrations
 
-Each of these CLIs owns state this app only displays. Shell out, map the JSON, and let failures
-reach the user — never read their caches or redo their lookups here. What each command does and
-returns is in the CLI's own docs, linked per section; this page only says what this app calls it
-for. Paths under `rlocal/` are in `~/.dotfiles`.
+Each of these owns state this app only displays. Shell out, map the JSON and let failures reach the
+user — never read their caches or redo their lookups here. What a command does is in the CLI's own
+docs; how it is called is in the module. Paths under `rlocal/` are in `~/.dotfiles`.
 
-## Worktrees — `rw-msg`
-
-`src/lib/workspaces.ts`, `src/lib/worktree.ts` — project list.
-Docs: `rlocal/app/rworkspaces/CLAUDE.md`, `rlocal/lib/python/rworktree/README.md`.
-
-- `rw-msg get_state` — which projects and worktrees are open on the desktop, and their warnings.
-
-## Worktrees on disk — `wtman`
-
-`src/lib/wtman.ts` — Wtman tab, the Wtman item on a worktree's kebab menu, the session modal's
-Worktree toggle, and the not-on-the-main-worktree warning on a worktree's Push tab.
-Docs: `rlocal/app/wtman/CLAUDE.md`.
-
-- `wtman status --json <repo>` — the worktree list.
-- `wtman branches --json <repo>` — the branches without a worktree, local and remote.
-- `wtman open <repo> --branch <branch>` — Open on a worktree.
-- `wtman new <repo> <branch> [--base <branch> | --from-local | --from-remote <remote>]` —
-  Create (`--base` when, on a worktree's page, the branch is made off that worktree's branch),
-  Create worktree on a branch row, and a session in a new worktree.
-- `wtman sync [--propagate] <repo> <branch>` — Merge sync, Merge sync propagate, and Sync on a
-  worktree's Push tab when its branch and main have moved apart.
-- `wtman --interactive merge <repo> <branch> [--squash]` — Merge, Squash merge.
-- `wtman --interactive remove [--remote <remote>] <repo> <branch>` — Remove on a worktree or a
-  branch row.
-
-## Pinboard — `rv pinboard`
-
-`src/lib/pinboard.ts` — Pinboard tab, `/pinboard` overview.
-Docs: `rlocal/app/rofi-vscode/docs/pinboard.md`.
-
-- `rv pinboard list|add|edit|delete --project-id <id> ...` — a project's notes.
-
-## Push and sudo — `pt`
-
-`src/lib/push.ts`, `src/lib/push-command.ts`, `src/lib/sudo.ts` — Push tab, Sudo tab, project list.
-A worktree's Push tab runs every `pt push` in the main checkout and shares its push job.
-Docs: `rlocal/app/push_tool/CLAUDE.md`.
-
-- `pt push config` — the Push tab's servers and targets.
-- `pt push check [...] --json` — what a push would deploy, previewed as it is typed.
-- `pt push [...]` — Deploy, as a detached CLI job.
-- `pt sudo list [--all-projects] --json` — the Sudo tab, and the project list's sweep.
-- `pt sudo <target> on|off|status` — the Sudo tab's toggles.
-
-## Env checks — `rpass`
-
-`src/lib/env-check.ts` — project list.
-Docs: `rlocal/app/rpass/CLAUDE.md`.
-
-- `rpass env check --json` — the orange key on a project card.
-
-## Run and desktop projects — `rv`
-
-`src/lib/run.ts`, `src/lib/desktop.ts` — Run tab, project menu, session launch.
-Docs: `rlocal/app/rofi-vscode/CLAUDE.md`, `rlocal/app/rofi-vscode/docs/run.md`.
-
-- `rv run start|stop|restart|status|logs -p <id> ...` — the Run tab.
-- `rv open <id> [--focus-ide]` — Open on the project menu, and before every session launch.
-- `rv close <id>` — Close on the project menu.
-
-## Sessions — `claudex`
-
-`src/lib/desktop.ts`, `src/lib/handoffs.ts`, `src/lib/claude-usage.ts` — Claude tab, project
-list, front page handoffs, usage badge.
-Docs: `rlocal/app/claudex/CLAUDE.md`.
-
-- `claudex desktop list [<id>|--all]` — the session list, Claude and Codex windows alike, each
-  with its `provider`; `--all` before a resume.
-- `claudex desktop count` — the sparkle count on project cards.
-- `claudex desktop screen|send|keys <windowId> ...` — a session's screen and keyboard. `send`
-  takes its text after `--`, so text starting with `-` is typed rather than parsed.
-- `claudex kitty --detach --provider <id> --directory <path> [--model <m> --effort <e>]
-[--resume <sessionId>] [--submit --file <path> --rm-file]` — New session, resume, and handoff
-  launch. The prompt goes in a fresh file under the OS temp dir, handed over for claudex to read
-  once and delete, so it is never parsed as an option. Every session runs without permission
-  prompts; provider and model are the only choices.
-- `claudex models` — the providers, models and efforts on offer: the model and effort dropdowns
-  (the first of each by default), and the server's check of both. The server runs it
-  on every ask; the browser fetches it once per device and keeps it in localStorage, so a session
-  box opens without a round trip. Reload models in the front page's cog menu fetches it again
-  after a catalog edit.
-- `claudex purgatory send --window <id> --pid <pid>` — closing the session after a commit.
-- `claudex gitlock release --repo <path>` — after a parked commit is accepted or rejected.
-- `claudex usage show --json` — the usage badge and panel.
-- Handoffs parked by `claudex handoff` in `~/.local/share/gitmob/pending-handoffs` — the front
-  page's handoff list. Writer: `rlocal/app/claudex/claudex-handoff`.
-
-## Past sessions — `recall`
-
-`src/lib/recall.ts` — Search on the Claude tab.
-Docs: https://github.com/zippoxer/recall.
-
-- `recall search|list -s claude --cwd <path> ...` — search results and recent sessions.
-- `recall read <sessionId>` — the transcript view.
-
-## Commits — `gg kitty-commit`
-
-`src/lib/pending-commits.ts` — Commit tab, front page.
-Docs: `rlocal/app/gg/CLAUDE.md`. Writer: `rlocal/app/gg/gg-kitty-commit`.
-
-- Parked commits in `~/.local/share/gitmob/pending-commits` — the message the Commit tab loads.
-
-## Cloning — `gh`
-
-`src/lib/clone.ts` — Clone on a project's menu.
-Docs: https://cli.github.com/manual/gh_repo_clone.
-
-- `gh repo clone <repo> <path>` — a checkout missing on this machine, as a detached CLI job.
-
-## AFK — `am-i-afk`
-
-`src/lib/afk.ts` — the badge on the front page.
-Docs: `rlocal/bin/am-i-afk`.
-
-- `am-i-afk` — whether the badge shows.
-- touching `/tmp/rlocal/am-i-afk-forced.flag` — tapping the badge.
-
-## Shared files — `rbak`
-
-`src/app/api/files/rbak/route.ts` — "Move all to rbak" on the Files page.
-Docs: `rlocal/app/rbak/CLAUDE.md`.
-
-- `rbak move <paths...>` — the folder's entries, as one rbak entry.
-
-## Dictation — rvoice STT server
-
-`src/app/app/SpeakButton.tsx` — the Speak button; called from the browser, not the server.
-Docs: `rlocal/app/rvoice/stt_server/README.md`.
-
-- `POST https://rvoice-stt.zerotail.r-mulyadi.com/transcribe` (`file`, `language`,
-  `autocorrect=<canonical id>`) — dictated text.
-
-## The agent's browser — `claude-in-chrome`
-
-`src/lib/browser.ts` — `/app/browser`.
-Docs: `rlocal/bin/claude-in-chrome`.
-
-- `claude-in-chrome cdp tabs|shot|click|scroll|text|key|navigate|back|forward|reload|open|close|activate`
-  — the page's tabs, screenshots and input.
-
-## Diff exclusions — `~/.config/git/diff-exclude.yaml`
-
-`src/lib/diff-exclude.ts` — the review page.
-Docs: `rlocal/app/gg/CLAUDE.md`.
-
-- The globs whose files show as a row with no diff.
+| CLI                               | Used for                                      | Module                                                 | Docs                                        |
+| --------------------------------- | --------------------------------------------- | ------------------------------------------------------ | ------------------------------------------- |
+| `rw-msg`                          | which projects and worktrees are open         | `src/lib/workspaces.ts`, `worktree.ts`                 | `rlocal/app/rworkspaces/CLAUDE.md`          |
+| `wtman`                           | worktrees and branches                        | `src/lib/wtman.ts`                                     | `rlocal/app/wtman/CLAUDE.md`                |
+| `rv pinboard`                     | project notes                                 | `src/lib/pinboard.ts`                                  | `rlocal/app/rofi-vscode/docs/pinboard.md`   |
+| `pt`                              | push, deploy, sudo                            | `src/lib/push.ts`, `push-command.ts`, `sudo.ts`        | `rlocal/app/push_tool/CLAUDE.md`            |
+| `rpass`                           | env checks                                    | `src/lib/env-check.ts`                                 | `rlocal/app/rpass/CLAUDE.md`                |
+| `rv`                              | run commands, opening projects on the desktop | `src/lib/run.ts`, `desktop.ts`                         | `rlocal/app/rofi-vscode/CLAUDE.md`          |
+| `claudex`                         | sessions, handoffs, models, usage             | `src/lib/desktop.ts`, `handoffs.ts`, `claude-usage.ts` | `rlocal/app/claudex/CLAUDE.md`              |
+| `recall`                          | past sessions                                 | `src/lib/recall.ts`                                    | https://github.com/zippoxer/recall          |
+| `gg kitty-commit`                 | parked commits                                | `src/lib/pending-commits.ts`                           | `rlocal/app/gg/CLAUDE.md`                   |
+| `gh`                              | cloning a missing checkout                    | `src/lib/clone.ts`                                     | https://cli.github.com/manual/gh_repo_clone |
+| `am-i-afk`                        | the AFK badge                                 | `src/lib/afk.ts`                                       | `rlocal/bin/am-i-afk`                       |
+| `rbak`                            | "Move all to rbak" on the Files page          | `src/app/api/files/rbak/route.ts`                      | `rlocal/app/rbak/CLAUDE.md`                 |
+| rvoice STT server                 | dictation, called from the browser            | `src/app/app/SpeakButton.tsx`                          | `rlocal/app/rvoice/stt_server/README.md`    |
+| `claude-in-chrome`                | the agent's browser                           | `src/lib/browser.ts`                                   | `rlocal/bin/claude-in-chrome`               |
+| `~/.config/git/diff-exclude.yaml` | files the review page shows without a diff    | `src/lib/diff-exclude.ts`                              | `rlocal/app/gg/CLAUDE.md`                   |
