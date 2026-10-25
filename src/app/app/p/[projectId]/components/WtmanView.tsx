@@ -249,6 +249,19 @@ function RemoveBranchModal({
   );
 }
 
+/** The worktree this page is for first, the rest by branch name, as the wtman menu orders them. */
+function sortedWorktrees(
+  worktrees: Worktree[],
+  currentProjectId: string
+): Worktree[] {
+  return [...worktrees].sort(
+    (a, b) =>
+      Number(b.projectId === currentProjectId) -
+        Number(a.projectId === currentProjectId) ||
+      a.branch.localeCompare(b.branch)
+  );
+}
+
 export function WtmanView({
   projectId,
   currentProjectId,
@@ -456,7 +469,7 @@ export function WtmanView({
           No worktrees checked out for this project yet.
         </div>
       )}
-      {worktrees.map((worktree) => {
+      {sortedWorktrees(worktrees, currentProjectId).map((worktree) => {
         const isCurrent = worktree.projectId === currentProjectId;
         return (
           <div
