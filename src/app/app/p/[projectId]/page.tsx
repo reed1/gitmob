@@ -46,7 +46,7 @@ const validTabs = new Set<string>(tabs.map((t) => t.id));
 function getInitialTab(searchParams: URLSearchParams): Tab {
   const param = searchParams.get('tab');
   if (param && validTabs.has(param)) return param as Tab;
-  return 'pinboard';
+  return 'claude';
 }
 
 // A tab stacks history entries on top of its own: one per folder drilled into on Files, one for
