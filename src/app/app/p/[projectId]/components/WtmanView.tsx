@@ -331,7 +331,7 @@ export function WtmanView({
         `${projectApiPath(projectId)}/worktrees/${encodeURIComponent(worktree.name)}`,
         { action: 'open' }
       );
-      if (ok) router.push(`${projectPagePath(opened)}?tab=pinboard`);
+      if (ok) router.push(projectPagePath(opened));
     } finally {
       setWorking(null);
     }
@@ -362,7 +362,7 @@ export function WtmanView({
       );
       if (ok) {
         setNewBranch('');
-        router.push(`${projectPagePath(created)}?tab=pinboard`);
+        router.push(projectPagePath(created));
       }
     } finally {
       setCreating(false);
@@ -376,7 +376,7 @@ export function WtmanView({
         `${projectApiPath(projectId)}/worktrees`,
         { from: 'branch', name: row.name }
       );
-      if (ok) router.push(`${projectPagePath(opened)}?tab=pinboard`);
+      if (ok) router.push(projectPagePath(opened));
       else loadBranches();
     } finally {
       setWorking(null);
@@ -503,9 +503,7 @@ export function WtmanView({
                   isCurrent={isCurrent}
                   disabled={busy}
                   onGoTo={() =>
-                    router.push(
-                      `${projectPagePath(worktree.projectId)}?tab=pinboard`
-                    )
+                    router.push(projectPagePath(worktree.projectId))
                   }
                   onOpen={() => open(worktree)}
                   onClose={() => setClosing(worktree)}

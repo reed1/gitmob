@@ -10,10 +10,11 @@ import { projectPagePath } from '@/lib/project-paths';
 // 'reed' is the trunk on forks of other people's repositories.
 const DEFAULT_BRANCHES = new Set(['main', 'master', 'reed']);
 
-function getDefaultTab(project: Project): string {
-  if (project.downSites.length > 0) return 'run';
-  if (project.editing) return 'changes';
-  return 'pinboard';
+function getProjectHref(project: Project): string {
+  const path = projectPagePath(project.id);
+  if (project.downSites.length > 0) return `${path}?tab=run`;
+  if (project.editing) return `${path}?tab=changes`;
+  return path;
 }
 
 export default function ProjectCard({
@@ -29,11 +30,7 @@ export default function ProjectCard({
 
   return (
     <div
-      onClick={() =>
-        router.push(
-          `${projectPagePath(project.id)}?tab=${getDefaultTab(project)}`
-        )
-      }
+      onClick={() => router.push(getProjectHref(project))}
       className={`p-4 rounded-lg border flex items-center gap-3 cursor-pointer ${
         project.warnings.length > 0
           ? 'border-red-500/60 bg-red-500/15'

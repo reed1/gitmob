@@ -19,16 +19,3 @@ export interface GitStatus {
   unstaged: { path: string; status: string }[];
   untracked: string[];
 }
-
-export type Tab =
-  | 'pinboard'
-  | 'files'
-  | 'changes'
-  | 'commit'
-  | 'run'
-  | 'cli'
-  | 'dooit'
-  | 'claude'
-  | 'push'
-  | 'sudo'
-  | 'wtman';

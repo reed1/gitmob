@@ -2,7 +2,7 @@
 
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Project, GitStatus, Tab } from './types';
+import { Project, GitStatus } from './types';
 import { FileBrowser } from './components/FileBrowser';
 import { ChangesView } from './components/ChangesView';
 import {
@@ -41,12 +41,11 @@ const tabs = [
   { id: 'wtman', label: 'Wtman' },
 ] as const;
 
-const validTabs = new Set<string>(tabs.map((t) => t.id));
+type Tab = (typeof tabs)[number]['id'];
 
-function getInitialTab(searchParams: URLSearchParams): Tab {
+function tabFromUrl(searchParams: URLSearchParams): Tab {
   const param = searchParams.get('tab');
-  if (param && validTabs.has(param)) return param as Tab;
-  return 'claude';
+  return tabs.find((t) => t.id === param)?.id ?? 'claude';
 }
 
 // A tab stacks history entries on top of its own: one per folder drilled into on Files, one for
@@ -64,7 +63,7 @@ export default function ProjectPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [project, setProject] = useState<Project | null>(null);
-  const tab = getInitialTab(searchParams);
+  const tab = tabFromUrl(searchParams);
   const fileParam = searchParams.get('file');
   const showingFile = tab === 'files' && fileParam !== null;
   const commitParam = searchParams.get('commit');
