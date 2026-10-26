@@ -13,6 +13,13 @@ const keycapClass =
   'inline-flex items-center justify-center w-7 h-7 rounded-md bg-foreground/10 ' +
   'border border-b-[3px] border-foreground/25 text-foreground/70 shadow-sm';
 
+/** A Mario "?" block: a bevelled yellow box with a rivet in each corner. */
+const questionBlockClass =
+  'relative shrink-0 w-9 h-9 flex items-center justify-center rounded-sm bg-amber-400 ' +
+  'border-2 border-amber-800 text-xl font-black text-white [text-shadow:2px_2px_0_#78350f] ' +
+  'shadow-[inset_2px_2px_0_#fde68a,inset_-2px_-2px_0_#b45309] ' +
+  'active:translate-y-0.5 transition-transform';
+
 export function DesktopScreenView({
   projectId,
   canonicalId,
@@ -136,21 +143,20 @@ export function DesktopScreenView({
           <button
             onClick={() => setOpenQuestionId(question.id)}
             aria-label="Answer Claude's question"
-            className="shrink-0 p-2 rounded-lg bg-violet-500/15 border border-violet-500/40 text-violet-400 active:bg-violet-500/25 transition-colors"
+            className={questionBlockClass}
           >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01"
+            {[
+              'top-0.5 left-0.5',
+              'top-0.5 right-0.5',
+              'bottom-0.5 left-0.5',
+              'bottom-0.5 right-0.5',
+            ].map((corner) => (
+              <span
+                key={corner}
+                className={`absolute ${corner} w-1 h-1 bg-amber-900/70`}
               />
-            </svg>
+            ))}
+            ?
           </button>
         )}
         <div className="relative shrink-0">
