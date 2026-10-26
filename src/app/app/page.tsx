@@ -6,6 +6,7 @@ import ProjectCard from './ProjectCard';
 import { TextHistoryModal } from './TextHistoryModal';
 import { PendingHandoffs } from './PendingHandoffs';
 import { PendingCommits } from './PendingCommits';
+import { PendingQuestions } from './PendingQuestions';
 import { UncommittedProjects } from './UncommittedProjects';
 import UsagePanel from './UsagePanel';
 import { ClaudeUsage, Project, StaleBuild } from './types';
@@ -668,6 +669,8 @@ export default function Home() {
 
         {/* A search is a look for one project, so parked work steps aside rather than being
             filtered — it stays mounted, and is back the moment the box is cleared. */}
+        <PendingQuestions hidden={search !== ''} />
+
         <PendingHandoffs
           hidden={search !== ''}
           onLaunched={() => refreshProjects()}
