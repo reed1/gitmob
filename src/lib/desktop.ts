@@ -5,6 +5,7 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import type { CommonCommand, SpecialKey } from './desktop-keys';
 import type { CustomModel, ModelCatalog } from './desktop-models';
+import type { Answers, PendingQuestion, Question } from './claude-questions';
 
 /** What Claude Code itself reports the session's context window to be holding. */
 export interface SessionContext {
@@ -232,8 +233,50 @@ export async function getClaudeSessionCounts(): Promise<
   }
 }
 
-export function getSessionScreen(windowId: string): Promise<string> {
-  return claudexDesktop(['screen', windowId]);
+interface ClaudexQuestionRow {
+  id: string;
+  session_id: string;
+  cwd: string;
+  created_at: string;
+  questions: Question[];
+}
+
+function toPendingQuestion(row: ClaudexQuestionRow): PendingQuestion {
+  return {
+    id: row.id,
+    sessionId: row.session_id,
+    cwd: row.cwd,
+    createdAt: row.created_at,
+    questions: row.questions,
+  };
+}
+
+/** The screen, and the question its session is blocked on while the user is away, if any. */
+export async function getSessionScreen(
+  windowId: string
+): Promise<{ content: string; question: PendingQuestion | null }> {
+  const result: { content: string; question: ClaudexQuestionRow | null } =
+    JSON.parse(await claudexDesktop(['screen', windowId, '--json']));
+  return {
+    content: result.content,
+    question: result.question && toPendingQuestion(result.question),
+  };
+}
+
+/** Every question a session is blocked on, oldest first. */
+export async function listPendingQuestions(): Promise<PendingQuestion[]> {
+  const rows: ClaudexQuestionRow[] = JSON.parse(
+    await claudexDesktop(['questions'])
+  );
+  return rows.map(toPendingQuestion);
+}
+
+/** claudex refuses a question nobody waits on any more, and answers that leave one unanswered. */
+export async function answerQuestion(
+  id: string,
+  answers: Answers
+): Promise<void> {
+  await claudexDesktop(['answer', id, JSON.stringify(answers)]);
 }
 
 /**

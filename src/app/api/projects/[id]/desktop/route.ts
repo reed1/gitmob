@@ -30,7 +30,7 @@ export async function GET(
 
   try {
     if (windowId) {
-      return NextResponse.json({ content: await getSessionScreen(windowId) });
+      return NextResponse.json(await getSessionScreen(windowId));
     }
     return NextResponse.json(await listDesktopSessions(id));
   } catch (err) {

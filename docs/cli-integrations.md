@@ -13,7 +13,7 @@ docs; how it is called is in the module. Paths under `rlocal/` are in `~/.dotfil
 | `rpass`                           | env checks                                    | `src/lib/env-check.ts`                                 | `rlocal/app/rpass/CLAUDE.md`                |
 | `rv`                              | run commands, opening projects on the desktop | `src/lib/run.ts`, `desktop.ts`                         | `rlocal/app/rofi-vscode/CLAUDE.md`          |
 | `claudex`                         | sessions, handoffs, models, usage             | `src/lib/desktop.ts`, `handoffs.ts`, `claude-usage.ts` | `rlocal/app/claudex/CLAUDE.md`              |
-| `claudex ask`                     | Claude's questions while the user is away     | `src/lib/claude-questions.ts`                          | `rlocal/app/claudex/claudex-ask`            |
+| `claudex ask`                     | Claude's questions while the user is away     | `src/lib/desktop.ts`                                   | `rlocal/app/claudex/claudex-ask`            |
 | `recall`                          | past sessions                                 | `src/lib/recall.ts`                                    | https://github.com/zippoxer/recall          |
 | `gg kitty-commit`                 | parked commits                                | `src/lib/pending-commits.ts`                           | `rlocal/app/gg/CLAUDE.md`                   |
 | `gg hold`                         | the hold on autopush and auto-pull            | `src/lib/gg-hold.ts`                                   | `rlocal/app/gg/gg-hold`                     |

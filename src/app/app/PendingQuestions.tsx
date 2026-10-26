@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ModalOverlay } from '@/components/ModalOverlay';
 import { addToast, apiFetch } from '@/lib/api';
 import { relativeTime } from '@/lib/relative-time';
@@ -43,30 +43,12 @@ function answerOf(choice: Choice): string {
 export function PendingQuestions({ hidden }: { hidden: boolean }) {
   const [questions, setQuestions] = useState<PendingQuestion[]>([]);
   const [openId, setOpenId] = useState<string | null>(null);
-  const linked = useRef<string | null>(null);
 
   const fetchQuestions = useCallback(async () => {
     const res = await fetch('/api/claude-questions');
     if (!res.ok) return;
     const data: { questions: PendingQuestion[] } = await res.json();
     setQuestions(data.questions);
-
-    // A push lands on `/app?question=<id>`: open that one as soon as it is known.
-    if (linked.current) {
-      const target = data.questions.find((q) => q.id === linked.current);
-      if (!target) addToast('That question is no longer waiting', 'warning');
-      else setOpenId(target.id);
-      linked.current = null;
-      const url = new URL(window.location.href);
-      url.searchParams.delete('question');
-      window.history.replaceState(null, '', url);
-    }
-  }, []);
-
-  useEffect(() => {
-    linked.current = new URLSearchParams(window.location.search).get(
-      'question'
-    );
   }, []);
 
   useAutoRefresh(fetchQuestions, 5000);
@@ -128,7 +110,7 @@ export function PendingQuestions({ hidden }: { hidden: boolean }) {
 }
 
 /** One step per question, then a review of every answer when there was more than one. */
-function QuestionWizard({
+export function QuestionWizard({
   pending,
   onClose,
   onAnswered,

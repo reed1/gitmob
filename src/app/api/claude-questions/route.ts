@@ -1,37 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  isAnswersFor,
-  isQuestionId,
-  listPendingQuestions,
-  readPendingQuestion,
-  writeAnswers,
-} from '@/lib/claude-questions';
+import { answerQuestion, listPendingQuestions } from '@/lib/desktop';
 
 export async function GET() {
-  return NextResponse.json({ questions: listPendingQuestions() });
+  try {
+    return NextResponse.json({ questions: await listPendingQuestions() });
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'claudex desktop failed' },
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST(request: NextRequest) {
   const { id, answers } = await request.json();
-  if (!isQuestionId(id)) {
+  if (typeof id !== 'string' || !id) {
     return NextResponse.json({ error: 'Missing question' }, { status: 400 });
   }
 
-  const question = readPendingQuestion(id);
-  if (!question) {
+  try {
+    await answerQuestion(id, answers);
+    return NextResponse.json({ success: true });
+  } catch (err) {
     return NextResponse.json(
-      { error: 'The session is no longer waiting on this question' },
-      { status: 404 }
+      { error: err instanceof Error ? err.message : 'claudex desktop failed' },
+      { status: 500 }
     );
   }
-
-  if (!isAnswersFor(question, answers)) {
-    return NextResponse.json(
-      { error: 'Every question needs an answer' },
-      { status: 400 }
-    );
-  }
-
-  writeAnswers(id, answers);
-  return NextResponse.json({ success: true });
 }

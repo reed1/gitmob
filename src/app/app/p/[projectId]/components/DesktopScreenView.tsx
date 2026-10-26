@@ -5,6 +5,8 @@ import { SendKeysModal, SendTextModal } from './DesktopSendModals';
 import { addToast, apiFetch } from '@/lib/api';
 import { COMMON_COMMANDS, type CommonCommand } from '@/lib/desktop-keys';
 import { projectApiPath } from '@/lib/project-paths';
+import { QuestionWizard } from '@/app/app/PendingQuestions';
+import type { PendingQuestion } from '@/lib/claude-questions';
 
 /** A physical keycap: a raised grey box, its thick bottom border reading as the key's side. */
 const keycapClass =
@@ -35,6 +37,8 @@ export function DesktopScreenView({
   const [menuOpen, setMenuOpen] = useState(false);
   const [textOpen, setTextOpen] = useState(false);
   const [keysOpen, setKeysOpen] = useState(false);
+  const [question, setQuestion] = useState<PendingQuestion | null>(null);
+  const [openQuestionId, setOpenQuestionId] = useState<string | null>(null);
   const preRef = useRef<HTMLPreElement>(null);
   const scrolledToBottom = useRef(false);
 
@@ -47,6 +51,7 @@ export function DesktopScreenView({
       if (signal.aborted) return;
       if (res.ok) {
         setContent(data.content ?? '');
+        setQuestion(data.question);
         setError(null);
       } else {
         setError(data.error || 'Could not read the session');
@@ -127,6 +132,27 @@ export function DesktopScreenView({
           </svg>
         </button>
         <div className="flex-1 min-w-0 font-medium truncate">{title}</div>
+        {question && (
+          <button
+            onClick={() => setOpenQuestionId(question.id)}
+            aria-label="Answer Claude's question"
+            className="shrink-0 p-2 rounded-lg bg-violet-500/15 border border-violet-500/40 text-violet-400 active:bg-violet-500/25 transition-colors"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01"
+              />
+            </svg>
+          </button>
+        )}
         <div className="relative shrink-0">
           <button
             onClick={() => setMenuOpen((open) => !open)}
@@ -324,6 +350,19 @@ export function DesktopScreenView({
           windowId={windowId}
           title={title}
           onClose={() => setTextOpen(false)}
+        />
+      )}
+
+      {/* The hook withdraws a question when the user is back at the desk; an open form goes with it. */}
+      {question && question.id === openQuestionId && (
+        <QuestionWizard
+          key={question.id}
+          pending={question}
+          onClose={() => setOpenQuestionId(null)}
+          onAnswered={() => {
+            setOpenQuestionId(null);
+            setQuestion(null);
+          }}
         />
       )}
 
