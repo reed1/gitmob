@@ -5,7 +5,7 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import type { CommonCommand, SpecialKey } from './desktop-keys';
 import type { CustomModel, ModelCatalog } from './desktop-models';
-import type { Answers, PendingQuestion, Question } from './claude-questions';
+import type { PendingQuestion, Question, Reply } from './claude-questions';
 
 /** What Claude Code itself reports the session's context window to be holding. */
 export interface SessionContext {
@@ -272,11 +272,14 @@ export async function listPendingQuestions(): Promise<PendingQuestion[]> {
 }
 
 /** claudex refuses a question nobody waits on any more, and answers that leave one unanswered. */
-export async function answerQuestion(
-  id: string,
-  answers: Answers
-): Promise<void> {
-  await claudexDesktop(['answer', id, JSON.stringify(answers)]);
+export async function replyToQuestion(id: string, reply: Reply): Promise<void> {
+  if (reply.kind === 'answers') {
+    await claudexDesktop(['answer', id, JSON.stringify(reply.answers)]);
+  } else if (reply.kind === 'deny') {
+    await claudexDesktop(['deny', id, ...(reply.reason ? [reply.reason] : [])]);
+  } else {
+    throw new Error(`Unexpected reply: ${JSON.stringify(reply)}`);
+  }
 }
 
 /**

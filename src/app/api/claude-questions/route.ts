@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { answerQuestion, listPendingQuestions } from '@/lib/desktop';
+import { listPendingQuestions, replyToQuestion } from '@/lib/desktop';
 
 export async function GET() {
   try {
@@ -13,13 +13,13 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const { id, answers } = await request.json();
+  const { id, reply } = await request.json();
   if (typeof id !== 'string' || !id) {
     return NextResponse.json({ error: 'Missing question' }, { status: 400 });
   }
 
   try {
-    await answerQuestion(id, answers);
+    await replyToQuestion(id, reply);
     return NextResponse.json({ success: true });
   } catch (err) {
     return NextResponse.json(

@@ -7,11 +7,7 @@ import { relativeTime } from '@/lib/relative-time';
 import { saveTextHistory } from '@/lib/text-history';
 import { useAutoRefresh } from '@/lib/use-auto-refresh';
 import { CollapsedRows } from './CollapsedRows';
-import type {
-  Answers,
-  PendingQuestion,
-  Question,
-} from '@/lib/claude-questions';
+import type { PendingQuestion, Question, Reply } from '@/lib/claude-questions';
 
 interface Choice {
   picked: string[];
@@ -109,7 +105,10 @@ export function PendingQuestions({ hidden }: { hidden: boolean }) {
   );
 }
 
-/** One step per question, then a review of every answer when there was more than one. */
+/**
+ * One step per question, then a review of every answer when there was more than one. The menu's
+ * Deny swaps the steps for the reason Claude is told instead.
+ */
 export function QuestionWizard({
   pending,
   onClose,
@@ -125,26 +124,28 @@ export function QuestionWizard({
   );
   const [step, setStep] = useState(0);
   const [sending, setSending] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [denying, setDenying] = useState(false);
+  const [reason, setReason] = useState('');
 
   const reviewing = step === count;
   const lastStep = count === 1 ? 0 : count;
   const answered = choices.map((choice) => answerOf(choice) !== '');
-  const touched = choices.some(
-    (choice) => choice.picked.length > 0 || choice.other.trim() !== ''
-  );
+  const touched =
+    reason.trim() !== '' ||
+    choices.some(
+      (choice) => choice.picked.length > 0 || choice.other.trim() !== ''
+    );
 
   const setChoice = (index: number, choice: Choice) =>
     setChoices((current) =>
       current.map((existing, i) => (i === index ? choice : existing))
     );
 
-  const submit = async () => {
-    const answers: Answers = Object.fromEntries(
-      pending.questions.map((q, i) => [q.question, answerOf(choices[i])])
-    );
-    choices.forEach((choice) =>
+  const send = async (reply: Reply, sentMessage: string) => {
+    [...choices.map((choice) => choice.other), reason].forEach((text) =>
       saveTextHistory({
-        text: choice.other,
+        text,
         source: `Claude asks: ${directoryName(pending.cwd)}`,
       })
     );
@@ -153,10 +154,10 @@ export function QuestionWizard({
       const res = await apiFetch('/api/claude-questions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: pending.id, answers }),
+        body: JSON.stringify({ id: pending.id, reply }),
       });
       if (!res.ok) return;
-      addToast('Answer sent', 'success');
+      addToast(sentMessage, 'success');
       onAnswered();
     } finally {
       setSending(false);
@@ -171,11 +172,59 @@ export function QuestionWizard({
     >
       <div className="bg-background border border-foreground/20 rounded-lg shadow-xl w-full max-w-lg max-h-full flex flex-col">
         <div className="px-4 py-3 border-b border-foreground/10">
-          <h3 className="font-medium">Claude asks</h3>
-          <div className="text-xs text-foreground/50 truncate">
-            {shortPath(pending.cwd)}
+          <div className="flex items-start gap-2">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-medium">
+                {denying ? "Deny Claude's questions" : 'Claude asks'}
+              </h3>
+              <div className="text-xs text-foreground/50 truncate">
+                {shortPath(pending.cwd)}
+              </div>
+            </div>
+            {!denying && (
+              <div className="relative shrink-0">
+                <button
+                  onClick={() => setMenuOpen((open) => !open)}
+                  aria-label="More"
+                  className="p-1.5 rounded-lg hover:bg-foreground/10 active:bg-foreground/20"
+                >
+                  <svg
+                    className="w-5 h-5 text-foreground/60"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 5v.01M12 12v.01M12 19v.01"
+                    />
+                  </svg>
+                </button>
+                {menuOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-10"
+                      onClick={() => setMenuOpen(false)}
+                    />
+                    <div className="absolute right-0 top-full mt-1 z-20 bg-background border border-foreground/20 rounded-lg shadow-lg py-1 min-w-[140px]">
+                      <button
+                        onClick={() => {
+                          setMenuOpen(false);
+                          setDenying(true);
+                        }}
+                        className="block w-full px-4 py-2 text-sm text-left text-red-400 hover:bg-foreground/10 whitespace-nowrap"
+                      >
+                        Deny
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
-          {count > 1 && (
+          {count > 1 && !denying && (
             <div className="flex flex-wrap gap-1.5 mt-2">
               {pending.questions.map((q, i) => (
                 <button
@@ -206,7 +255,19 @@ export function QuestionWizard({
         </div>
 
         <div className="px-4 py-3 overflow-y-auto">
-          {reviewing ? (
+          {denying ? (
+            <div className="space-y-2">
+              <div className="text-sm">Tell Claude why, or leave it empty.</div>
+              <textarea
+                autoFocus
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                rows={4}
+                placeholder="User denied to answer questions"
+                className="w-full text-sm border border-foreground/20 rounded-lg px-3 py-2 bg-background resize-none"
+              />
+            </div>
+          ) : reviewing ? (
             <div className="space-y-3">
               {pending.questions.map((q, i) => (
                 <button
@@ -235,7 +296,14 @@ export function QuestionWizard({
         </div>
 
         <div className="px-4 py-3 border-t border-foreground/10 flex items-center justify-between gap-2">
-          {step === 0 ? (
+          {denying ? (
+            <button
+              onClick={() => setDenying(false)}
+              className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
+            >
+              Back
+            </button>
+          ) : step === 0 ? (
             <button
               data-modal-cancel
               onClick={onClose}
@@ -251,9 +319,35 @@ export function QuestionWizard({
               Back
             </button>
           )}
-          {step === lastStep ? (
+          {denying ? (
             <button
-              onClick={submit}
+              onClick={() =>
+                send(
+                  { kind: 'deny', reason: reason.trim() },
+                  'Questions denied'
+                )
+              }
+              disabled={sending}
+              className="px-3 py-1.5 text-sm rounded-lg bg-red-500 text-white hover:opacity-90 disabled:opacity-40"
+            >
+              {sending ? 'Sending...' : 'Deny'}
+            </button>
+          ) : step === lastStep ? (
+            <button
+              onClick={() =>
+                send(
+                  {
+                    kind: 'answers',
+                    answers: Object.fromEntries(
+                      pending.questions.map((q, i) => [
+                        q.question,
+                        answerOf(choices[i]),
+                      ])
+                    ),
+                  },
+                  'Answer sent'
+                )
+              }
               disabled={sending || answered.includes(false)}
               className="px-3 py-1.5 text-sm rounded-lg bg-foreground text-background hover:opacity-90 disabled:opacity-40"
             >

@@ -15,7 +15,7 @@ and across projects, from the front page:
 
 - See every project's state at a glance; scan closed ones for uncommitted work
 - Read and launch handoffs, and accept commits, parked from the desktop
-- Answer the questions Claude asks while I am away from the desktop
+- Answer the questions Claude asks while I am away from the desktop, or deny them
 - Keep a scratchpad on the device
 - Drive the agent's Chrome by hand (`/app/browser`)
 

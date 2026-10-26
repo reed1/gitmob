@@ -26,3 +26,8 @@ export interface PendingQuestion {
 
 /** Question text to the answer, as AskUserQuestion takes them: several picks joined by ", ". */
 export type Answers = Record<string, string>;
+
+/** A denial with no reason leaves it to claudex, which tells Claude the user denied answering. */
+export type Reply =
+  | { kind: 'answers'; answers: Answers }
+  | { kind: 'deny'; reason: string };
