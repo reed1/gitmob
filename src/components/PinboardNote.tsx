@@ -6,7 +6,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ModalOverlay } from './ModalOverlay';
 import { addToast, apiFetch } from '@/lib/api';
 import { copyText } from '@/lib/clipboard';
-import { SpeakButton, appendSpoken } from '@/app/app/SpeakButton';
+import { SpeakButton } from '@/app/app/SpeakButton';
 import { projectApiPath } from '@/lib/project-paths';
 
 /** One note as both PWAs read it back: `rv` sends null, not an absent key, for a missing stamp. */
@@ -231,7 +231,8 @@ export function PinboardNoteModal({
       <div className="flex items-center justify-between gap-2">
         <SpeakButton
           projectId={projectId}
-          onText={(spoken) => setText((prev) => appendSpoken(prev, spoken))}
+          textareaRef={textareaRef}
+          onChange={setText}
         />
         <div className="flex gap-2">
           <button

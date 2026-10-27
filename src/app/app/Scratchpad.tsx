@@ -6,7 +6,7 @@ import { copyText } from '@/lib/clipboard';
 import { useCachedState } from '@/lib/use-cached-state';
 import { KebabMenu, KebabMenuItem } from './KebabMenu';
 import { Modal } from './Modal';
-import { SpeakButton, appendSpoken } from './SpeakButton';
+import { SpeakButton } from './SpeakButton';
 
 const ENABLED_KEY = 'gitmob:scratchpad:enabled';
 const POSITION_KEY = 'gitmob:scratchpad:position';
@@ -220,7 +220,8 @@ function ScratchpadModal({ onClose }: { onClose: () => void }) {
         {/* The scratchpad belongs to no project, so dictation takes only the shared phrase table. */}
         <SpeakButton
           projectId="global"
-          onText={(spoken) => setText((prev) => appendSpoken(prev, spoken))}
+          textareaRef={textareaRef}
+          onChange={setText}
         />
         <div className="flex gap-2">
           <button

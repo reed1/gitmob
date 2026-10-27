@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
+import { flushSync } from 'react-dom';
 import { addToast, apiFetch } from '@/lib/api';
 
 /**
@@ -20,10 +21,12 @@ type Phase = 'idle' | 'recording' | 'transcribing';
 
 export function SpeakButton({
   projectId,
-  onText,
+  textareaRef,
+  onChange,
 }: {
   projectId: string;
-  onText: (text: string) => void;
+  textareaRef: RefObject<HTMLTextAreaElement | null>;
+  onChange: (value: string) => void;
 }) {
   const [phase, setPhase] = useState<Phase>('idle');
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -90,8 +93,22 @@ export function SpeakButton({
     if (!res.ok) return;
 
     const { text } = await res.json();
-    if (text.trim()) onText(text.trim());
+    if (text.trim()) insertAtCaret(text.trim());
     else addToast('Heard nothing', 'warning');
+  };
+
+  // A textarea keeps its selection after it loses focus, so this is where the caret was left
+  // before Speak was tapped — or the end, where setting a textarea's value puts it.
+  const insertAtCaret = (spoken: string) => {
+    const textarea = textareaRef.current!;
+    const { value, selectionStart, selectionEnd } = textarea;
+    const before = value.slice(0, selectionStart);
+    const after = value.slice(selectionEnd);
+    const lead = before && !/\s$/.test(before) ? ' ' : '';
+    const trail = after && !/^\s/.test(after) ? ' ' : '';
+    flushSync(() => onChange(before + lead + spoken + trail + after));
+    const caret = before.length + lead.length + spoken.length;
+    textarea.setSelectionRange(caret, caret);
   };
 
   const start = async () => {
@@ -195,11 +212,4 @@ function MicIcon() {
       />
     </svg>
   );
-}
-
-/** Dictation lands after whatever is already typed, as one more thing said. */
-export function appendSpoken(existing: string, spoken: string): string {
-  if (!existing) return spoken;
-  if (/\s$/.test(existing)) return existing + spoken;
-  return `${existing} ${spoken}`;
 }

@@ -4,14 +4,14 @@ import { saveTextHistory } from '@/lib/text-history';
 
 import { SessionModelSelect, useSessionModel } from './SessionModelSelect';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { launchDesktopSession } from '@/lib/desktop-client';
 import { useModelCatalog } from '@/lib/use-model-catalog';
 import { Modal } from './Modal';
 import { KebabMenu, KebabMenuItem } from './KebabMenu';
-import { SpeakButton, appendSpoken } from './SpeakButton';
+import { SpeakButton } from './SpeakButton';
 import {
   ImageUploadMenuItem,
   ImageUploads,
@@ -51,6 +51,7 @@ export function NewSessionModal({
   const [branch, setBranch] = useState('');
   const [suggesting, setSuggesting] = useState(false);
   const [prompt, setPrompt] = useState(initialPrompt);
+  const promptRef = useRef<HTMLTextAreaElement>(null);
   const [launching, setLaunching] = useState(false);
 
   const uploads = useImageUploads();
@@ -172,6 +173,7 @@ export function NewSessionModal({
           </div>
         )}
         <textarea
+          ref={promptRef}
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           rows={4}
@@ -182,7 +184,8 @@ export function NewSessionModal({
         <div className="flex items-center justify-between gap-2">
           <SpeakButton
             projectId={canonicalId}
-            onText={(spoken) => setPrompt((prev) => appendSpoken(prev, spoken))}
+            textareaRef={promptRef}
+            onChange={setPrompt}
           />
           <div className="flex gap-2">
             <button

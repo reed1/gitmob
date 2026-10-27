@@ -2,11 +2,11 @@
 
 import { saveTextHistory } from '@/lib/text-history';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { ModalOverlay } from '@/components/ModalOverlay';
 import { apiFetch } from '@/lib/api';
 import { useAutoRefresh } from '@/lib/use-auto-refresh';
-import { SpeakButton, appendSpoken } from '@/app/app/SpeakButton';
+import { SpeakButton } from '@/app/app/SpeakButton';
 
 interface Todo {
   id: number;
@@ -32,6 +32,7 @@ export function DooitView({ projectId }: { projectId: string }) {
 
   const [modalMode, setModalMode] = useState<'add' | 'edit' | null>(null);
   const [modalText, setModalText] = useState('');
+  const modalTextareaRef = useRef<HTMLTextAreaElement>(null);
   const [initialModalText, setInitialModalText] = useState('');
   const [editingTodoId, setEditingTodoId] = useState<number | null>(null);
 
@@ -295,6 +296,7 @@ export function DooitView({ projectId }: { projectId: string }) {
         >
           <div className="bg-background border border-foreground/20 rounded-lg p-4 w-80 max-w-[90vw]">
             <textarea
+              ref={modalTextareaRef}
               value={modalText}
               onChange={(e) => setModalText(e.target.value)}
               placeholder="Todo description..."
@@ -306,9 +308,8 @@ export function DooitView({ projectId }: { projectId: string }) {
             <div className="flex items-center justify-between gap-2">
               <SpeakButton
                 projectId={projectId}
-                onText={(spoken) =>
-                  setModalText((prev) => appendSpoken(prev, spoken))
-                }
+                textareaRef={modalTextareaRef}
+                onChange={setModalText}
               />
               <div className="flex gap-2">
                 <button

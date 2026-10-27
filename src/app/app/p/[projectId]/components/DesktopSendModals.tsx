@@ -2,7 +2,7 @@
 
 import { saveTextHistory } from '@/lib/text-history';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { addToast, apiFetch } from '@/lib/api';
 import {
   NAVIGATION_KEY_ROWS,
@@ -10,7 +10,7 @@ import {
   type SpecialKey,
 } from '@/lib/desktop-keys';
 import { Modal } from '@/app/app/Modal';
-import { SpeakButton, appendSpoken } from '@/app/app/SpeakButton';
+import { SpeakButton } from '@/app/app/SpeakButton';
 import { KebabMenu } from '@/app/app/KebabMenu';
 import {
   ImageUploadMenuItem,
@@ -34,6 +34,7 @@ export function SendTextModal({
   onClose: () => void;
 }) {
   const [text, setText] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [pressEnter, setPressEnter] = useState(true);
   const uploads = useImageUploads();
   const canSend = Boolean(text || uploads.images.length) && !uploads.pending;
@@ -70,6 +71,7 @@ export function SendTextModal({
     >
       <div className="px-4 py-3 space-y-2">
         <textarea
+          ref={textareaRef}
           value={text}
           onChange={(e) => setText(e.target.value)}
           rows={4}
@@ -89,7 +91,8 @@ export function SendTextModal({
         <div className="flex items-center justify-between gap-2">
           <SpeakButton
             projectId={canonicalId}
-            onText={(spoken) => setText((prev) => appendSpoken(prev, spoken))}
+            textareaRef={textareaRef}
+            onChange={setText}
           />
           <div className="flex gap-2">
             <button
