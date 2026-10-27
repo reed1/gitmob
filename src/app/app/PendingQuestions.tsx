@@ -34,7 +34,8 @@ function answerOf(choice: Choice): string {
 /**
  * The questions `claudex ask` put here instead of on the desktop, because the user was away from
  * it. The session is blocked on each until it is answered, or until the user is back at the desk
- * and the question moves to Claude Code's own menu, when it drops off this list by itself.
+ * and the question moves to Claude Code's own menu, when it drops off this list the next time
+ * the front page loads.
  */
 export function PendingQuestions({ hidden }: { hidden: boolean }) {
   const [questions, setQuestions] = useState<PendingQuestion[]>([]);
@@ -47,9 +48,8 @@ export function PendingQuestions({ hidden }: { hidden: boolean }) {
     setQuestions(data.questions);
   }, []);
 
-  useAutoRefresh(fetchQuestions, 5000);
+  useAutoRefresh(fetchQuestions);
 
-  // The hook withdraws a question when the user is back at the desk; an open form goes with it.
   const open = questions.find((q) => q.id === openId) ?? null;
 
   if (questions.length === 0 || hidden) return null;

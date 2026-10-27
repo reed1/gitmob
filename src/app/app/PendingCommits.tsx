@@ -66,7 +66,7 @@ export function PendingCommits({
     setCommits(data.commits);
   }, []);
 
-  useAutoRefresh(fetchCommits, 15000);
+  useAutoRefresh(fetchCommits);
 
   const openCommit = (pending: PendingCommit) => {
     setMessage(pending.message);

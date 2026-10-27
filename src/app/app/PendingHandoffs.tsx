@@ -118,7 +118,7 @@ export function PendingHandoffs({
     setHandoffs(data.handoffs);
   }, []);
 
-  useAutoRefresh(fetchHandoffs, 15000);
+  useAutoRefresh(fetchHandoffs);
 
   const openHandoff = (handoff: PendingHandoff) => {
     setPrompt(handoff.prompt);
