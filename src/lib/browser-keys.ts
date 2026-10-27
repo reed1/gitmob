@@ -1,5 +1,5 @@
 /**
- * The keys `claude-in-chrome cdp key` accepts, grouped the way the Browser page shows them.
+ * The keys `rv chrome cdp key` accepts, grouped the way the Browser page shows them.
  * Its own module because that page is a client component and `browser.ts` reaches for
  * child_process — the same split `desktop-keys.ts` makes for the same reason.
  *

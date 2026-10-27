@@ -10,7 +10,11 @@ import { isBrowserKey } from '@/lib/browser-keys';
  * tabs stays on `/api/browser`, where a repeat is a second tab and must still be caught.
  */
 export async function POST(request: NextRequest) {
-  const { action, tab, x, y, dx, dy, count, text, key } = await request.json();
+  const { action, project, tab, x, y, dx, dy, count, text, key } =
+    await request.json();
+  if (typeof project !== 'string' || !project) {
+    return NextResponse.json({ error: 'Missing project' }, { status: 400 });
+  }
   const target = typeof tab === 'string' && tab ? tab : null;
 
   try {
@@ -18,7 +22,7 @@ export async function POST(request: NextRequest) {
       if (typeof x !== 'number' || typeof y !== 'number') {
         return NextResponse.json({ error: 'Missing point' }, { status: 400 });
       }
-      await clickTab(target, x, y, count === 2 ? 2 : 1);
+      await clickTab(project, target, x, y, count === 2 ? 2 : 1);
       return NextResponse.json({ success: true });
     }
 
@@ -26,7 +30,7 @@ export async function POST(request: NextRequest) {
       if (typeof x !== 'number' || typeof y !== 'number') {
         return NextResponse.json({ error: 'Missing point' }, { status: 400 });
       }
-      await scrollTab(target, x, y, dx ?? 0, dy ?? 0);
+      await scrollTab(project, target, x, y, dx ?? 0, dy ?? 0);
       return NextResponse.json({ success: true });
     }
 
@@ -34,7 +38,7 @@ export async function POST(request: NextRequest) {
       if (typeof text !== 'string' || !text) {
         return NextResponse.json({ error: 'Missing text' }, { status: 400 });
       }
-      await typeIntoTab(target, text);
+      await typeIntoTab(project, target, text);
       return NextResponse.json({ success: true });
     }
 
@@ -45,7 +49,7 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-      await pressTabKey(target, key);
+      await pressTabKey(project, target, key);
       return NextResponse.json({ success: true });
     }
 
@@ -56,8 +60,7 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     return NextResponse.json(
       {
-        error:
-          err instanceof Error ? err.message : 'claude-in-chrome cdp failed',
+        error: err instanceof Error ? err.message : 'rv chrome cdp failed',
       },
       { status: 500 }
     );

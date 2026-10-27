@@ -16,5 +16,5 @@ Deployed as the `gitmob` systemd user service, which runs `run_production.sh`: i
 
 It runs on two machines, each showing its own projects and state: rdzero, my PC, at
 `gitmob.zerotail.r-mulyadi.com`, and rdpav, my laptop, at `gitmob.pavtail.r-mulyadi.com`. Nothing
-is shared between them: `/app/browser` drives the agent Chrome of the machine serving it, and each
+is shared between them: `/app/browser` drives the agent Chromes of the machine serving it, and each
 has its own push subscriptions and VAPID keys, the two being separate origins and installs.

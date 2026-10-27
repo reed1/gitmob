@@ -10,10 +10,14 @@ import { captureTab } from '@/lib/browser';
  * because a poll with no tab named follows whichever tab Chrome has in front.
  */
 export async function GET(request: NextRequest) {
+  const project = request.nextUrl.searchParams.get('project');
   const tab = request.nextUrl.searchParams.get('tab');
+  if (!project) {
+    return NextResponse.json({ error: 'Missing project' }, { status: 400 });
+  }
 
   try {
-    const shot = await captureTab(tab);
+    const shot = await captureTab(project, tab);
     return new NextResponse(new Uint8Array(shot.jpeg), {
       headers: {
         'Content-Type': 'image/jpeg',
@@ -27,8 +31,7 @@ export async function GET(request: NextRequest) {
   } catch (err) {
     return NextResponse.json(
       {
-        error:
-          err instanceof Error ? err.message : 'claude-in-chrome cdp failed',
+        error: err instanceof Error ? err.message : 'rv chrome cdp failed',
       },
       { status: 500 }
     );

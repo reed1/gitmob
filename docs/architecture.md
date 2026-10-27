@@ -17,7 +17,7 @@ and across projects, from the front page:
 - Read and launch handoffs, and accept commits, parked from the desktop
 - Answer the questions Claude asks while I am away from the desktop, or deny them
 - Keep a scratchpad on the device
-- Drive the agent's Chrome by hand (`/app/browser`)
+- Drive a project's agent Chrome by hand (`/app/browser`)
 
 **Pinboard** (`/pinboard`) — every project's notes on one page.
 **Checklist** (`/checklist`) — lists of what to bring.

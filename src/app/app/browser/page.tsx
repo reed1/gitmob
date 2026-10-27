@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ModalOverlay } from '@/components/ModalOverlay';
 import { addToast, apiFetch } from '@/lib/api';
 import { goHome } from '@/lib/app-depth';
@@ -13,7 +13,9 @@ import {
 } from '@/lib/browser-keys';
 
 /**
- * The agent's Chrome, driven from wherever the phone is.
+ * A project's agent Chrome, driven from wherever the phone is. `?project=` names whose; without
+ * it the page offers the agent Chromes running on this machine, and goes straight to the only
+ * one when there is just one.
  *
  * The page it draws is a JPEG of one tab, refetched on a loop, and every gesture on it goes
  * back as the coordinate it landed on: the frame is sized in CSS pixels, so nothing here
@@ -42,7 +44,91 @@ interface Frame {
   title: string;
 }
 
+interface AgentChrome {
+  project_id: string;
+}
+
+function browserPath(project: string) {
+  return `/app/browser?project=${encodeURIComponent(project)}`;
+}
+
 export default function BrowserPage() {
+  // useSearchParams opts a static route out of prerendering only inside a boundary.
+  return (
+    <Suspense>
+      <BrowserRoute />
+    </Suspense>
+  );
+}
+
+function BrowserRoute() {
+  const project = useSearchParams().get('project');
+  return project ? <BrowserView project={project} /> : <ChromePicker />;
+}
+
+function ChromePicker() {
+  const router = useRouter();
+  const [chromes, setChromes] = useState<AgentChrome[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function load() {
+      const res = await fetch('/api/browser/chromes');
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? 'Could not list the agent Chromes');
+        return;
+      }
+      if (data.chromes.length === 1) {
+        router.replace(browserPath(data.chromes[0].project_id));
+        return;
+      }
+      setChromes(data.chromes);
+    }
+    load();
+  }, [router]);
+
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="flex items-center gap-1 px-2 py-2 border-b border-foreground/10">
+        <IconButton label="Leave" onClick={() => goHome(router)}>
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M6 18L18 6M6 6l12 12"
+          />
+        </IconButton>
+        <span className="text-sm font-medium">Agent Chromes</span>
+      </div>
+      {error && (
+        <div className="px-4 py-3 text-xs text-red-400 break-words">
+          {error}
+        </div>
+      )}
+      {chromes === null && !error && (
+        <div className="px-4 py-3 text-sm text-foreground/50">Looking...</div>
+      )}
+      {chromes?.length === 0 && (
+        <div className="px-4 py-3 text-sm text-foreground/50">
+          No agent Chrome is running. An agent opens one with{' '}
+          <code>rv chrome open --agent</code>.
+        </div>
+      )}
+      {chromes?.map((chrome) => (
+        <button
+          key={chrome.project_id}
+          onClick={() => router.push(browserPath(chrome.project_id))}
+          className="w-full px-4 py-3 text-left text-sm border-b border-foreground/5 active:opacity-80"
+        >
+          {chrome.project_id}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function BrowserView({ project }: { project: string }) {
   const router = useRouter();
   const [tab, setTab] = useState<string | null>(null);
   const [frame, setFrame] = useState<Frame | null>(null);
@@ -88,8 +174,8 @@ export default function BrowserPage() {
   const grabFrame = useCallback(async () => {
     if (document.visibilityState === 'hidden') return;
 
-    const query = tab ? `?tab=${encodeURIComponent(tab)}` : '';
-    const res = await fetch(`/api/browser/screenshot${query}`).catch(
+    const query = new URLSearchParams({ project, ...(tab ? { tab } : {}) });
+    const res = await fetch(`/api/browser/screenshot?${query}`).catch(
       () => null
     );
     if (res === null) {
@@ -121,7 +207,7 @@ export default function BrowserPage() {
     if (shown && shown !== tab) setTab(shown);
     setError(null);
     setLoading(false);
-  }, [tab]);
+  }, [project, tab]);
 
   useEffect(() => {
     let stopped = false;
@@ -188,12 +274,12 @@ export default function BrowserPage() {
       const res = await apiFetch(path, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...body, tab }),
+        body: JSON.stringify({ ...body, project, tab }),
       });
       if (res.ok) refreshNow();
       return res.ok;
     },
-    [tab, refreshNow]
+    [project, tab, refreshNow]
   );
 
   /**
@@ -416,7 +502,9 @@ export default function BrowserPage() {
   }
 
   async function loadTabs() {
-    const res = await fetch('/api/browser');
+    const res = await fetch(
+      `/api/browser?project=${encodeURIComponent(project)}`
+    );
     const data = await res.json();
     if (res.ok) setTabs(data.tabs);
     else addToast(data.error ?? 'Could not list the tabs');
@@ -431,7 +519,7 @@ export default function BrowserPage() {
     const res = await apiFetch('/api/browser', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, tab, ...body }),
+      body: JSON.stringify({ action, project, tab, ...body }),
     });
     if (res.ok) refreshNow();
     return res;
@@ -459,7 +547,7 @@ export default function BrowserPage() {
     const res = await apiFetch('/api/browser', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'close', tab: id }),
+      body: JSON.stringify({ action: 'close', project, tab: id }),
     });
     if (!res.ok) return;
     // Closing the tab being watched leaves nothing to watch: fall back to whichever Chrome
@@ -667,13 +755,23 @@ export default function BrowserPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-4 py-3 border-b border-foreground/10">
-              <span className="text-sm font-medium">Tabs</span>
-              <button
-                onClick={newTab}
-                className="px-3 py-1 rounded-lg bg-foreground/10 text-sm active:opacity-80"
-              >
-                New tab
-              </button>
+              <span className="text-sm font-medium truncate">
+                Tabs of {project}
+              </span>
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  onClick={() => router.push('/app/browser')}
+                  className="px-3 py-1 rounded-lg bg-foreground/10 text-sm active:opacity-80"
+                >
+                  Chromes
+                </button>
+                <button
+                  onClick={newTab}
+                  className="px-3 py-1 rounded-lg bg-foreground/10 text-sm active:opacity-80"
+                >
+                  New tab
+                </button>
+              </div>
             </div>
             {tabs.map((entry) => (
               <div

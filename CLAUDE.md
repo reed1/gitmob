@@ -4,12 +4,11 @@ Next.js web interface for managing Git operations across multiple projects from 
 React 19, Next.js 16, TypeScript, Tailwind CSS 4, simple-git.
 
 It serves three installable PWAs off one server: **GitMob** (`/app`) — per-project browsing,
-changes, commits, pushes, runs, CLI jobs, todos, notes and Claude sessions, plus `/app/browser`, the
-agent's Chrome driven by hand — **Pinboard** (`/pinboard`), the overview of every project's notes,
-and **Checklist** (`/checklist`), lists of what to bring, kept as JSON in `checklists/`.
+changes, commits, pushes, runs, CLI jobs, todos, notes and Claude sessions, plus `/app/browser`, a
+project's agent Chrome driven by hand — **Pinboard** (`/pinboard`), the overview of every project's
+notes, and **Checklist** (`/checklist`), lists of what to bring, kept as JSON in `checklists/`.
 Projects and their per-project state come from the desktop CLIs (`rworkspaces`, `wtman`, `pt`, `rv`,
-`claudex`, `claude-in-chrome`, `gg`); long-running work runs as detached jobs that report back over
-Web Push.
+`claudex`, `gg`); long-running work runs as detached jobs that report back over Web Push.
 
 ## Docs
 

@@ -21,5 +21,5 @@ docs; how it is called is in the module. Paths under `rlocal/` are in `~/.dotfil
 | `am-i-afk`                        | the AFK badge                                 | `src/lib/afk.ts`                                       | `rlocal/bin/am-i-afk`                       |
 | `rbak`                            | "Move all to rbak" on the Files page          | `src/app/api/files/rbak/route.ts`                      | `rlocal/app/rbak/CLAUDE.md`                 |
 | rvoice STT server                 | dictation, called from the browser            | `src/app/app/SpeakButton.tsx`                          | `rlocal/app/rvoice/stt_server/README.md`    |
-| `claude-in-chrome`                | the agent's browser                           | `src/lib/browser.ts`                                   | `rlocal/bin/claude-in-chrome`               |
+| `rv chrome cdp`                   | a project's agent Chrome                      | `src/lib/browser.ts`                                   | `rlocal/app/rofi-vscode/CLAUDE.md`          |
 | `~/.config/git/diff-exclude.yaml` | files the review page shows without a diff    | `src/lib/diff-exclude.ts`                              | `rlocal/app/gg/CLAUDE.md`                   |

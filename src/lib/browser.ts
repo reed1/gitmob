@@ -2,13 +2,19 @@ import { execFile } from 'child_process';
 import type { BrowserKey } from './browser-keys';
 
 /**
- * The Chrome the Claude extension drives, reached through the CLI that owns it —
- * `claude-in-chrome cdp`, in rlocal/bin. Same contract as every other CLI here: shell out,
- * map the JSON, let its failures reach the user.
+ * A project's agent Chrome, reached through the CLI that owns it — `rv chrome cdp`. Same
+ * contract as every other CLI here: shell out, map the JSON, let its failures reach the user.
  *
- * It is one browser for the whole desktop, not one per project, so nothing on this path takes
- * a project id.
+ * Every project has its own, shared by the agents working on it, so everything past
+ * `listChromes` names the project whose Chrome it drives.
  */
+
+export interface AgentChrome {
+  project_id: string;
+  pid: number;
+  /** Null for the moment between Chrome starting and writing its port out. */
+  debug_port: number | null;
+}
 
 export interface BrowserTab {
   id: string;
@@ -32,8 +38,8 @@ const TIMEOUT_MS = 20000;
 function cdp(args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
     execFile(
-      'claude-in-chrome',
-      ['cdp', ...args],
+      'rv',
+      ['chrome', 'cdp', ...args],
       { timeout: TIMEOUT_MS, maxBuffer: 8 * 1024 * 1024 },
       (error, stdout, stderr) => {
         if (error) {
@@ -47,20 +53,28 @@ function cdp(args: string[]): Promise<string> {
 }
 
 /** Every command but `tabs` and `open` acts on one tab, and defaults to the frontmost. */
-function forTab(tab: string | null): string[] {
-  return tab ? ['--target', tab] : [];
+function forTab(project: string, tab: string | null): string[] {
+  return ['--project-id', project, ...(tab ? ['--target', tab] : [])];
 }
 
-export async function listTabs(): Promise<BrowserTab[]> {
-  return JSON.parse(await cdp(['tabs'])).tabs;
+export async function listChromes(): Promise<AgentChrome[]> {
+  return JSON.parse(await cdp(['list'])).chromes;
 }
 
-export async function captureTab(tab: string | null): Promise<BrowserShot> {
-  const shot = JSON.parse(await cdp(['shot', ...forTab(tab)]));
+export async function listTabs(project: string): Promise<BrowserTab[]> {
+  return JSON.parse(await cdp(['tabs', '--project-id', project])).tabs;
+}
+
+export async function captureTab(
+  project: string,
+  tab: string | null
+): Promise<BrowserShot> {
+  const shot = JSON.parse(await cdp(['shot', ...forTab(project, tab)]));
   return { ...shot, jpeg: Buffer.from(shot.jpeg, 'base64') };
 }
 
 export async function clickTab(
+  project: string,
   tab: string | null,
   x: number,
   y: number,
@@ -68,7 +82,7 @@ export async function clickTab(
 ): Promise<void> {
   await cdp([
     'click',
-    ...forTab(tab),
+    ...forTab(project, tab),
     '--x',
     String(x),
     '--y',
@@ -79,6 +93,7 @@ export async function clickTab(
 }
 
 export async function scrollTab(
+  project: string,
   tab: string | null,
   x: number,
   y: number,
@@ -87,7 +102,7 @@ export async function scrollTab(
 ): Promise<void> {
   await cdp([
     'scroll',
-    ...forTab(tab),
+    ...forTab(project, tab),
     '--x',
     String(x),
     '--y',
@@ -100,41 +115,48 @@ export async function scrollTab(
 }
 
 export async function typeIntoTab(
+  project: string,
   tab: string | null,
   text: string
 ): Promise<void> {
-  await cdp(['text', ...forTab(tab), text]);
+  await cdp(['text', ...forTab(project, tab), text]);
 }
 
 export async function pressTabKey(
+  project: string,
   tab: string | null,
   key: BrowserKey
 ): Promise<void> {
-  await cdp(['key', ...forTab(tab), key]);
+  await cdp(['key', ...forTab(project, tab), key]);
 }
 
 export async function navigateTab(
+  project: string,
   tab: string | null,
   url: string
 ): Promise<void> {
-  await cdp(['navigate', ...forTab(tab), url]);
+  await cdp(['navigate', ...forTab(project, tab), url]);
 }
 
 export async function stepTabHistory(
+  project: string,
   tab: string | null,
   direction: 'back' | 'forward'
 ): Promise<void> {
-  await cdp([direction, ...forTab(tab)]);
+  await cdp([direction, ...forTab(project, tab)]);
 }
 
-export async function reloadTab(tab: string | null): Promise<void> {
-  await cdp(['reload', ...forTab(tab)]);
+export async function reloadTab(
+  project: string,
+  tab: string | null
+): Promise<void> {
+  await cdp(['reload', ...forTab(project, tab)]);
 }
 
-export async function openTab(url: string): Promise<string> {
-  return JSON.parse(await cdp(['open', url])).id;
+export async function openTab(project: string, url: string): Promise<string> {
+  return JSON.parse(await cdp(['open', '--project-id', project, url])).id;
 }
 
-export async function closeTab(tab: string): Promise<void> {
-  await cdp(['close', '--target', tab]);
+export async function closeTab(project: string, tab: string): Promise<void> {
+  await cdp(['close', ...forTab(project, tab)]);
 }
