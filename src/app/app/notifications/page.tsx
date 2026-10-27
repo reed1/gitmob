@@ -3,7 +3,7 @@
 import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { addToast, apiFetch } from '@/lib/api';
-import { useAutoRefresh } from '@/lib/use-auto-refresh';
+import { useLoad } from '@/lib/use-load';
 import { goHome } from '@/lib/app-depth';
 import {
   currentEndpoint,
@@ -40,7 +40,7 @@ export default function NotificationsPage() {
     setLoading(false);
   }, []);
 
-  useAutoRefresh(load);
+  useLoad(load);
 
   const subscribed =
     thisEndpoint !== null && devices.some((d) => d.endpoint === thisEndpoint);

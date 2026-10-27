@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import { addToast, apiFetch } from '@/lib/api';
-import { useAutoRefresh } from '@/lib/use-auto-refresh';
+import { useLoad } from '@/lib/use-load';
 import { Modal } from './Modal';
 import { projectApiPath } from '@/lib/project-paths';
 
@@ -466,7 +466,7 @@ export function ProjectWorktreeModal({
     else setError(data.error || 'Could not read worktrees');
   }, [repoId]);
 
-  useAutoRefresh(load);
+  useLoad(load);
 
   const worktree = worktrees?.find((w) => w.projectId === projectId) ?? null;
 
@@ -528,7 +528,7 @@ export function WorktreeSyncNotice({
     }
   }, [repoId, pick]);
 
-  useAutoRefresh(load);
+  useLoad(load);
 
   const sync = async (chosen: Pending) => {
     setPending(null);

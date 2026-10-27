@@ -2,7 +2,7 @@
 
 import { useCallback, useState, type ReactNode } from 'react';
 import { apiFetch } from '@/lib/api';
-import { useAutoRefresh } from '@/lib/use-auto-refresh';
+import { useLoad } from '@/lib/use-load';
 import type {
   Review,
   ReviewFile,
@@ -183,7 +183,7 @@ export function ReviewScreen({
     setReview(await res.json());
   }, [projectId, commit, side, path, full, force]);
 
-  useAutoRefresh(load);
+  useLoad(load);
 
   const fileCount =
     path === null && review && !review.tooLarge ? review.files.length : null;

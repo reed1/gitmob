@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import ProjectCard from './ProjectCard';
 import { TextHistoryModal } from './TextHistoryModal';
@@ -12,12 +12,10 @@ import UsagePanel from './UsagePanel';
 import { ClaudeUsage, Project, StaleBuild } from './types';
 import { addToast, apiFetch } from '@/lib/api';
 import { useOutsideClick } from '@/lib/use-outside-click';
-import { useAutoRefresh } from '@/lib/use-auto-refresh';
+import { useLoad } from '@/lib/use-load';
 import { useBackToDismiss } from '@/lib/use-back-to-dismiss';
 import { needsNotificationSetup } from '@/lib/notifications-client';
 import { useModelCatalog } from '@/lib/use-model-catalog';
-
-const RESUME_REFRESH_THRESHOLD_MS = 10000;
 
 async function fetchHealthWithTimeout(
   timeoutMs: number
@@ -114,7 +112,7 @@ export default function Home() {
       });
   }, []);
 
-  useAutoRefresh(refreshProjects);
+  useLoad(refreshProjects);
 
   // The desktop's own idle timer has not run out — I am simply not at it. Saying so is what
   // sends the next handoff and commit review here instead of to a screen nobody is watching.
@@ -164,30 +162,7 @@ export default function Home() {
   const checkNotifications = useCallback(async () => {
     setNotificationsOff(await needsNotificationSetup());
   }, []);
-  useAutoRefresh(checkNotifications);
-
-  useEffect(() => {
-    let hiddenAt = 0;
-    function onVisibilityChange() {
-      if (document.visibilityState === 'hidden') {
-        hiddenAt = Date.now();
-      } else if (document.visibilityState === 'visible') {
-        if (hiddenAt && Date.now() - hiddenAt > RESUME_REFRESH_THRESHOLD_MS) {
-          refreshProjects();
-        }
-        hiddenAt = 0;
-      } else {
-        throw new Error(
-          `Unexpected visibility state: ${document.visibilityState}`
-        );
-      }
-    }
-
-    document.addEventListener('visibilitychange', onVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', onVisibilityChange);
-    };
-  }, [refreshProjects]);
+  useLoad(checkNotifications);
 
   // The list only knows whether an open project is dirty. Once one the scan found is opened,
   // that answer is the live one and the scan's stands aside.

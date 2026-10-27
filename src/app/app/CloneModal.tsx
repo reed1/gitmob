@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch } from '@/lib/api';
-import { useAutoRefresh } from '@/lib/use-auto-refresh';
+import { usePoll } from '@/lib/use-load';
 import {
   ClientJob,
   elapsedSince,
@@ -43,7 +43,7 @@ export function CloneModal({
 
   const running = job?.status === 'running';
 
-  useAutoRefresh(load, running ? 1000 : undefined);
+  usePoll(load, running ? 1000 : null);
 
   useEffect(() => {
     if (running) logRef.current?.scrollTo({ top: logRef.current.scrollHeight });

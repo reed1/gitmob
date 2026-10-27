@@ -5,7 +5,7 @@ import { ModalOverlay } from '@/components/ModalOverlay';
 import { addToast, apiFetch } from '@/lib/api';
 import { relativeTime } from '@/lib/relative-time';
 import { saveTextHistory } from '@/lib/text-history';
-import { useAutoRefresh } from '@/lib/use-auto-refresh';
+import { useLoad } from '@/lib/use-load';
 import { CollapsedRows } from './CollapsedRows';
 import type { PendingQuestion, Question, Reply } from '@/lib/claude-questions';
 
@@ -48,7 +48,7 @@ export function PendingQuestions({ hidden }: { hidden: boolean }) {
     setQuestions(data.questions);
   }, []);
 
-  useAutoRefresh(fetchQuestions);
+  useLoad(fetchQuestions);
 
   const open = questions.find((q) => q.id === openId) ?? null;
 

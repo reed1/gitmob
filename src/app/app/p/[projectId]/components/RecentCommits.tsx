@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { KebabMenu, KebabMenuItem } from '@/app/app/KebabMenu';
-import { useAutoRefresh } from '@/lib/use-auto-refresh';
+import { useLoad } from '@/lib/use-load';
 import { relativeTime } from '@/lib/relative-time';
 import { addToast } from '@/lib/api';
 import { copyText } from '@/lib/clipboard';
@@ -129,7 +129,7 @@ export function RecentCommits({ projectId }: { projectId: string }) {
     setLoaded({ count, commits: data.commits ?? [] });
   }, [projectId, count]);
 
-  useAutoRefresh(load);
+  useLoad(load);
 
   if (loaded === null) return null;
 

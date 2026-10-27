@@ -6,7 +6,7 @@ import { useCallback, useState } from 'react';
 import { ModalOverlay } from '@/components/ModalOverlay';
 import { addToast, apiFetch } from '@/lib/api';
 import { relativeTime } from '@/lib/relative-time';
-import { useAutoRefresh } from '@/lib/use-auto-refresh';
+import { useLoad } from '@/lib/use-load';
 import { CollapsedRows } from './CollapsedRows';
 
 interface StagedFile {
@@ -66,7 +66,7 @@ export function PendingCommits({
     setCommits(data.commits);
   }, []);
 
-  useAutoRefresh(fetchCommits);
+  useLoad(fetchCommits);
 
   const openCommit = (pending: PendingCommit) => {
     setMessage(pending.message);

@@ -7,7 +7,7 @@ import { DesktopSessions } from './DesktopSessions';
 import { RecallSearch } from './RecallSearch';
 import { RecallTranscript } from './RecallTranscript';
 import { SessionTranscript } from './SessionTranscript';
-import { useAutoRefresh } from '@/lib/use-auto-refresh';
+import { usePoll } from '@/lib/use-load';
 import { projectApiPath, projectPagePath } from '@/lib/project-paths';
 
 /** What Claude Code itself reports the session's context window to be holding. */
@@ -68,7 +68,7 @@ export function ClaudeView({
   // The list polls, but only while it is the thing on screen: a five-second refresh under a
   // search box is a keystroke lost every five seconds.
   const showingList = !windowParam && !searchParam && !sessionParam;
-  useAutoRefresh(fetchSessions, showingList ? 5000 : undefined);
+  usePoll(fetchSessions, showingList ? 5000 : null);
 
   const sessionsUrl = `${projectPagePath(projectId)}?tab=claude`;
 

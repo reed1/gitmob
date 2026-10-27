@@ -23,7 +23,7 @@ import { ReviewScreen } from './components/ReviewScreen';
 import ProjectKebabMenu from '@/app/app/ProjectKebabMenu';
 import { HoldBadge } from '@/app/app/GgHold';
 import { WorktreeSyncNotice } from '@/app/app/WorktreeActions';
-import { useAutoRefresh } from '@/lib/use-auto-refresh';
+import { useLoad } from '@/lib/use-load';
 import { goHome } from '@/lib/app-depth';
 import { projectApiPath, projectPagePath } from '@/lib/project-paths';
 
@@ -161,7 +161,7 @@ export default function ProjectPage() {
     await refreshStatus();
   }, [tab, refreshStatus]);
 
-  useAutoRefresh(reloadChanges);
+  useLoad(reloadChanges);
 
   if (loading) {
     return (

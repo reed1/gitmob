@@ -5,7 +5,7 @@ import { saveTextHistory } from '@/lib/text-history';
 import { useState, useCallback, useRef } from 'react';
 import { ModalOverlay } from '@/components/ModalOverlay';
 import { apiFetch } from '@/lib/api';
-import { useAutoRefresh } from '@/lib/use-auto-refresh';
+import { useLoad } from '@/lib/use-load';
 import { SpeakButton } from '@/app/app/SpeakButton';
 
 interface Todo {
@@ -66,8 +66,8 @@ export function DooitView({ projectId }: { projectId: string }) {
     setTodosLoading(false);
   }, [projectId, selectedWorkspace]);
 
-  useAutoRefresh(fetchWorkspaces);
-  useAutoRefresh(fetchTodos);
+  useLoad(fetchWorkspaces);
+  useLoad(fetchTodos);
 
   const addWorkspace = async () => {
     if (!workspaceText.trim()) return;

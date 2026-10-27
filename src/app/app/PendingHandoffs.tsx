@@ -10,7 +10,7 @@ import { ModalOverlay } from '@/components/ModalOverlay';
 import { addToast, apiFetch } from '@/lib/api';
 import { copyText } from '@/lib/clipboard';
 import { relativeTime } from '@/lib/relative-time';
-import { useAutoRefresh } from '@/lib/use-auto-refresh';
+import { useLoad } from '@/lib/use-load';
 import { CollapsedRows } from './CollapsedRows';
 import { KebabMenu, KebabMenuItem } from './KebabMenu';
 import { useModelCatalog } from '@/lib/use-model-catalog';
@@ -118,7 +118,7 @@ export function PendingHandoffs({
     setHandoffs(data.handoffs);
   }, []);
 
-  useAutoRefresh(fetchHandoffs);
+  useLoad(fetchHandoffs);
 
   const openHandoff = (handoff: PendingHandoff) => {
     setPrompt(handoff.prompt);

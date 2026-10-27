@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useAutoRefresh } from '@/lib/use-auto-refresh';
+import { useLoad } from '@/lib/use-load';
 import {
   PinboardDeleteConfirm,
   PinboardNoteCard,
@@ -42,7 +42,7 @@ export function PinboardView({
     setLoading(false);
   }, [canonicalId]);
 
-  useAutoRefresh(fetchNotes);
+  useLoad(fetchNotes);
 
   const closeModal = () => {
     setModalMode(null);

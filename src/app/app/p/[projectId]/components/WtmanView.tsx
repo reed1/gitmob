@@ -5,7 +5,7 @@ import { useCallback, useState } from 'react';
 import { addToast, apiFetch } from '@/lib/api';
 import { goHome } from '@/lib/app-depth';
 import { relativeTime } from '@/lib/relative-time';
-import { useAutoRefresh } from '@/lib/use-auto-refresh';
+import { useLoad } from '@/lib/use-load';
 import {
   actOnDesktop,
   CloseOnDesktopModal,
@@ -296,7 +296,7 @@ export function WtmanView({
     }
   }, [projectId]);
 
-  useAutoRefresh(load);
+  useLoad(load);
 
   const loadBranches = useCallback(async () => {
     const res = await fetch(`${projectApiPath(projectId)}/branches`);
@@ -309,7 +309,7 @@ export function WtmanView({
     }
   }, [projectId]);
 
-  useAutoRefresh(loadBranches);
+  useLoad(loadBranches);
 
   const post = async (url: string, body: object) => {
     const res = await apiFetch(url, {

@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import { addToast } from '@/lib/api';
-import { useAutoRefresh } from '@/lib/use-auto-refresh';
+import { useLoad } from '@/lib/use-load';
 import { useCachedState } from '@/lib/use-cached-state';
 
 /**
@@ -53,7 +53,7 @@ export function useOfflineFirst<T>(
     setRefreshing(false);
   }, [restored, fetchFresh, setCached]);
 
-  useAutoRefresh(reload);
+  useLoad(reload);
 
   const edit = useCallback((update: (data: T) => T) => {
     setLoaded((prev) => (prev === null ? prev : update(prev)));

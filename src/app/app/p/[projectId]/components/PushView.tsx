@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch } from '@/lib/api';
-import { useAutoRefresh } from '@/lib/use-auto-refresh';
+import { useLoad, usePoll } from '@/lib/use-load';
 import {
   ClientJob,
   elapsedSince,
@@ -71,7 +71,7 @@ export function PushView({ projectId }: { projectId: string }) {
     setError(null);
   }, [projectId]);
 
-  useAutoRefresh(load);
+  useLoad(load);
 
   const running = job?.status === 'running';
 
@@ -82,7 +82,7 @@ export function PushView({ projectId }: { projectId: string }) {
     setJob(data.job);
   }, [projectId, running]);
 
-  useAutoRefresh(pollJob, 1000);
+  usePoll(pollJob, 1000);
 
   useEffect(() => {
     if (running) logRef.current?.scrollTo({ top: logRef.current.scrollHeight });
