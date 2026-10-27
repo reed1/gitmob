@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import AppDepthTracker from './AppDepthTracker';
+import ResumeAtHome from './ResumeAtHome';
 import { Scratchpad } from './Scratchpad';
 
 export const metadata: Metadata = {
@@ -14,6 +15,7 @@ export default function GitMobLayout({
   return (
     <>
       <AppDepthTracker />
+      <ResumeAtHome />
       {children}
       <Scratchpad />
     </>
