@@ -13,11 +13,13 @@
 
 and across projects, from the front page:
 
-- See every project's state at a glance; scan closed ones for uncommitted work
+- See every project's state at a glance
 - Read and launch handoffs, and accept commits, parked from the desktop
 - Answer the questions Claude asks while I am away from the desktop, or deny them
 - Keep a scratchpad on the device
 - Drive a project's agent Chrome by hand (`/app/browser`)
+- Keep GitMob itself in shape (`/app/internals`): notifications, scanning closed projects for
+  uncommitted work, refreshing checks and models, restarting the service
 
 **Pinboard** (`/pinboard`) — every project's notes on one page.
 **Checklist** (`/checklist`) — lists of what to bring.

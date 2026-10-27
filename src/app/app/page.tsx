@@ -7,7 +7,6 @@ import { TextHistoryModal } from './TextHistoryModal';
 import { PendingHandoffs } from './PendingHandoffs';
 import { PendingCommits } from './PendingCommits';
 import { PendingQuestions } from './PendingQuestions';
-import { UncommittedProjects } from './UncommittedProjects';
 import UsagePanel from './UsagePanel';
 import { ClaudeUsage, Project, StaleBuild } from './types';
 import { addToast, apiFetch } from '@/lib/api';
@@ -16,37 +15,8 @@ import { useLoad } from '@/lib/use-load';
 import { useBackToDismiss } from '@/lib/use-back-to-dismiss';
 import { needsNotificationSetup } from '@/lib/notifications-client';
 import { useModelCatalog } from '@/lib/use-model-catalog';
-
-async function fetchHealthWithTimeout(
-  timeoutMs: number
-): Promise<{ startedAt: number } | null> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const res = await fetch('/api/health', { signal: controller.signal });
-    clearTimeout(timeoutId);
-    if (!res.ok) return null;
-    return res.json();
-  } catch {
-    clearTimeout(timeoutId);
-    return null;
-  }
-}
-
-async function waitForNewServer(
-  previousStartedAt: number,
-  timeoutMs = 20000
-): Promise<boolean> {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    const health = await fetchHealthWithTimeout(3000);
-    if (health && health.startedAt !== previousStartedAt) {
-      return true;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 500));
-  }
-  return false;
-}
+import { useRestart } from '@/lib/use-restart';
+import { RestartingOverlay } from './RestartingOverlay';
 
 export default function Home() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -60,34 +30,15 @@ export default function Home() {
   const [search, setSearch] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const [textHistoryOpen, setTextHistoryOpen] = useState(false);
-  const [restarting, setRestarting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // The closed projects the last scan found dirty, for as long as this page is up.
-  const [uncommittedIds, setUncommittedIds] = useState<Set<string>>(new Set());
-  const [scanning, setScanning] = useState(false);
-  const [refreshingChecks, setRefreshingChecks] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   // Opening the front page is what fills the catalog on a new device, before any session box.
-  const { reload: reloadModelCatalog } = useModelCatalog();
+  useModelCatalog();
+  const { restarting, restart } = useRestart();
 
   useOutsideClick(menuOpen, menuRef, () => setMenuOpen(false));
   useBackToDismiss(search !== '', () => setSearch(''));
-
-  const restart = useCallback(async () => {
-    const health = await fetchHealthWithTimeout(3000);
-    if (!health) return;
-    const previousStartedAt = health.startedAt;
-    setRestarting(true);
-    // Raw fetch to avoid error toasts — the server will die mid-request
-    fetch('/api/restart', { method: 'POST' }).catch(() => {});
-    if (await waitForNewServer(previousStartedAt)) {
-      window.location.reload();
-    } else {
-      setRestarting(false);
-      addToast('Service did not come back up after 20 seconds');
-    }
-  }, []);
 
   const refreshProjects = useCallback(() => {
     setRefreshing(true);
@@ -129,34 +80,6 @@ export default function Home() {
     }
   };
 
-  const scanUncommitted = async () => {
-    setScanning(true);
-    try {
-      const res = await apiFetch('/api/uncommitted');
-      if (!res.ok) return;
-      const { ids }: { ids: string[] } = await res.json();
-      setUncommittedIds(new Set(ids));
-      if (ids.length === 0) {
-        addToast('No closed project has uncommitted changes', 'success');
-      }
-    } finally {
-      setScanning(false);
-    }
-  };
-
-  // Sudo, monitored sites and env checks are answered from the server's memory and refreshed
-  // behind it, so the list never waits on them. This is for when they have to be right now.
-  const refreshChecks = async () => {
-    setRefreshingChecks(true);
-    try {
-      const res = await apiFetch('/api/checks/refresh', { method: 'POST' });
-      if (res.ok) addToast('Checks refreshed', 'success');
-      refreshProjects();
-    } finally {
-      setRefreshingChecks(false);
-    }
-  };
-
   // Starts hidden so a phone that is already subscribed never flashes the prompt.
   const [notificationsOff, setNotificationsOff] = useState(false);
   const checkNotifications = useCallback(async () => {
@@ -164,16 +87,7 @@ export default function Home() {
   }, []);
   useLoad(checkNotifications);
 
-  // The list only knows whether an open project is dirty. Once one the scan found is opened,
-  // that answer is the live one and the scan's stands aside.
-  const withScan = projects.map((p) =>
-    !p.openOnDesktop && uncommittedIds.has(p.id) ? { ...p, editing: true } : p
-  );
-  const uncommitted = withScan
-    .filter((p) => !p.openOnDesktop && uncommittedIds.has(p.id))
-    .sort((a, b) => a.id.localeCompare(b.id));
-
-  const filtered = withScan
+  const filtered = projects
     .filter(
       (p) => search === '' || p.id.toLowerCase().includes(search.toLowerCase())
     )
@@ -209,11 +123,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
-      {restarting && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center">
-          <div className="text-foreground/70 text-lg">Restarting...</div>
-        </div>
-      )}
+      {restarting && <RestartingOverlay />}
       <header className="sticky top-0 z-10 border-b border-foreground/10 bg-background/95 backdrop-blur px-4 py-3 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -397,7 +307,7 @@ export default function Home() {
                     Browser
                   </Link>
                   <Link
-                    href="/app/notifications"
+                    href="/app/internals"
                     onClick={() => setMenuOpen(false)}
                     className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 flex items-center gap-2"
                   >
@@ -411,103 +321,11 @@ export default function Home() {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1h6z"
+                        d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                       />
                     </svg>
-                    Notifications
+                    Internals
                   </Link>
-                  <button
-                    onClick={() => {
-                      setMenuOpen(false);
-                      scanUncommitted();
-                    }}
-                    disabled={scanning}
-                    className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 flex items-center gap-2 disabled:opacity-50"
-                  >
-                    <svg
-                      className="w-4 h-4 text-foreground/60"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                      />
-                    </svg>
-                    Scan for uncommitted changes
-                  </button>
-                  <button
-                    onClick={() => {
-                      setMenuOpen(false);
-                      refreshChecks();
-                    }}
-                    disabled={refreshingChecks}
-                    className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 flex items-center gap-2 disabled:opacity-50"
-                  >
-                    <svg
-                      className="w-4 h-4 text-foreground/60"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                      />
-                    </svg>
-                    Refresh sudo, sites and env checks
-                  </button>
-                  <button
-                    onClick={() => {
-                      setMenuOpen(false);
-                      reloadModelCatalog()
-                        .then(() => addToast('Models reloaded', 'success'))
-                        .catch((err) => addToast(err.message));
-                    }}
-                    className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 flex items-center gap-2"
-                  >
-                    <svg
-                      className="w-4 h-4 text-foreground/60"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                      />
-                    </svg>
-                    Reload models
-                  </button>
-                  <button
-                    onClick={() => {
-                      setMenuOpen(false);
-                      restart();
-                    }}
-                    className="w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 flex items-center gap-2"
-                  >
-                    <svg
-                      className="w-4 h-4 text-foreground/60"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                      />
-                    </svg>
-                    Restart GitMob
-                  </button>
                 </div>
               )}
             </div>
@@ -654,14 +472,6 @@ export default function Home() {
         <PendingCommits
           hidden={search !== ''}
           onCommitted={() => refreshProjects()}
-        />
-
-        <UncommittedProjects
-          projects={uncommitted}
-          scanning={scanning}
-          hidden={search !== ''}
-          onDismiss={() => setUncommittedIds(new Set())}
-          onOpened={() => refreshProjects()}
         />
 
         {error && (

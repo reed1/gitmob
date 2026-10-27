@@ -19,12 +19,15 @@ export async function GET() {
 
   const results = await processWithWorkers(closed, WORKERS, async (p) => ({
     id: p.id,
-    dirty: await getRepoSummary(p.path)
-      .then((summary) => summary.hasChanges)
-      .catch(() => false),
+    canonicalId: p.canonicalId,
+    summary: await getRepoSummary(p.path).catch(() => null),
   }));
 
   return NextResponse.json({
-    ids: results.filter((r) => r.dirty).map((r) => r.id),
+    projects: results
+      .flatMap(({ id, canonicalId, summary }) =>
+        summary?.hasChanges ? [{ id, canonicalId, branch: summary.branch }] : []
+      )
+      .sort((a, b) => a.id.localeCompare(b.id)),
   });
 }
