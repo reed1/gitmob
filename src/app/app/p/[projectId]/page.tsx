@@ -30,9 +30,9 @@ import { projectApiPath, projectPagePath } from '@/lib/project-paths';
 const tabs = [
   { id: 'pinboard', label: 'Pinboard' },
   { id: 'claude', label: 'Claude' },
-  { id: 'files', label: 'Files' },
   { id: 'changes', label: 'Changes' },
   { id: 'commit', label: 'Commit' },
+  { id: 'files', label: 'Files' },
   { id: 'cli', label: 'CLI' },
   { id: 'run', label: 'Run' },
   { id: 'dooit', label: 'Dooit' },
