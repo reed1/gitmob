@@ -235,8 +235,7 @@ export function WorktreeConflicts({
   if (worktree.conflicts.length === 0) return null;
   return (
     <div className={`text-xs text-red-500 break-all ${className}`}>
-      Conflict in {worktree.conflicts.join(', ')}. Resolve it in the
-      worktree.
+      Conflict in {worktree.conflicts.join(', ')}. Resolve it in the worktree.
     </div>
   );
 }
@@ -529,7 +528,7 @@ export function WorktreeSyncNotice({
     }
   }, [repoId, pick]);
 
-  useAutoRefresh(load, 10000);
+  useAutoRefresh(load);
 
   const sync = async (chosen: Pending) => {
     setPending(null);

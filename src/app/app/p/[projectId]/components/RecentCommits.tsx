@@ -129,7 +129,7 @@ export function RecentCommits({ projectId }: { projectId: string }) {
     setLoaded({ count, commits: data.commits ?? [] });
   }, [projectId, count]);
 
-  useAutoRefresh(load, 60000);
+  useAutoRefresh(load);
 
   if (loaded === null) return null;
 

@@ -296,8 +296,7 @@ export function WtmanView({
     }
   }, [projectId]);
 
-  // The desktop takes a while to finish opening one, so the badge catches up on its own.
-  useAutoRefresh(load, 10000);
+  useAutoRefresh(load);
 
   const loadBranches = useCallback(async () => {
     const res = await fetch(`${projectApiPath(projectId)}/branches`);
@@ -310,8 +309,7 @@ export function WtmanView({
     }
   }, [projectId]);
 
-  // Every read asks each remote where its branches are, seconds over ssh.
-  useAutoRefresh(loadBranches, 60000);
+  useAutoRefresh(loadBranches);
 
   const post = async (url: string, body: object) => {
     const res = await apiFetch(url, {
