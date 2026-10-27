@@ -1,9 +1,9 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { addToast } from '@/lib/api';
-import { useAutoRefresh } from '@/lib/use-auto-refresh';
-import { useCachedState } from '@/lib/use-cached-state';
+import { useOfflineFirst } from '@/lib/use-offline-first';
+import { OfflineFirstPage } from '@/components/OfflineFirstPage';
 import { CHECKLIST_NAME, type Checklist } from '@/lib/checklist-name';
 
 const ICONS = {
@@ -11,16 +11,18 @@ const ICONS = {
   down: 'M19 9l-7 7-7-7',
   remove: 'M6 18L18 6M6 6l12 12',
   add: 'M12 4v16m8-8H4',
-  refresh:
-    'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15',
 };
 
 const LISTS_KEY = 'checklist:lists';
 
-function Icon({ path, className }: { path: string; className?: string }) {
+async function parseLists(res: Response): Promise<Checklist[]> {
+  return (await res.json()).checklists;
+}
+
+function Icon({ path }: { path: string }) {
   return (
     <svg
-      className={className ?? 'w-4 h-4'}
+      className="w-4 h-4"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
@@ -190,28 +192,15 @@ function ListEditor({
 }
 
 /**
- * The cached lists paint on open and are replaced when the server answers. Edit waits for that
- * answer, since Save sends every list and would otherwise write back a stale one. Edits stay on
- * the page until Save, which sends every list to be written to `checklists/` and committed, then
- * reads them back. Cancel drops them.
+ * Edit waits for the server's lists, since Save sends every list and would otherwise write back
+ * a stale one. Edits stay on the page until Save, which sends every list to be written to
+ * `checklists/` and committed, then reads them back. Cancel drops them.
  */
 export default function ChecklistPage() {
-  const [lists, setLists, restored] = useCachedState<Checklist[]>(LISTS_KEY);
-  const [loaded, setLoaded] = useState(false);
-  const [refreshing, setRefreshing] = useState(true);
+  const source = useOfflineFirst(LISTS_KEY, '/api/checklist', parseLists);
   const [draft, setDraft] = useState<Checklist[] | null>(null);
   const [addedIndex, setAddedIndex] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
-
-  const load = useCallback(async () => {
-    setRefreshing(true);
-    const res = await fetch('/api/checklist');
-    setLists((await res.json()).checklists);
-    setLoaded(true);
-    setRefreshing(false);
-  }, [setLists]);
-
-  useAutoRefresh(load);
 
   const problem = draft === null ? null : problemWith(draft);
 
@@ -228,7 +217,7 @@ export default function ChecklistPage() {
       }),
     }).catch(() => null);
     if (res?.ok) {
-      await load();
+      await source.reload();
       setDraft(null);
       addToast('Checklist saved', 'success');
     } else {
@@ -239,126 +228,110 @@ export default function ChecklistPage() {
   };
 
   return (
-    <div className="min-h-dvh">
-      <header className="sticky top-0 z-10 bg-background border-b border-foreground/10 px-4 py-3">
-        <div className="flex items-center gap-2">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-semibold">Checklist</h1>
-            {problem !== null && (
-              <div className="text-xs text-amber-400 truncate">{problem}</div>
-            )}
-          </div>
-          {draft === null ? (
-            <>
-              <button
-                onClick={load}
-                className="p-2 rounded-lg hover:bg-foreground/10 active:opacity-80"
-                aria-label="Refresh"
-              >
-                <Icon
-                  path={ICONS.refresh}
-                  className={`w-5 h-5 text-foreground/60 ${
-                    refreshing ? 'animate-spin' : ''
-                  }`}
-                />
-              </button>
-              <button
-                onClick={() => {
-                  setDraft(lists);
-                  setAddedIndex(null);
-                }}
-                disabled={!loaded}
-                className="px-3 py-1.5 text-sm rounded-lg bg-foreground/10 hover:bg-foreground/20 disabled:opacity-30 active:opacity-80"
-              >
-                Edit
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={() => setDraft(null)}
-                disabled={saving}
-                className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10 disabled:opacity-30"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={save}
-                disabled={saving || problem !== null}
-                className="px-3 py-1.5 text-sm rounded-lg bg-blue-500 text-white disabled:opacity-30 active:opacity-80"
-              >
-                {saving ? 'Saving...' : 'Save'}
-              </button>
-            </>
-          )}
-        </div>
-      </header>
-
-      <main className="p-3 space-y-3">
-        {restored && lists === null && (
-          <div className="text-center text-foreground/50 py-8">Loading...</div>
-        )}
-
-        {draft === null && lists?.length === 0 && (
-          <div className="text-center text-foreground/50 py-8">
-            No lists yet — tap Edit to add one
-          </div>
-        )}
-
-        {draft === null
-          ? lists?.map((list) => (
-              <section
-                key={list.name}
-                className="rounded-lg border border-foreground/10 bg-foreground/[0.03]"
-              >
-                <h2 className="px-4 py-3 border-b border-foreground/10 font-mono font-medium break-words">
-                  {list.name}
-                </h2>
-                {list.items.length === 0 ? (
-                  <div className="px-4 py-3 text-sm text-foreground/50">
-                    No items yet
-                  </div>
-                ) : (
-                  <ul className="divide-y divide-foreground/5">
-                    {list.items.map((item, index) => (
-                      <li key={index} className="px-4 py-3 break-words">
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-            ))
-          : draft.map((list, index) => (
-              <ListEditor
-                key={index}
-                list={list}
-                autoFocus={index === addedIndex}
-                onChange={(next) =>
-                  setDraft(
-                    draft.map((other, i) => (i === index ? next : other))
-                  )
-                }
-                onDelete={() => {
-                  setAddedIndex(null);
-                  setDraft(draft.filter((_, i) => i !== index));
-                }}
-              />
-            ))}
-
-        {draft !== null && (
+    <OfflineFirstPage
+      source={source}
+      title="Checklist"
+      subtitle={
+        problem !== null && (
+          <div className="text-xs text-amber-400 truncate">{problem}</div>
+        )
+      }
+      refreshable={draft === null}
+      actions={
+        draft === null ? (
           <button
             onClick={() => {
-              setAddedIndex(draft.length);
-              setDraft([...draft, { name: '', items: [] }]);
+              setDraft(source.data);
+              setAddedIndex(null);
             }}
-            className="w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-foreground/20 py-3 text-sm text-foreground/60 hover:bg-foreground/5 active:opacity-80"
+            disabled={!source.fresh}
+            className="px-3 py-1.5 text-sm rounded-lg bg-foreground/10 hover:bg-foreground/20 disabled:opacity-30 active:opacity-80"
           >
-            <Icon path={ICONS.add} />
-            Add list
+            Edit
           </button>
-        )}
-      </main>
-    </div>
+        ) : (
+          <>
+            <button
+              onClick={() => setDraft(null)}
+              disabled={saving}
+              className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10 disabled:opacity-30"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={save}
+              disabled={saving || problem !== null}
+              className="px-3 py-1.5 text-sm rounded-lg bg-blue-500 text-white disabled:opacity-30 active:opacity-80"
+            >
+              {saving ? 'Saving...' : 'Save'}
+            </button>
+          </>
+        )
+      }
+    >
+      {(lists) => (
+        <div className="space-y-3">
+          {draft === null && lists.length === 0 && (
+            <div className="text-center text-foreground/50 py-8">
+              No lists yet — tap Edit to add one
+            </div>
+          )}
+
+          {draft === null
+            ? lists.map((list) => (
+                <section
+                  key={list.name}
+                  className="rounded-lg border border-foreground/10 bg-foreground/[0.03]"
+                >
+                  <h2 className="px-4 py-3 border-b border-foreground/10 font-mono font-medium break-words">
+                    {list.name}
+                  </h2>
+                  {list.items.length === 0 ? (
+                    <div className="px-4 py-3 text-sm text-foreground/50">
+                      No items yet
+                    </div>
+                  ) : (
+                    <ul className="divide-y divide-foreground/5">
+                      {list.items.map((item, index) => (
+                        <li key={index} className="px-4 py-3 break-words">
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+              ))
+            : draft.map((list, index) => (
+                <ListEditor
+                  key={index}
+                  list={list}
+                  autoFocus={index === addedIndex}
+                  onChange={(next) =>
+                    setDraft(
+                      draft.map((other, i) => (i === index ? next : other))
+                    )
+                  }
+                  onDelete={() => {
+                    setAddedIndex(null);
+                    setDraft(draft.filter((_, i) => i !== index));
+                  }}
+                />
+              ))}
+
+          {draft !== null && (
+            <button
+              onClick={() => {
+                setAddedIndex(draft.length);
+                setDraft([...draft, { name: '', items: [] }]);
+              }}
+              className="w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-foreground/20 py-3 text-sm text-foreground/60 hover:bg-foreground/5 active:opacity-80"
+            >
+              <Icon path={ICONS.add} />
+              Add list
+            </button>
+          )}
+        </div>
+      )}
+    </OfflineFirstPage>
   );
 }

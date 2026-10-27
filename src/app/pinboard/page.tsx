@@ -1,11 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { addToast } from '@/lib/api';
-import { useAutoRefresh } from '@/lib/use-auto-refresh';
-import { useCachedState } from '@/lib/use-cached-state';
+import { useOfflineFirst } from '@/lib/use-offline-first';
+import { OfflineFirstPage } from '@/components/OfflineFirstPage';
 import {
   PinboardDeleteConfirm,
   PinboardNoteCard,
@@ -46,8 +46,7 @@ function matchesQuery(note: RecentNote, query: string): boolean {
     .every((term) => haystack.includes(term));
 }
 
-async function fetchSnapshot(): Promise<Snapshot> {
-  const res = await fetch('/api/pinboard');
+async function parseSnapshot(res: Response): Promise<Snapshot> {
   const data = await res.json();
   return { notes: data.notes, failures: data.failures };
 }
@@ -73,16 +72,15 @@ async function postPinboard(
 }
 
 /**
- * The cached snapshot paints on open; edits and deletes wait for the first load and then act
- * on a list of this page's own. They are optimistic and never reconciled with the server: the
- * success toast comes with the change on screen, the server only speaks up when it fails, and
- * a failed write leaves its text on screen to be copied — only a reload shows the boards as
- * they are. Successful writes refresh the cache in the background, never the screen.
+ * Edits and deletes wait for the server's snapshot and then act on a copy of this page's own.
+ * They are optimistic and never reconciled with the server: the success toast comes with the
+ * change on screen, the server only speaks up when it fails, and a failed write leaves its text
+ * on screen to be copied — only a reload shows the boards as they are. Successful writes refresh
+ * the cache in the background, never the screen.
  */
 export default function PinboardOverviewPage() {
-  const [cached, setCached, restored] = useCachedState<Snapshot>(SNAPSHOT_KEY);
-  const [loaded, setLoaded] = useState<Snapshot | null>(null);
-  const [refreshing, setRefreshing] = useState(true);
+  const source = useOfflineFirst(SNAPSHOT_KEY, '/api/pinboard', parseSnapshot);
+  const { data: snapshot, edit } = source;
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [editing, setEditing] = useState<RecentNote | null>(null);
   const [deleting, setDeleting] = useState<RecentNote | null>(null);
@@ -93,7 +91,6 @@ export default function PinboardOverviewPage() {
   const searchInput = useRef<HTMLInputElement>(null);
   const cacheRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const snapshot = loaded ?? cached;
   const allNotes = useMemo(() => snapshot?.notes ?? [], [snapshot]);
   const notes = useMemo(
     () =>
@@ -112,23 +109,13 @@ export default function PinboardOverviewPage() {
   );
   const router = useRouter();
 
-  const load = useCallback(async () => {
-    setRefreshing(true);
-    const fresh = await fetchSnapshot();
-    setCached(fresh);
-    setLoaded(fresh);
-    setRefreshing(false);
-  }, [setCached]);
-
-  useAutoRefresh(load);
-
   const scheduleCacheRefresh = () => {
     if (cacheRefreshTimer.current !== null) {
       clearTimeout(cacheRefreshTimer.current);
     }
     cacheRefreshTimer.current = setTimeout(async () => {
       cacheRefreshTimer.current = null;
-      setCached(await fetchSnapshot());
+      await source.refreshCache();
     }, CACHE_REFRESH_DELAY_MS);
   };
 
@@ -143,7 +130,7 @@ export default function PinboardOverviewPage() {
 
   const modalOpen =
     editing !== null || deleting !== null || claudeNote !== null;
-  const actionsReady = loaded !== null;
+  const actionsReady = source.fresh;
 
   useEffect(() => {
     if (modalOpen) return;
@@ -205,18 +192,14 @@ export default function PinboardOverviewPage() {
 
   const editNote = async (note: RecentNote, text: string) => {
     setEditing(null);
-    setLoaded((prev) =>
-      prev === null
-        ? prev
-        : {
-            ...prev,
-            notes: prev.notes.map((n) =>
-              noteKey(n) === noteKey(note)
-                ? { ...n, text, editedAt: new Date().toISOString() }
-                : n
-            ),
-          }
-    );
+    edit((prev) => ({
+      ...prev,
+      notes: prev.notes.map((n) =>
+        noteKey(n) === noteKey(note)
+          ? { ...n, text, editedAt: new Date().toISOString() }
+          : n
+      ),
+    }));
     toastNoteWritten('Note edited');
 
     if (
@@ -240,14 +223,10 @@ export default function PinboardOverviewPage() {
       const successor = notes[index + 1] ?? notes[index - 1];
       setHighlightedKey(successor ? noteKey(successor) : null);
     }
-    setLoaded((prev) =>
-      prev === null
-        ? prev
-        : {
-            ...prev,
-            notes: prev.notes.filter((n) => noteKey(n) !== noteKey(note)),
-          }
-    );
+    edit((prev) => ({
+      ...prev,
+      notes: prev.notes.filter((n) => noteKey(n) !== noteKey(note)),
+    }));
     toastNoteWritten('Note deleted');
 
     if (
@@ -263,19 +242,20 @@ export default function PinboardOverviewPage() {
   };
 
   return (
-    <div className="min-h-dvh">
-      <header className="sticky top-0 z-10 bg-background border-b border-foreground/10 px-4 py-3">
-        <div className="flex items-center gap-3">
-          <div className="min-w-0 max-w-[45%]">
-            <h1 className="text-lg font-semibold">Pinboard</h1>
-            <div className="text-xs text-foreground/50 truncate">
-              {snapshot === null
-                ? 'Reading every board...'
-                : appliedQuery.trim() === ''
-                  ? `${notes.length} most recent notes, all projects`
-                  : `${notes.length} of ${allNotes.length} notes match`}
-            </div>
+    <>
+      <OfflineFirstPage
+        source={source}
+        title="Pinboard"
+        subtitle={
+          <div className="text-xs text-foreground/50 truncate">
+            {snapshot === null
+              ? 'Reading every board...'
+              : appliedQuery.trim() === ''
+                ? `${notes.length} most recent notes, all projects`
+                : `${notes.length} of ${allNotes.length} notes match`}
           </div>
+        }
+        middle={
           <input
             ref={searchInput}
             type="text"
@@ -295,81 +275,58 @@ export default function PinboardOverviewPage() {
             aria-label="Search notes"
             className="flex-1 min-w-0 rounded-lg border border-foreground/15 bg-foreground/5 px-3 py-1.5 text-sm placeholder:text-foreground/40 focus:outline-none focus:border-blue-400/70"
           />
-          <button
-            onClick={load}
-            className="p-2 rounded-lg hover:bg-foreground/10 active:opacity-80"
-            aria-label="Refresh"
-          >
-            <svg
-              className={`w-5 h-5 text-foreground/60 ${
-                refreshing ? 'animate-spin' : ''
-              }`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              />
-            </svg>
-          </button>
-        </div>
-      </header>
-
-      <main className="p-3 space-y-2">
-        {failures.length > 0 && (
-          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-300 space-y-1">
-            {failures.map((failure) => (
-              <div key={failure.projectId} className="break-words">
-                <span className="font-mono">{failure.projectId}</span>:{' '}
-                {failure.error}
+        }
+      >
+        {() => (
+          <div className="space-y-2">
+            {failures.length > 0 && (
+              <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-300 space-y-1">
+                {failures.map((failure) => (
+                  <div key={failure.projectId} className="break-words">
+                    <span className="font-mono">{failure.projectId}</span>:{' '}
+                    {failure.error}
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
+
+            {notes.length === 0 && failures.length === 0 && (
+              <div className="text-center text-foreground/50 py-8">
+                No notes pinned anywhere
+              </div>
+            )}
+
+            {notes.map((note, index) => {
+              const key = noteKey(note);
+              return (
+                <PinboardNoteCard
+                  key={key}
+                  note={note}
+                  label={
+                    <Link
+                      href={`${projectPagePath(note.projectId)}?tab=pinboard`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="font-mono text-blue-400/80 active:text-blue-300"
+                    >
+                      {note.projectId}
+                    </Link>
+                  }
+                  expanded={expandedKey === key}
+                  highlighted={index === highlighted}
+                  onToggle={() => {
+                    setHighlightedKey(key);
+                    setExpandedKey(expandedKey === key ? null : key);
+                  }}
+                  actionsDisabled={!actionsReady}
+                  onClaude={() => setClaudeNote(note)}
+                  onEdit={() => setEditing(note)}
+                  onDelete={() => setDeleting(note)}
+                />
+              );
+            })}
           </div>
         )}
-
-        {restored && snapshot === null && (
-          <div className="text-center text-foreground/50 py-8">Loading...</div>
-        )}
-
-        {snapshot !== null && notes.length === 0 && failures.length === 0 && (
-          <div className="text-center text-foreground/50 py-8">
-            No notes pinned anywhere
-          </div>
-        )}
-
-        {notes.map((note, index) => {
-          const key = noteKey(note);
-          return (
-            <PinboardNoteCard
-              key={key}
-              note={note}
-              label={
-                <Link
-                  href={`${projectPagePath(note.projectId)}?tab=pinboard`}
-                  onClick={(e) => e.stopPropagation()}
-                  className="font-mono text-blue-400/80 active:text-blue-300"
-                >
-                  {note.projectId}
-                </Link>
-              }
-              expanded={expandedKey === key}
-              highlighted={index === highlighted}
-              onToggle={() => {
-                setHighlightedKey(key);
-                setExpandedKey(expandedKey === key ? null : key);
-              }}
-              actionsDisabled={!actionsReady}
-              onClaude={() => setClaudeNote(note)}
-              onEdit={() => setEditing(note)}
-              onDelete={() => setDeleting(note)}
-            />
-          );
-        })}
-      </main>
+      </OfflineFirstPage>
 
       {editing !== null && (
         <PinboardNoteModal
@@ -397,6 +354,6 @@ export default function PinboardOverviewPage() {
           onConfirm={() => deleteNote(deleting)}
         />
       )}
-    </div>
+    </>
   );
 }
