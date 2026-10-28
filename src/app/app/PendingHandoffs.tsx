@@ -57,10 +57,10 @@ function CleanBadge({ clean }: { clean: boolean | null }) {
 
 function HandoffKebabMenu({
   handoff,
-  onPinned,
+  onRemoved,
 }: {
   handoff: PendingHandoff;
-  onPinned: () => void;
+  onRemoved: () => void;
 }) {
   const moveToPinboard = async () => {
     const res = await apiFetch('/api/handoffs/pinboard', {
@@ -70,7 +70,17 @@ function HandoffKebabMenu({
     });
     if (!res.ok) return;
     addToast(`Moved to ${handoff.projectId}'s pinboard`, 'success');
-    onPinned();
+    onRemoved();
+  };
+
+  const remove = async () => {
+    const res = await apiFetch(
+      `/api/handoffs?handoff=${encodeURIComponent(handoff.id)}`,
+      { method: 'DELETE' }
+    );
+    if (!res.ok) return;
+    addToast('Handoff deleted', 'success');
+    onRemoved();
   };
 
   const copyPath = async () => {
@@ -82,6 +92,9 @@ function HandoffKebabMenu({
     <KebabMenu label={`Actions for the ${handoff.projectId} handoff`}>
       <KebabMenuItem onSelect={moveToPinboard}>Move to pinboard</KebabMenuItem>
       <KebabMenuItem onSelect={copyPath}>Copy path</KebabMenuItem>
+      <KebabMenuItem onSelect={remove} danger>
+        Delete
+      </KebabMenuItem>
     </KebabMenu>
   );
 }
@@ -161,18 +174,6 @@ export function PendingHandoffs({
     }
   };
 
-  const discard = async () => {
-    if (!open) return;
-    const res = await apiFetch(
-      `/api/handoffs?handoff=${encodeURIComponent(open.id)}`,
-      { method: 'DELETE' }
-    );
-    if (!res.ok) return;
-    setOpenId(null);
-    addToast('Handoff deleted', 'success');
-    fetchHandoffs();
-  };
-
   if (handoffs.length === 0 || hidden) return null;
 
   return (
@@ -205,7 +206,7 @@ export function PendingHandoffs({
                   </div>
                   <div className="mt-1 text-sm line-clamp-2">{title}</div>
                 </button>
-                <HandoffKebabMenu handoff={handoff} onPinned={fetchHandoffs} />
+                <HandoffKebabMenu handoff={handoff} onRemoved={fetchHandoffs} />
               </div>
             );
           }}
@@ -230,7 +231,7 @@ export function PendingHandoffs({
                     {open.directory}
                   </div>
                 </div>
-                <HandoffKebabMenu handoff={open} onPinned={fetchHandoffs} />
+                <HandoffKebabMenu handoff={open} onRemoved={fetchHandoffs} />
               </div>
               {/* Dirty is a warning and not a refusal — the briefing may well be about those
                     very changes — so the Changes tab is one tap away and Launch stays live. The
@@ -279,12 +280,6 @@ export function PendingHandoffs({
                 className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
               >
                 Cancel
-              </button>
-              <button
-                onClick={discard}
-                className="px-3 py-1.5 text-sm rounded-lg text-red-500 hover:bg-red-500/10"
-              >
-                Delete
               </button>
               <button
                 onClick={launch}
