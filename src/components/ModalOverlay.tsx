@@ -46,11 +46,12 @@ export function ModalOverlay({
       latest.current.onClose();
       return;
     }
+    animation.current?.cancel();
     const cancel = element.querySelector<HTMLButtonElement>(
       '[data-modal-cancel]'
     );
+    const timing = { duration: 350, iterations: 2 };
     if (cancel) {
-      animation.current?.cancel();
       animation.current = cancel.animate(
         [
           { backgroundColor: 'transparent', outline: '2px solid transparent' },
@@ -60,9 +61,21 @@ export function ModalOverlay({
           },
           { backgroundColor: 'transparent', outline: '2px solid transparent' },
         ],
-        { duration: 350, iterations: 2 }
+        timing
       );
+      return;
     }
+    // A step with no Cancel on screen, like a wizard's later steps: flash the panel instead,
+    // so a refused dismissal is never silent.
+    animation.current =
+      element.firstElementChild?.animate(
+        [
+          { outline: '2px solid transparent' },
+          { outline: '2px solid rgb(245, 158, 11)' },
+          { outline: '2px solid transparent' },
+        ],
+        timing
+      ) ?? null;
   };
   const dismissRef = useRef(dismiss);
   useEffect(() => {

@@ -62,7 +62,7 @@ export function SendTextModal({
       heading="Send text"
       subtitle={title}
       onClose={onClose}
-      guardDismiss={uploads.images.length > 0}
+      guardDismiss={Boolean(text || uploads.images.length)}
       menu={
         <KebabMenu label="Send options">
           <ImageUploadMenuItem uploads={uploads} />
