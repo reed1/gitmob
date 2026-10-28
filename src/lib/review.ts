@@ -15,7 +15,7 @@ export type ReviewScope =
   | 'unstaged'
   | 'untracked';
 
-/** Which side of a dirty tree to read, where the next commit's own choice is not wanted. */
+/** One side of a dirty tree, read instead of all of it. */
 export type ReviewSide = 'staged' | 'unstaged' | 'untracked';
 
 export interface ReviewRequest {
@@ -136,26 +136,28 @@ interface Source {
   readAdded: (path: string) => Promise<string>;
 }
 
-async function stagedChanges(git: SimpleGit): Promise<Change[]> {
-  return parseNameStatus(
-    await git.raw([...STAGED_DIFF, '--name-status', '-z'])
-  );
-}
-
-function stagedSource(git: SimpleGit, staged: Change[]): Source {
+async function stagedSource(git: SimpleGit): Promise<Source> {
   return {
     scope: 'staged',
     diffArgs: STAGED_DIFF,
-    tracked: staged,
+    tracked: parseNameStatus(
+      await git.raw([...STAGED_DIFF, '--name-status', '-z'])
+    ),
     untracked: [],
     readAdded: (path) => git.show([`:${path}`]),
   };
 }
 
+async function untrackedPaths(git: SimpleGit): Promise<string[]> {
+  return (await git.raw(['ls-files', '--others', '--exclude-standard', '-z']))
+    .split('\0')
+    .filter(Boolean);
+}
+
 async function worktreeSource(
   git: SimpleGit,
   cwd: string,
-  scope: 'all' | 'unstaged' | 'untracked'
+  scope: 'unstaged' | 'untracked'
 ): Promise<Source> {
   return {
     scope,
@@ -166,24 +168,29 @@ async function worktreeSource(
         : parseNameStatus(
             await git.raw([...WORKTREE_DIFF, '--name-status', '-z'])
           ),
-    untracked:
-      scope === 'unstaged'
-        ? []
-        : (await git.raw(['ls-files', '--others', '--exclude-standard', '-z']))
-            .split('\0')
-            .filter(Boolean),
+    untracked: scope === 'unstaged' ? [] : await untrackedPaths(git),
     readAdded: (path) => readFile(join(cwd, path), 'utf-8'),
   };
 }
 
-/** What the next commit would be: what is staged when anything is, otherwise the dirty tree. */
-async function nextCommit(git: SimpleGit, cwd: string): Promise<Source> {
-  const staged = await stagedChanges(git);
-  // An unmerged file sits in the index without being staged.
-  if (staged.some((change) => change.status !== 'U')) {
-    return stagedSource(git, staged);
-  }
-  return worktreeSource(git, cwd, 'all');
+/** Every change since HEAD, staged or not, untracked files included. */
+async function allChanges(git: SimpleGit, cwd: string): Promise<Source> {
+  const head = (
+    await git.raw(['rev-parse', '--verify', '--quiet', 'HEAD'])
+  ).trim();
+  // Before the first commit, everything is diffed against the empty tree.
+  const base =
+    head || (await git.raw(['hash-object', '-t', 'tree', '/dev/null'])).trim();
+  const diffArgs = [...WORKTREE_DIFF, base];
+  return {
+    scope: 'all',
+    diffArgs,
+    tracked: parseNameStatus(
+      await git.raw([...diffArgs, '--name-status', '-z'])
+    ),
+    untracked: await untrackedPaths(git),
+    readAdded: (path) => readFile(join(cwd, path), 'utf-8'),
+  };
 }
 
 async function dirtyTree(
@@ -191,9 +198,8 @@ async function dirtyTree(
   cwd: string,
   side: ReviewSide | null
 ): Promise<Source> {
-  if (side === null) return nextCommit(git, cwd);
-  else if (side === 'staged')
-    return stagedSource(git, await stagedChanges(git));
+  if (side === null) return allChanges(git, cwd);
+  else if (side === 'staged') return stagedSource(git);
   else if (side === 'unstaged' || side === 'untracked') {
     return worktreeSource(git, cwd, side);
   } else throw new Error(`Unexpected review side: ${side}`);
@@ -247,9 +253,9 @@ async function renderTracked(
 }
 
 /**
- * Every change on one page: a commit already made, or by default what the next commit would be,
- * untracked files included. Changed lines are counted before any diff is read, and past
- * REVIEW_LINE_LIMIT the answer is only that — unless `force`.
+ * Every change on one page: a commit already made, or by default the whole dirty tree against
+ * HEAD, staged or not, untracked files included. Changed lines are counted before any diff is
+ * read, and past REVIEW_LINE_LIMIT the answer is only that — unless `force`.
  */
 export async function getReview(
   cwd: string,
