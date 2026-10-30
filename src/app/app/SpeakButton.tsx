@@ -17,6 +17,9 @@ const AUDIO_BITRATE = 32000;
 // Opus, in the only container MediaRecorder offers for it. Chrome records WebM, Firefox Ogg.
 const MIME_TYPES = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus'];
 
+// How often the recorder hands over what it has encoded, so the upload trails speech by this much.
+const TIMESLICE_MS = 250;
+
 type Phase = 'idle' | 'recording' | 'transcribing';
 
 export function SpeakButton({
@@ -83,13 +86,22 @@ export function SpeakButton({
     };
   }, [phase]);
 
-  const transcribe = async (audio: Blob) => {
-    const form = new FormData();
-    form.append('file', audio, 'speech');
-    form.append('language', 'en');
-    form.append('autocorrect', projectId);
+  const fields = { language: 'en', autocorrect: projectId };
 
-    const res = await apiFetch(TRANSCRIBE_URL, { method: 'POST', body: form });
+  // The streamed upload is only a head start. Whatever cut it short, the whole recording is
+  // still in hand, and goes again as one plain POST that reports its own failure.
+  const transcribe = async (
+    audio: Blob,
+    streamed: Promise<Response | null> | null
+  ) => {
+    let res = await streamed;
+    if (!res?.ok) {
+      const form = new FormData();
+      for (const [name, value] of Object.entries(fields))
+        form.append(name, value);
+      form.append('file', audio, 'speech');
+      res = await apiFetch(TRANSCRIBE_URL, { method: 'POST', body: form });
+    }
     if (!res.ok) return;
 
     const { text } = await res.json();
@@ -133,25 +145,30 @@ export function SpeakButton({
     }
 
     const chunks: Blob[] = [];
+    const upload = supportsRequestStreams()
+      ? streamUpload(fields, mimeType)
+      : null;
     const recorder = new MediaRecorder(stream, {
       mimeType,
       audioBitsPerSecond: AUDIO_BITRATE,
     });
     recorder.ondataavailable = (e) => {
-      if (e.data.size) chunks.push(e.data);
+      if (!e.data.size) return;
+      chunks.push(e.data);
+      upload?.write(e.data);
     };
     recorder.onstop = () => {
       for (const track of stream.getTracks()) track.stop();
       letScreenSleep();
       setPhase('transcribing');
       // apiFetch has already reported anything that went wrong; this only clears the button.
-      transcribe(new Blob(chunks, { type: mimeType }))
+      transcribe(new Blob(chunks, { type: mimeType }), upload?.finish() ?? null)
         .catch(() => {})
         .finally(() => setPhase('idle'));
     };
 
     recorderRef.current = recorder;
-    recorder.start();
+    recorder.start(TIMESLICE_MS);
     setPhase('recording');
     keepScreenAwake();
   };
@@ -194,6 +211,83 @@ export function SpeakButton({
   }
 
   throw new Error(`Unexpected phase: ${phase}`);
+}
+
+/**
+ * Chrome uploads a stream only over HTTP/2, which the STT front speaks. Firefox and Safari
+ * would send the stream's `toString()` instead, so they record whole and POST at the end.
+ */
+function supportsRequestStreams() {
+  let duplexAccessed = false;
+  const hasContentType = new Request(location.href, {
+    body: new ReadableStream(),
+    method: 'POST',
+    get duplex() {
+      duplexAccessed = true;
+      return 'half';
+    },
+  } as RequestInit).headers.has('Content-Type');
+  return duplexAccessed && !hasContentType;
+}
+
+/**
+ * Opens the transcribe POST as recording starts and feeds it the audio as it is encoded, so
+ * Stop only waits for the last slice and the transcription. The multipart is written by hand,
+ * fields first and the file last, since the server reads it whole only once the body ends.
+ */
+function streamUpload(fields: Record<string, string>, mimeType: string) {
+  const boundary = `gitmob-${crypto.randomUUID()}`;
+  let controller!: ReadableStreamDefaultController<Uint8Array>;
+  let cancelled = false;
+  const body = new ReadableStream<Uint8Array>({
+    start: (c) => {
+      controller = c;
+    },
+    cancel: () => {
+      cancelled = true;
+    },
+  });
+
+  const response = fetch(TRANSCRIBE_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}` },
+    body,
+    duplex: 'half',
+  } as RequestInit).catch(() => null);
+
+  // Blob reads resolve out of order, so each waits on the one before it.
+  let written = Promise.resolve();
+  const write = (part: Blob) => {
+    written = written.then(async () => {
+      const bytes = new Uint8Array(await part.arrayBuffer());
+      if (!cancelled) controller.enqueue(bytes);
+    });
+  };
+
+  const head = Object.entries(fields)
+    .map(
+      ([name, value]) =>
+        `--${boundary}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value}\r\n`
+    )
+    .join('');
+  write(
+    new Blob([
+      head,
+      `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="speech"\r\n`,
+      `Content-Type: ${mimeType}\r\n\r\n`,
+    ])
+  );
+
+  return {
+    write,
+    finish: () => {
+      write(new Blob([`\r\n--${boundary}--\r\n`]));
+      written.then(() => {
+        if (!cancelled) controller.close();
+      });
+      return response;
+    },
+  };
 }
 
 function MicIcon() {
