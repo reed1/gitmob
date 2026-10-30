@@ -20,6 +20,6 @@ docs; how it is called is in the module. Paths under `rlocal/` are in `~/.dotfil
 | `gh`                              | cloning a missing checkout                    | `src/lib/clone.ts`                                     | https://cli.github.com/manual/gh_repo_clone |
 | `am-i-afk`                        | the AFK badge                                 | `src/lib/afk.ts`                                       | `rlocal/bin/am-i-afk`                       |
 | `rbak`                            | "Move all to rbak" on the Files page          | `src/app/api/files/rbak/route.ts`                      | `rlocal/app/rbak/CLAUDE.md`                 |
-| rvoice STT server                 | dictation, called from the browser            | `src/app/app/SpeakButton.tsx`                          | `rlocal/app/rvoice/stt_server/README.md`    |
+| rvoice STT server                 | dictation, called from the browser            | `src/lib/transcribe.ts`, `src/app/app/SpeakButton.tsx` | `rlocal/app/rvoice/stt_server/README.md`    |
 | `rv chrome cdp`                   | a project's agent Chrome                      | `src/lib/browser.ts`                                   | `rlocal/app/rofi-vscode/CLAUDE.md`          |
 | `~/.config/git/diff-exclude.yaml` | files the review page shows without a diff    | `src/lib/diff-exclude.ts`                              | `rlocal/app/gg/CLAUDE.md`                   |

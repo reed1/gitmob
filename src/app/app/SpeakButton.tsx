@@ -2,14 +2,13 @@
 
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { flushSync } from 'react-dom';
-import { addToast, apiFetch } from '@/lib/api';
-
-/**
- * Dictation straight into a textarea, transcribed by the rvoice STT server on rdzero.
- * The call goes to it directly rather than through `/api` — Caddy already answers CORS on
- * every front, so the audio takes one hop instead of two.
- */
-const TRANSCRIBE_URL = 'https://rvoice-stt.zerotail.r-mulyadi.com/transcribe';
+import { addToast } from '@/lib/api';
+import { saveRecording, setRecordingText } from '@/lib/audio-history';
+import {
+  postRecording,
+  TRANSCRIBE_URL,
+  transcriptionFields,
+} from '@/lib/transcribe';
 
 // What rvoice sends over the tailnet, and transparent to Parakeet at that rate.
 const AUDIO_BITRATE = 32000;
@@ -22,6 +21,10 @@ const TIMESLICE_MS = 250;
 
 type Phase = 'idle' | 'recording' | 'transcribing';
 
+/**
+ * Dictation straight into a textarea, transcribed by the rvoice STT server on rdzero. Every
+ * recording is also kept on the device, so one the server never heard can be sent again later.
+ */
 export function SpeakButton({
   projectId,
   textareaRef,
@@ -86,27 +89,21 @@ export function SpeakButton({
     };
   }, [phase]);
 
-  const fields = { language: 'en', autocorrect: projectId };
-
   // The streamed upload is only a head start. Whatever cut it short, the whole recording is
   // still in hand, and goes again as one plain POST that reports its own failure.
   const transcribe = async (
     audio: Blob,
     streamed: Promise<Response | null> | null
   ) => {
-    let res = await streamed;
-    if (!res?.ok) {
-      const form = new FormData();
-      for (const [name, value] of Object.entries(fields))
-        form.append(name, value);
-      form.append('file', audio, 'speech');
-      res = await apiFetch(TRANSCRIBE_URL, { method: 'POST', body: form });
-    }
-    if (!res.ok) return;
+    const res = await streamed;
+    const text = res?.ok
+      ? ((await res.json()).text as string).trim()
+      : await postRecording(audio, projectId);
+    if (text === null) return null;
 
-    const { text } = await res.json();
-    if (text.trim()) insertAtCaret(text.trim());
+    if (text) insertAtCaret(text);
     else addToast('Heard nothing', 'warning');
+    return text;
   };
 
   // A textarea keeps its selection after it loses focus, so this is where the caret was left
@@ -146,7 +143,7 @@ export function SpeakButton({
 
     const chunks: Blob[] = [];
     const upload = supportsRequestStreams()
-      ? streamUpload(fields, mimeType)
+      ? streamUpload(transcriptionFields(projectId), mimeType)
       : null;
     const recorder = new MediaRecorder(stream, {
       mimeType,
@@ -161,13 +158,22 @@ export function SpeakButton({
       for (const track of stream.getTracks()) track.stop();
       letScreenSleep();
       setPhase('transcribing');
-      // apiFetch has already reported anything that went wrong; this only clears the button.
-      transcribe(new Blob(chunks, { type: mimeType }), upload?.finish() ?? null)
-        .catch(() => {})
-        .finally(() => setPhase('idle'));
+      const audio = new Blob(chunks, { type: mimeType });
+      const saved = saveRecording({
+        audio,
+        durationMs: Date.now() - startedAt,
+        projectId,
+      });
+      const transcribed = transcribe(audio, upload?.finish() ?? null).finally(
+        () => setPhase('idle')
+      );
+      Promise.all([saved, transcribed]).then(([id, text]) => {
+        if (id !== null && text !== null) return setRecordingText(id, text);
+      });
     };
 
     recorderRef.current = recorder;
+    const startedAt = Date.now();
     recorder.start(TIMESLICE_MS);
     setPhase('recording');
     keepScreenAwake();

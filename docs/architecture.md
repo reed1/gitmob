@@ -17,6 +17,8 @@ and across projects, from the front page:
 - Read and launch handoffs, and accept commits, parked from the desktop
 - Answer the questions Claude asks while I am away from the desktop, or deny them
 - Keep a scratchpad on the device
+- Replay the last five dictated recordings, kept on the device, and send them to be transcribed
+  again once the STT server can be reached
 - Drive a project's agent Chrome by hand (`/app/browser`)
 - Keep GitMob itself in shape (`/app/internals`): notifications, scanning closed projects for
   uncommitted work, refreshing checks and models, restarting the service
