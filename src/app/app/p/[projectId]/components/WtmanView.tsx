@@ -26,12 +26,11 @@ interface BranchRow {
   name: string;
   branch: string;
   remote: string | null;
-  committedAt: string | null;
+  committedAt: string;
   into: string | null;
   ahead: number;
   behind: number;
   state: Worktree['state'];
-  stale: boolean;
   remotes: Record<string, boolean>;
 }
 
@@ -67,26 +66,9 @@ function WorktreeKebabMenu({
   );
 }
 
-/** Why wtman would refuse to remove it, or null when it would go ahead. */
-function branchRemoveBlocked(row: BranchRow): string | null {
-  if (row.kind === 'remote') {
-    return row.stale
-      ? 'stale, the remote has moved since the last fetch'
-      : null;
-  }
-  const differs = Object.entries(row.remotes)
-    .filter(([, same]) => !same)
-    .map(([remote]) => remote);
-  return differs.length > 0
-    ? `${differs.join(', ')} is on another commit`
-    : null;
-}
-
 function branchBadges(row: BranchRow): { text: string; className: string }[] {
   if (row.kind === 'remote') {
-    return row.stale
-      ? [{ text: 'stale', className: 'bg-amber-500/15 text-amber-500' }]
-      : [];
+    return [];
   }
   return [
     { text: 'local', className: 'bg-foreground/10 text-foreground/60' },
@@ -115,21 +97,13 @@ function BranchKebabMenu({
   onCreate: () => void;
   onRemove: () => void;
 }) {
-  const removeBlocked = branchRemoveBlocked(row);
   return (
     <KebabMenu label={`Actions for ${row.name}`} disabled={disabled}>
       <KebabMenuItem onSelect={onCreate}>Create worktree</KebabMenuItem>
-      <KebabMenuItem
-        onSelect={onRemove}
-        disabled={removeBlocked !== null}
-        danger
-      >
-        {row.kind === 'remote' ? `Remove from ${row.remote}` : 'Remove branch'}
-      </KebabMenuItem>
-      {removeBlocked && (
-        <div className="px-4 pt-1 pb-2 text-xs text-foreground/40">
-          Remove: {removeBlocked}
-        </div>
+      {row.kind === 'local' && (
+        <KebabMenuItem onSelect={onRemove} danger>
+          Remove branch
+        </KebabMenuItem>
       )}
     </KebabMenu>
   );
@@ -197,28 +171,17 @@ function RemoveBranchModal({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
-  const into = row.into ?? 'the main checkout';
-  const warnings: string[] = [];
-  let body: string;
-
-  if (row.kind === 'local') {
-    const remotes = Object.keys(row.remotes);
-    body = `Deletes the branch${remotes.length > 0 ? `, here and on ${remotes.join(', ')}` : ''}. Refused unless each remote is on the same commit. wtman keeps a backup bundle of commits not in main.`;
-    if (!isMerged(row)) {
-      warnings.push(
-        `${row.ahead} commit${row.ahead === 1 ? '' : 's'} not in ${into}: the branch is force deleted.`
-      );
-    }
-  } else if (row.kind === 'remote') {
-    body = `Deletes ${row.branch} on ${row.remote}. Nothing backs it up.`;
-    if (row.ahead > 0) {
-      warnings.push(
-        `${row.ahead} commit${row.ahead === 1 ? '' : 's'} not in ${into} go with it.`
-      );
-    }
-  } else {
-    throw new Error(`Unexpected branch kind: ${(row as BranchRow).kind}`);
+  if (row.kind !== 'local') {
+    throw new Error(`Only a local branch is removed: ${row.name}`);
   }
+  const into = row.into ?? 'the main checkout';
+  const remotes = Object.keys(row.remotes);
+  const body = `Deletes the local branch${remotes.length > 0 ? `; ${remotes.join(', ')} keep${remotes.length === 1 ? 's' : ''} theirs` : ''}. wtman keeps a backup bundle of commits not in main.`;
+  const warnings = isMerged(row)
+    ? []
+    : [
+        `${row.ahead} commit${row.ahead === 1 ? '' : 's'} not in ${into}: the branch is force deleted.`,
+      ];
 
   return (
     <Modal heading="Remove branch?" subtitle={row.name} onClose={onCancel}>
@@ -387,7 +350,7 @@ export function WtmanView({
     try {
       const { ok } = await post(`${projectApiPath(projectId)}/branches`, {
         name: row.name,
-        force: row.kind === 'local' && !isMerged(row),
+        force: !isMerged(row),
       });
       if (ok) addToast(`Removed ${row.name}`, 'success');
       await loadBranches();
@@ -525,8 +488,8 @@ export function WtmanView({
       })}
 
       <p className="text-xs text-foreground/40">
-        Merge and remove delete the branch here and on its remotes, and stop if
-        a remote has commits it lacks.
+        Merge and remove delete the worktree and the local branch; remotes keep
+        theirs until <code>gg prune-remote</code>.
       </p>
 
       <div className="space-y-2 pt-2">
@@ -537,7 +500,7 @@ export function WtmanView({
           <div className="text-xs text-red-500 break-all">{branchesError}</div>
         )}
         {branches === null && !branchesError && (
-          <div className="text-xs text-foreground/50">Asking the remotes…</div>
+          <div className="text-xs text-foreground/50">Loading…</div>
         )}
         {branches?.length === 0 && (
           <div className="text-xs text-foreground/50">None.</div>
@@ -550,9 +513,7 @@ export function WtmanView({
             <div className="min-w-0">
               <div className="font-medium truncate">{row.name}</div>
               <div className="text-xs text-foreground/50">
-                {row.committedAt
-                  ? relativeTime(row.committedAt)
-                  : 'never fetched'}
+                {relativeTime(row.committedAt)}
               </div>
               <div className="mt-1 flex flex-wrap gap-1 empty:hidden">
                 <MergeBadge worktree={row} extra={branchBadges(row)} />

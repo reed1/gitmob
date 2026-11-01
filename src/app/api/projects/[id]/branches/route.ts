@@ -8,10 +8,7 @@ import {
   removeBranch,
 } from '@/lib/wtman';
 
-/**
- * Local and remote branches with no worktree. Apart from the worktree list because wtman asks
- * every remote where its branches are now, which is seconds over ssh.
- */
+/** Local and remote branches with no worktree, the remotes as of their last fetch. */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -31,8 +28,8 @@ export async function GET(
 }
 
 /**
- * Removes a branch with no worktree. The row is looked up rather than taken from the request,
- * and whether it is merged is judged from that same fresh read.
+ * Removes a local branch with no worktree. The row is looked up rather than taken from the
+ * request, and whether it is merged is judged from that same fresh read.
  */
 export async function POST(
   request: NextRequest,

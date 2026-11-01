@@ -49,20 +49,21 @@ export interface BranchRow {
   /** The local branch, and so the branch its worktree will report. */
   branch: string;
   remote: string | null;
-  /** When its tip was committed, ISO; null for a remote branch never fetched. */
-  committedAt: string | null;
+  /** When its tip was committed, ISO. */
+  committedAt: string;
   into: string | null;
   ahead: number;
   behind: number;
   state: MergeState | null;
-  /** A remote branch whose last fetch is not where the remote is now. */
-  stale: boolean;
-  /** For a local branch: the remotes it is on, and whether each is on the same commit. */
+  /**
+   * For a local branch: the remotes it was on at the last fetch, and whether each was on the
+   * same commit.
+   */
   remotes: Record<string, boolean>;
 }
 
 type WtmanBranchRow = Omit<BranchRow, 'committedAt'> & {
-  committed: number | null;
+  committed: number;
 };
 
 interface WtmanStatusRow {
@@ -172,8 +173,7 @@ export async function getDivergence(
 
 /**
  * Local and remote branches with no worktree, most recently committed first, as `wtman
- * branches --json` sees them. wtman asks each remote where its branches are now, which is what
- * makes a remote row's `stale` mean something — and what makes this a network call.
+ * branches --json` sees them. Remotes are as of their last fetch: wtman never contacts one.
  */
 export async function listBranchRows(project: Project): Promise<BranchRow[]> {
   const rows = JSON.parse(
@@ -181,8 +181,7 @@ export async function listBranchRows(project: Project): Promise<BranchRow[]> {
   ) as WtmanBranchRow[];
   return rows.map(({ committed, ...row }) => ({
     ...row,
-    committedAt:
-      committed === null ? null : new Date(committed * 1000).toISOString(),
+    committedAt: new Date(committed * 1000).toISOString(),
   }));
 }
 
@@ -255,7 +254,7 @@ export async function createWorktree(
 
 /**
  * Makes a worktree for a branch that has none, and opens it: a local branch as it is, a remote
- * one fetched and tracked by a local branch of its name first.
+ * one tracked by a local branch of its name, from where the last fetch left it.
  */
 export async function createWorktreeFrom(
   project: Project,
@@ -279,7 +278,7 @@ function sourceOf(row: BranchRow): string[] {
   }
 }
 
-/** Merging and removing ask every remote where the branch is now, and delete it there. */
+/** Merging and removing back the branch up and delete its worktree first. */
 const MERGE_TIMEOUT_MS = 120000;
 
 /**
@@ -302,9 +301,8 @@ function runAnswered(
 }
 
 /**
- * Merges the branch into whatever the main checkout is on, then removes its worktree, the
- * branch and the branch on its remotes, as `wtman merge` does — refused before anything when a
- * remote has commits the branch lacks. The one question it may ask is whether to copy the branch's
+ * Merges the branch into whatever the main checkout is on, then removes its worktree and the
+ * branch, as `wtman merge` does; the branch on a remote stays. The one question it may ask is whether to copy the branch's
  * box directories into the main checkout first, and yes is its default at the terminal too.
  * wtman refuses a worktree still open on the desktop, since Cursor goes down with its folder.
  */
@@ -326,8 +324,8 @@ export async function mergeWorktree(
 }
 
 /**
- * Removes the worktree, the branch, which wtman bundles into a backup first, and the branch on
- * every remote it was pushed to — refused when a remote has commits the branch lacks. Deleting a branch with commits the main checkout's branch does
+ * Removes the worktree and the branch, which wtman bundles into a backup first; the branch on a
+ * remote stays. Deleting a branch with commits the main checkout's branch does
  * not have is a second question, and `force` is the answer to it; without it nothing is removed.
  */
 export async function removeWorktree(
@@ -351,9 +349,8 @@ export async function removeWorktree(
 }
 
 /**
- * Removes a branch with no worktree. A local one goes as a worktree's does, remotes included,
- * and wtman refuses it unless every remote has it on the same commit. A remote one goes from
- * that remote only, and wtman refuses it while its last fetch is stale.
+ * Removes a local branch with no worktree, as a worktree's goes. A remote one is not wtman's to
+ * remove: it never contacts a remote.
  */
 export async function removeBranch(
   project: Project,
@@ -362,11 +359,9 @@ export async function removeBranch(
 ): Promise<string> {
   if (row.kind === 'local') {
     return removeWorktree(project, row, force);
-  } else if (row.kind === 'remote' && row.remote !== null) {
-    return runAnswered(
-      ['remove', '--remote', row.remote, repoPath(project), row.branch],
-      ['y'],
-      MERGE_TIMEOUT_MS
+  } else if (row.kind === 'remote') {
+    throw new Error(
+      `${row.name} is on a remote; wtman only removes local branches`
     );
   } else {
     throw new Error(`Unexpected branch row: ${row.kind} ${row.name}`);
