@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { errorResponse } from '@/lib/error-response';
 import { getProject } from '@/lib/projects';
 import { launchDesktopSession, listAllDesktopSessions } from '@/lib/desktop';
 import { readSession, recentSessions, searchSessions } from '@/lib/recall';
@@ -33,10 +34,7 @@ export async function GET(
         : await recentSessions(project.path),
     });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'recall failed' },
-      { status: 500 }
-    );
+    return errorResponse(request, err, 'recall failed');
   }
 }
 
@@ -82,9 +80,6 @@ export async function POST(
     });
     return NextResponse.json({ success: true, name });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'claudex kitty failed' },
-      { status: 500 }
-    );
+    return errorResponse(request, err, 'claudex kitty failed');
   }
 }

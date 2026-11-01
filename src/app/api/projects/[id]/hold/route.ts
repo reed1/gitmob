@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { errorResponse } from '@/lib/error-response';
 import { getProject } from '@/lib/projects';
 import { releaseHold } from '@/lib/gg-hold';
 
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
@@ -17,9 +18,6 @@ export async function DELETE(
     await releaseHold(project.path);
     return NextResponse.json({ success: true });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'gg hold release failed' },
-      { status: 500 }
-    );
+    return errorResponse(request, err, 'gg hold release failed');
   }
 }

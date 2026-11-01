@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { errorResponse } from '@/lib/error-response';
 import {
   addPinboardNote,
   deletePinboardNote,
@@ -6,12 +7,8 @@ import {
   getPinboardNotes,
 } from '@/lib/pinboard';
 
-function errorMessage(err: unknown, fallback: string): string {
-  return err instanceof Error ? err.message : fallback;
-}
-
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
@@ -21,10 +18,7 @@ export async function GET(
   } catch (err) {
     // An empty board and an unreachable rv are different answers, and only one of them is
     // safe to draw as "no notes".
-    return NextResponse.json(
-      { error: errorMessage(err, 'rv pinboard list failed') },
-      { status: 500 }
-    );
+    return errorResponse(request, err, 'rv pinboard list failed');
   }
 }
 
@@ -49,10 +43,7 @@ export async function POST(
       );
     }
   } catch (err) {
-    return NextResponse.json(
-      { error: errorMessage(err, `rv pinboard ${action} failed`) },
-      { status: 500 }
-    );
+    return errorResponse(request, err, `rv pinboard ${action} failed`);
   }
 
   // The CLI reports what it did, not the board it left behind, so the fresh list is what

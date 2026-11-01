@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { errorResponse } from '@/lib/error-response';
 import {
   closeTab,
   listTabs,
@@ -22,12 +23,7 @@ export async function GET(request: NextRequest) {
   try {
     return NextResponse.json({ tabs: await listTabs(project) });
   } catch (err) {
-    return NextResponse.json(
-      {
-        error: err instanceof Error ? err.message : 'rv chrome cdp failed',
-      },
-      { status: 500 }
-    );
+    return errorResponse(request, err, 'rv chrome cdp failed');
   }
 }
 
@@ -74,12 +70,7 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   } catch (err) {
-    return NextResponse.json(
-      {
-        error: err instanceof Error ? err.message : 'rv chrome cdp failed',
-      },
-      { status: 500 }
-    );
+    return errorResponse(request, err, 'rv chrome cdp failed');
   }
 }
 

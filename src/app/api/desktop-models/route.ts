@@ -1,15 +1,11 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { errorResponse } from '@/lib/error-response';
 import { getModelCatalog } from '@/lib/desktop';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     return NextResponse.json(await getModelCatalog());
   } catch (error) {
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : 'Unable to load models',
-      },
-      { status: 500 }
-    );
+    return errorResponse(request, error, 'Unable to load models');
   }
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { errorResponse } from '@/lib/error-response';
 import { getProject } from '@/lib/projects';
 import {
   getSudoTargets,
@@ -8,7 +9,7 @@ import {
 } from '@/lib/sudo';
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
@@ -23,10 +24,7 @@ export async function GET(
   } catch (err) {
     // Reporting every target as disabled would be a lie about a security setting, so the
     // failure has to reach the user instead.
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'pt sudo list failed' },
-      { status: 500 }
-    );
+    return errorResponse(request, err, 'pt sudo list failed');
   }
 }
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { errorResponse } from '@/lib/error-response';
 import { getProject, getProjects, Project } from '@/lib/projects';
 import { checkPush, getPushConfig, readPushJob, startPush } from '@/lib/push';
 import { checkSelection, PushSelection } from '@/lib/push-command';
@@ -47,10 +48,7 @@ export async function GET(
       );
       return NextResponse.json({ resolution });
     } catch (err) {
-      return NextResponse.json(
-        { error: err instanceof Error ? err.message : 'pt push check failed' },
-        { status: 500 }
-      );
+      return errorResponse(request, err, 'pt push check failed');
     }
   }
 
@@ -58,10 +56,7 @@ export async function GET(
     const config = await getPushConfig(project);
     return NextResponse.json({ config, job: readPushJob(project.id) });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'pt push config failed' },
-      { status: 500 }
-    );
+    return errorResponse(request, err, 'pt push config failed');
   }
 }
 

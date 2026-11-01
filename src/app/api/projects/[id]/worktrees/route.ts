@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { errorResponse } from '@/lib/error-response';
 import { getProject } from '@/lib/projects';
 import {
   createWorktree,
@@ -8,7 +9,7 @@ import {
 } from '@/lib/wtman';
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
@@ -21,10 +22,7 @@ export async function GET(
   try {
     return NextResponse.json({ worktrees: await listWorktrees(project) });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'wtman list failed' },
-      { status: 500 }
-    );
+    return errorResponse(request, err, 'wtman list failed');
   }
 }
 
@@ -98,9 +96,6 @@ export async function POST(
       worktrees: await listWorktrees(project).catch(() => undefined),
     });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'wtman failed' },
-      { status: 500 }
-    );
+    return errorResponse(request, err, 'wtman failed');
   }
 }

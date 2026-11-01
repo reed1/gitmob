@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { errorResponse } from '@/lib/error-response';
 import { getProject } from '@/lib/projects';
 import {
   UnmergedBranch,
@@ -68,12 +69,6 @@ export async function POST(
     if (err instanceof UnmergedBranch) {
       return NextResponse.json({ error: err.message }, { status: 409 });
     }
-    return NextResponse.json(
-      {
-        error:
-          err instanceof Error ? err.message : `wtman ${body.action} failed`,
-      },
-      { status: 500 }
-    );
+    return errorResponse(request, err, `wtman ${body.action} failed`);
   }
 }

@@ -1,5 +1,6 @@
 import { isCustomModel, isProvider } from '@/lib/desktop';
 import { NextRequest, NextResponse } from 'next/server';
+import { errorResponse } from '@/lib/error-response';
 import { getProject } from '@/lib/projects';
 import {
   acceptSuggestedPrompt,
@@ -34,10 +35,7 @@ export async function GET(
     }
     return NextResponse.json(await listDesktopSessions(id));
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'claudex desktop failed' },
-      { status: 500 }
-    );
+    return errorResponse(request, err, 'claudex desktop failed');
   }
 }
 
@@ -146,9 +144,6 @@ export async function POST(
       );
     }
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'claudex desktop failed' },
-      { status: 500 }
-    );
+    return errorResponse(request, err, 'claudex desktop failed');
   }
 }

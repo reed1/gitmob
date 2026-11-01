@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { errorResponse } from '@/lib/error-response';
 import { getProject } from '@/lib/projects';
 import { pressSessionKey } from '@/lib/desktop';
 import { isSpecialKey } from '@/lib/desktop-keys';
@@ -37,9 +38,6 @@ export async function POST(
     await pressSessionKey(windowId, key);
     return NextResponse.json({ success: true });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'claudex desktop failed' },
-      { status: 500 }
-    );
+    return errorResponse(request, err, 'claudex desktop failed');
   }
 }

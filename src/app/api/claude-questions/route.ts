@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { errorResponse } from '@/lib/error-response';
 import { listPendingQuestions, replyToQuestion } from '@/lib/desktop';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     return NextResponse.json({ questions: await listPendingQuestions() });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'claudex desktop failed' },
-      { status: 500 }
-    );
+    return errorResponse(request, err, 'claudex desktop failed');
   }
 }
 
@@ -22,9 +20,6 @@ export async function POST(request: NextRequest) {
     await replyToQuestion(id, reply);
     return NextResponse.json({ success: true });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'claudex desktop failed' },
-      { status: 500 }
-    );
+    return errorResponse(request, err, 'claudex desktop failed');
   }
 }

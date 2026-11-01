@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { errorResponse } from '@/lib/error-response';
 import { clickTab, pressTabKey, scrollTab, typeIntoTab } from '@/lib/browser';
 import { isBrowserKey } from '@/lib/browser-keys';
 
@@ -58,11 +59,6 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   } catch (err) {
-    return NextResponse.json(
-      {
-        error: err instanceof Error ? err.message : 'rv chrome cdp failed',
-      },
-      { status: 500 }
-    );
+    return errorResponse(request, err, 'rv chrome cdp failed');
   }
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { errorResponse } from '@/lib/error-response';
 import { getProject } from '@/lib/projects';
 import {
   getStatus,
@@ -123,8 +124,6 @@ export async function POST(
         return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error(`[git/${action}] ${project.path}: ${message}`);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return errorResponse(request, err, `git ${action} failed`);
   }
 }

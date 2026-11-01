@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { errorResponse } from '@/lib/error-response';
 import { getProjectsWithWorktrees, openRepos } from '@/lib/projects';
 import { getRepoSummary } from '@/lib/git';
 import { getAllRunning } from '@/lib/run';
@@ -18,17 +19,14 @@ import { existsSync } from 'fs';
 
 const WORKERS = 4;
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   // The sweeps below each survive their CLI being down, but the list itself cannot: a project
   // missing from it is indistinguishable from one that does not exist, so say so instead.
   let projectList;
   try {
     projectList = await getProjectsWithWorktrees();
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Could not list projects' },
-      { status: 500 }
-    );
+    return errorResponse(request, err, 'Could not list projects');
   }
   const { projects, warnings } = projectList;
   const openIds = new Set(projectList.openIds);

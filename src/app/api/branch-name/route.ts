@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { errorResponse } from '@/lib/error-response';
 import { suggestBranchName } from '@/lib/branch-name';
 
 export async function POST(request: NextRequest) {
@@ -16,9 +17,6 @@ export async function POST(request: NextRequest) {
       branch: await suggestBranchName(description.trim()),
     });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Branch naming failed' },
-      { status: 500 }
-    );
+    return errorResponse(request, err, 'Branch naming failed');
   }
 }

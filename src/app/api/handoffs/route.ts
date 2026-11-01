@@ -1,5 +1,6 @@
 import { isCustomModel, isProvider } from '@/lib/desktop';
 import { NextRequest, NextResponse } from 'next/server';
+import { errorResponse } from '@/lib/error-response';
 import { getProject } from '@/lib/projects';
 import {
   deletePendingHandoff,
@@ -89,10 +90,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     // A launch that never happened leaves the handoff parked, to fix and try again.
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'claudex kitty failed' },
-      { status: 500 }
-    );
+    return errorResponse(request, err, 'claudex kitty failed');
   }
 
   deletePendingHandoff(handoffId);

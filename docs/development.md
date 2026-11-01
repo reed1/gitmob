@@ -12,7 +12,8 @@ pnpm build && pnpm start
 ## Production
 
 Deployed as the `gitmob` systemd user service, which runs `run_production.sh`: it builds
-`.next-prod` (`GITMOB_DIST_DIR`) when HEAD moved, then serves it with `next start`.
+`.next-prod` (`GITMOB_DIST_DIR`) when HEAD moved, then serves it with `next start`. Failed
+requests, with their stack, are in `journalctl --user -u gitmob`.
 
 It runs on two machines, each showing its own projects and state: rdzero, my PC, at
 `gitmob.zerotail.r-mulyadi.com`, and rdpav, my laptop, at `gitmob.pavtail.r-mulyadi.com`. Nothing

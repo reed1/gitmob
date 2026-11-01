@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { errorResponse } from '@/lib/error-response';
 import {
   deletePendingHandoff,
   handoffPinboardNote,
@@ -24,10 +25,7 @@ export async function POST(request: NextRequest) {
     await addPinboardNote(handoff.projectId, text, metadata);
   } catch (err) {
     // A note that never landed leaves the handoff parked, so nothing is lost.
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'rv pinboard add failed' },
-      { status: 500 }
-    );
+    return errorResponse(request, err, 'rv pinboard add failed');
   }
 
   deletePendingHandoff(handoffId);

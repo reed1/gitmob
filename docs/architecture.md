@@ -44,6 +44,9 @@ and across projects, from the front page:
 - Work that outlives a request runs as a detached job (`src/lib/cli-jobs.ts`). A tab's job has
   one id per project (`cli-`, `push-`, `clone-`), so a reload finds it again and the next run
   replaces its log rather than adding one.
+- A route that catches an error answers through `errorResponse` (`src/lib/error-response.ts`):
+  the client gets the message to show, the journal gets the request and the stack. Errors a route
+  leaves uncaught are printed by Next, and `src/instrumentation.ts` adds the request they came from.
 - A project id is plain text everywhere — worktree ids hold `::` — and is encoded only where a
   URL is built, through `src/lib/project-paths.ts`. The `[projectId]` pages decode the route
   param on read.

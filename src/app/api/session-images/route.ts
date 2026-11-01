@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { NextRequest, NextResponse } from 'next/server';
+import { errorResponse } from '@/lib/error-response';
 
 export const runtime = 'nodejs';
 
@@ -31,9 +32,6 @@ export async function POST(request: NextRequest) {
     });
     return NextResponse.json({ path });
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Image upload failed' },
-      { status: 500 }
-    );
+    return errorResponse(request, error, 'Image upload failed');
   }
 }

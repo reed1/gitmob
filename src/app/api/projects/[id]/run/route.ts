@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { errorResponse } from '@/lib/error-response';
 import { getProject } from '@/lib/projects';
 import {
   captureLog,
@@ -30,10 +31,7 @@ export async function GET(
       });
     } catch (err) {
       // Reporting every run as stopped would invite a second start of something already up.
-      return NextResponse.json(
-        { error: err instanceof Error ? err.message : 'rv run status failed' },
-        { status: 500 }
-      );
+      return errorResponse(request, err, 'rv run status failed');
     }
   }
 
@@ -84,10 +82,7 @@ export async function POST(
     }
   } catch (err) {
     // Reading the group's members can fail the same way status does.
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : `rv run ${action} failed` },
-      { status: 500 }
-    );
+    return errorResponse(request, err, `rv run ${action} failed`);
   }
 
   if (!result.success) {

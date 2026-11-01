@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { errorResponse } from '@/lib/error-response';
 import { getProject } from '@/lib/projects';
 import {
   UnmergedBranch,
@@ -12,7 +13,7 @@ import {
  * every remote where its branches are now, which is seconds over ssh.
  */
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
@@ -25,10 +26,7 @@ export async function GET(
   try {
     return NextResponse.json({ branches: await listBranchRows(project) });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'wtman branches failed' },
-      { status: 500 }
-    );
+    return errorResponse(request, err, 'wtman branches failed');
   }
 }
 
@@ -69,9 +67,6 @@ export async function POST(
     if (err instanceof UnmergedBranch) {
       return NextResponse.json({ error: err.message }, { status: 409 });
     }
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'wtman remove failed' },
-      { status: 500 }
-    );
+    return errorResponse(request, err, 'wtman remove failed');
   }
 }
