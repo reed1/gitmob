@@ -112,7 +112,7 @@ function ChromePicker() {
       {chromes?.length === 0 && (
         <div className="px-4 py-3 text-sm text-foreground/50">
           No agent Chrome is running. An agent opens one with{' '}
-          <code>rv chrome open --agent</code>.
+          <code>rv chrome open</code>.
         </div>
       )}
       {chromes?.map((chrome) => (
