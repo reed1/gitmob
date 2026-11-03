@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { goHome } from '@/lib/app-depth';
 
-const AWAY_LONG_ENOUGH_MS = 5 * 60 * 1000;
+const AWAY_LONG_ENOUGH_MS = 6 * 60 * 60 * 1000;
 
 // Back after a long enough while, whatever page was left open is stale and the task that opened it
 // is likely done, so the app starts over at a front page loaded afresh. Arriving there remounts it;
