@@ -40,7 +40,8 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const { handoffId, prompt, provider, customModel } = await request.json();
+  const { handoffId, prompt, provider, customModel, browser } =
+    await request.json();
   if (!isHandoffId(handoffId)) {
     return NextResponse.json({ error: 'Missing handoff' }, { status: 400 });
   }
@@ -56,6 +57,10 @@ export async function POST(request: NextRequest) {
       { error: 'Invalid custom model' },
       { status: 400 }
     );
+  }
+
+  if (typeof browser !== 'boolean') {
+    return NextResponse.json({ error: 'Missing browser' }, { status: 400 });
   }
 
   const handoff = readPendingHandoff(handoffId);
@@ -87,6 +92,7 @@ export async function POST(request: NextRequest) {
       customModel,
       prompt: briefing,
       title: HANDOFF_TITLE,
+      browser,
     });
   } catch (err) {
     // A launch that never happened leaves the handoff parked, to fix and try again.

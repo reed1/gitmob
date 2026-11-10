@@ -61,6 +61,7 @@ export async function POST(
     prompt,
     branch,
     customModel,
+    browser,
   } = await request.json();
 
   try {
@@ -77,6 +78,9 @@ export async function POST(
           { status: 400 }
         );
       }
+      if (typeof browser !== 'boolean') {
+        return NextResponse.json({ error: 'Missing browser' }, { status: 400 });
+      }
 
       const initialPrompt = typeof prompt === 'string' ? prompt.trim() : '';
       const newBranch = typeof branch === 'string' ? branch.trim() : '';
@@ -91,6 +95,7 @@ export async function POST(
         provider,
         customModel,
         prompt: initialPrompt,
+        browser,
       });
       return NextResponse.json({
         success: true,

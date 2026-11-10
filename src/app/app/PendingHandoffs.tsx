@@ -4,7 +4,7 @@ import { saveTextHistory } from '@/lib/text-history';
 
 import { SessionModelSelect, useSessionModel } from './SessionModelSelect';
 
-import { useCallback, useState } from 'react';
+import { ReactNode, useCallback, useState } from 'react';
 import Link from 'next/link';
 import { ModalOverlay } from '@/components/ModalOverlay';
 import { addToast, apiFetch } from '@/lib/api';
@@ -13,6 +13,7 @@ import { relativeTime } from '@/lib/relative-time';
 import { useLoad } from '@/lib/use-load';
 import { CollapsedRows } from './CollapsedRows';
 import { KebabMenu, KebabMenuItem } from './KebabMenu';
+import { BrowserMenuItem } from './BrowserMenuItem';
 import { useModelCatalog } from '@/lib/use-model-catalog';
 import { projectPagePath } from '@/lib/project-paths';
 
@@ -55,12 +56,15 @@ function CleanBadge({ clean }: { clean: boolean | null }) {
   }
 }
 
+/** The handoff's own actions, after the session options the open box puts first. */
 function HandoffKebabMenu({
   handoff,
   onRemoved,
+  sessionOptions,
 }: {
   handoff: PendingHandoff;
   onRemoved: () => void;
+  sessionOptions?: ReactNode;
 }) {
   const moveToPinboard = async () => {
     const res = await apiFetch('/api/handoffs/pinboard', {
@@ -90,6 +94,7 @@ function HandoffKebabMenu({
 
   return (
     <KebabMenu label={`Actions for the ${handoff.projectId} handoff`}>
+      {sessionOptions}
       <KebabMenuItem onSelect={moveToPinboard}>Move to pinboard</KebabMenuItem>
       <KebabMenuItem onSelect={copyPath}>Copy path</KebabMenuItem>
       <KebabMenuItem onSelect={remove} danger>
@@ -120,6 +125,7 @@ export function PendingHandoffs({
   const [initialPrompt, setInitialPrompt] = useState('');
   const { catalog, error: catalogError } = useModelCatalog();
   const [sessionModel, setSessionModel] = useSessionModel(catalog);
+  const [browser, setBrowser] = useState(false);
   const [launching, setLaunching] = useState(false);
 
   const open = handoffs.find((handoff) => handoff.id === openId) ?? null;
@@ -137,6 +143,7 @@ export function PendingHandoffs({
     setPrompt(handoff.prompt);
     setInitialPrompt(handoff.prompt);
     setSessionModel(undefined);
+    setBrowser(false);
     setOpenId(handoff.id);
   };
 
@@ -160,6 +167,7 @@ export function PendingHandoffs({
             model: sessionModel.model,
             effort: sessionModel.effort,
           },
+          browser,
         }),
       });
       // A launch that failed leaves the handoff parked, and the box open on the text to fix.
@@ -231,7 +239,13 @@ export function PendingHandoffs({
                     {open.directory}
                   </div>
                 </div>
-                <HandoffKebabMenu handoff={open} onRemoved={fetchHandoffs} />
+                <HandoffKebabMenu
+                  handoff={open}
+                  onRemoved={fetchHandoffs}
+                  sessionOptions={
+                    <BrowserMenuItem browser={browser} onChange={setBrowser} />
+                  }
+                />
               </div>
               {/* Dirty is a warning and not a refusal — the briefing may well be about those
                     very changes — so the Changes tab is one tap away and Launch stays live. The

@@ -8,20 +8,20 @@ import { projectApiPath } from './project-paths';
  */
 export async function launchDesktopSession(
   projectId: string,
-  provider: string,
-  prompt = '',
-  branch = '',
-  customModel?: CustomModel
+  launch: {
+    provider: string;
+    prompt: string;
+    branch: string;
+    customModel: CustomModel;
+    browser: boolean;
+  }
 ): Promise<string | null> {
   const res = await apiFetch(`${projectApiPath(projectId)}/desktop`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       action: 'launch',
-      provider,
-      prompt,
-      branch,
-      customModel,
+      ...launch,
     }),
   });
   if (!res.ok) return null;

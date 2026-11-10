@@ -106,6 +106,8 @@ export interface DesktopLaunch {
   title?: string;
   /** Reopens that conversation instead of starting an empty one — see below. */
   resumeSessionId?: string;
+  /** Gives the session the project's agent Chrome as its `browser` MCP server. */
+  browser: boolean;
 }
 
 /**
@@ -161,6 +163,7 @@ function runKitty(
       : []),
     ...(launch.title ? ['--title', launch.title] : []),
     ...(launch.resumeSessionId ? ['--resume', launch.resumeSessionId] : []),
+    ...(launch.browser ? ['--browser', 'agent'] : []),
     ...(promptFile ? ['--submit', '--file', promptFile, '--rm-file'] : []),
   ]);
 }

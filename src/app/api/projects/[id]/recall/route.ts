@@ -77,6 +77,7 @@ export async function POST(
       prompt: '',
       title: RESUME_TITLE,
       resumeSessionId: sessionId,
+      browser: false,
     });
     return NextResponse.json({ success: true, name });
   } catch (err) {
