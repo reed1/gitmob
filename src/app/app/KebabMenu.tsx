@@ -83,11 +83,14 @@ export function KebabMenuItem({
   onSelect,
   disabled = false,
   danger = false,
+  ariaLabel,
   children,
 }: {
   onSelect: () => void;
   disabled?: boolean;
   danger?: boolean;
+  /** For an item whose children are icons rather than words. */
+  ariaLabel?: string;
   children: ReactNode;
 }) {
   const close = useContext(CloseKebabMenu);
@@ -99,6 +102,7 @@ export function KebabMenuItem({
         onSelect();
       }}
       disabled={disabled}
+      aria-label={ariaLabel}
       className={`block w-full px-4 py-2 text-sm text-left whitespace-nowrap ${
         disabled
           ? 'text-foreground/30 cursor-not-allowed'
@@ -108,4 +112,35 @@ export function KebabMenuItem({
       {children}
     </button>
   );
+}
+
+export function KebabMenuToggle({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  const close = useContext(CloseKebabMenu);
+
+  return (
+    <label className="flex w-full items-center gap-2 px-4 py-2 text-sm hover:bg-foreground/10 whitespace-nowrap cursor-pointer">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => {
+          close();
+          onChange(event.target.checked);
+        }}
+        className="w-4 h-4 accent-foreground"
+      />
+      {label}
+    </label>
+  );
+}
+
+export function KebabMenuSeparator() {
+  return <div className="my-1 border-t border-foreground/10" />;
 }

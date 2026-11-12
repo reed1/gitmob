@@ -12,8 +12,7 @@ import { copyText } from '@/lib/clipboard';
 import { relativeTime } from '@/lib/relative-time';
 import { useLoad } from '@/lib/use-load';
 import { CollapsedRows } from './CollapsedRows';
-import { KebabMenu, KebabMenuItem } from './KebabMenu';
-import { BrowserMenuItem } from './BrowserMenuItem';
+import { KebabMenu, KebabMenuItem, KebabMenuToggle } from './KebabMenu';
 import { useModelCatalog } from '@/lib/use-model-catalog';
 import { projectPagePath } from '@/lib/project-paths';
 
@@ -243,7 +242,11 @@ export function PendingHandoffs({
                   handoff={open}
                   onRemoved={fetchHandoffs}
                   sessionOptions={
-                    <BrowserMenuItem browser={browser} onChange={setBrowser} />
+                    <KebabMenuToggle
+                      label="Browser"
+                      checked={browser}
+                      onChange={setBrowser}
+                    />
                   }
                 />
               </div>

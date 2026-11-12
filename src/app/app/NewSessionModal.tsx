@@ -10,8 +10,7 @@ import { apiFetch } from '@/lib/api';
 import { launchDesktopSession } from '@/lib/desktop-client';
 import { useModelCatalog } from '@/lib/use-model-catalog';
 import { Modal } from './Modal';
-import { KebabMenu, KebabMenuItem } from './KebabMenu';
-import { BrowserMenuItem } from './BrowserMenuItem';
+import { KebabMenu, KebabMenuToggle } from './KebabMenu';
 import { SpeakButton } from './SpeakButton';
 import {
   ImageUploadMenuItem,
@@ -109,27 +108,16 @@ export function NewSessionModal({
       guardDismiss={Boolean(prompt || branch || uploads.images.length)}
       menu={
         <KebabMenu label="Session options" disabled={launching}>
-          <KebabMenuItem onSelect={() => setInWorktree(!inWorktree)}>
-            <span
-              className={`flex items-center gap-2 ${inWorktree ? 'text-blue-500' : ''}`}
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <circle cx="6" cy="5" r="3" />
-                <circle cx="6" cy="19" r="3" />
-                <circle cx="18" cy="5" r="3" />
-                <path d="M6 8v8m12-8a8 8 0 0 1-8 8H6" />
-              </svg>
-              Worktree{inWorktree ? ' ✓' : ''}
-            </span>
-          </KebabMenuItem>
-          <BrowserMenuItem browser={browser} onChange={setBrowser} />
+          <KebabMenuToggle
+            label="Worktree"
+            checked={inWorktree}
+            onChange={setInWorktree}
+          />
+          <KebabMenuToggle
+            label="Browser"
+            checked={browser}
+            onChange={setBrowser}
+          />
           <ImageUploadMenuItem uploads={uploads} />
         </KebabMenu>
       }
