@@ -14,6 +14,7 @@ docs; how it is called is in the module. Paths under `rlocal/` are in `~/.dotfil
 | `rv`                              | run commands, opening projects on the desktop | `src/lib/run.ts`, `desktop.ts`                         | `rlocal/app/rofi-vscode/CLAUDE.md`          |
 | `claudex`                         | sessions, handoffs, models, usage             | `src/lib/desktop.ts`, `handoffs.ts`, `claude-usage.ts` | `rlocal/app/claudex/CLAUDE.md`              |
 | `claudex ask`                     | Claude's questions while the user is away     | `src/lib/desktop.ts`                                   | `rlocal/app/claudex/claudex-ask`            |
+| `claudex edit-remote`             | input boxes handed over from the desk         | `src/lib/desktop.ts`                                   | `rlocal/app/claudex/claudex-edit-remote`    |
 | `recall`                          | past sessions                                 | `src/lib/recall.ts`                                    | https://github.com/zippoxer/recall          |
 | `gg kitty-commit`                 | parked commits                                | `src/lib/pending-commits.ts`                           | `rlocal/app/gg/CLAUDE.md`                   |
 | `gg hold`                         | the hold on autopush and auto-pull            | `src/lib/gg-hold.ts`                                   | `rlocal/app/gg/gg-hold`                     |

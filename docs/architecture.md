@@ -16,6 +16,8 @@ and across projects, from the front page:
 - See every project's state at a glance
 - Read and launch handoffs, and accept commits, parked from the desktop
 - Answer the questions Claude asks while I am away from the desktop, or deny them
+- Edit a session's input box handed over from the desk (`claudex edit-remote`), then submit or
+  save it back
 - Keep a scratchpad on the device
 - Replay the last five dictated recordings, kept on the device, and send them to be transcribed
   again once the STT server can be reached

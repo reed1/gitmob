@@ -6,6 +6,7 @@ import { join } from 'path';
 import type { CommonCommand, SpecialKey } from './desktop-keys';
 import type { CustomModel, ModelCatalog } from './desktop-models';
 import type { PendingQuestion, Question, Reply } from './claude-questions';
+import type { PendingEdit } from './remote-edits';
 
 /** What Claude Code itself reports the session's context window to be holding. */
 export interface SessionContext {
@@ -254,15 +255,46 @@ function toPendingQuestion(row: ClaudexQuestionRow): PendingQuestion {
   };
 }
 
-/** The screen, and the question its session is blocked on while the user is away, if any. */
-export async function getSessionScreen(
-  windowId: string
-): Promise<{ content: string; question: PendingQuestion | null }> {
-  const result: { content: string; question: ClaudexQuestionRow | null } =
-    JSON.parse(await claudexDesktop(['screen', windowId, '--json']));
+interface ClaudexEditRow {
+  id: string;
+  window_id: string;
+  project_id: string | null;
+  canonical_project_id: string | null;
+  cwd: string;
+  created_at: string;
+  text: string;
+}
+
+function toPendingEdit(row: ClaudexEditRow): PendingEdit {
+  return {
+    id: row.id,
+    windowId: row.window_id,
+    projectId: row.project_id,
+    canonicalProjectId: row.canonical_project_id,
+    cwd: row.cwd,
+    createdAt: row.created_at,
+    text: row.text,
+  };
+}
+
+/**
+ * The screen, the question its session is blocked on while the user is away, and its input box
+ * when `claudex edit-remote` has handed that here.
+ */
+export async function getSessionScreen(windowId: string): Promise<{
+  content: string;
+  question: PendingQuestion | null;
+  edit: PendingEdit | null;
+}> {
+  const result: {
+    content: string;
+    question: ClaudexQuestionRow | null;
+    edit: ClaudexEditRow | null;
+  } = JSON.parse(await claudexDesktop(['screen', windowId, '--json']));
   return {
     content: result.content,
     question: result.question && toPendingQuestion(result.question),
+    edit: result.edit && toPendingEdit(result.edit),
   };
 }
 
@@ -283,6 +315,30 @@ export async function replyToQuestion(id: string, reply: Reply): Promise<void> {
   } else {
     throw new Error(`Unexpected reply: ${JSON.stringify(reply)}`);
   }
+}
+
+/** Every input box out here, oldest first. */
+export async function listPendingEdits(): Promise<PendingEdit[]> {
+  const rows: ClaudexEditRow[] = JSON.parse(await claudexDesktop(['edits']));
+  return rows.map(toPendingEdit);
+}
+
+/**
+ * The text goes back into the session's input box; `submit` presses Enter on it too. claudex
+ * refuses an edit nobody waits on any more — its window was closed — and an empty submit.
+ */
+export async function replyToEdit(
+  id: string,
+  text: string,
+  submit: boolean
+): Promise<void> {
+  await claudexDesktop([
+    'edit-reply',
+    id,
+    ...(submit ? ['--submit'] : []),
+    '--',
+    text,
+  ]);
 }
 
 /**

@@ -6,6 +6,7 @@ import { addToast, apiFetch } from '@/lib/api';
 import { COMMON_COMMANDS, type CommonCommand } from '@/lib/desktop-keys';
 import { projectApiPath } from '@/lib/project-paths';
 import { QuestionWizard } from '@/app/app/PendingQuestions';
+import { RemoteEditModal } from '@/app/app/PendingEdits';
 import {
   KebabMenu,
   KebabMenuItem,
@@ -13,6 +14,7 @@ import {
   KebabMenuToggle,
 } from '@/app/app/KebabMenu';
 import type { PendingQuestion } from '@/lib/claude-questions';
+import type { PendingEdit } from '@/lib/remote-edits';
 
 /** A physical keycap: a raised grey box, its thick bottom border reading as the key's side. */
 const keycapClass =
@@ -51,6 +53,11 @@ export function DesktopScreenView({
   const [keysOpen, setKeysOpen] = useState(false);
   const [question, setQuestion] = useState<PendingQuestion | null>(null);
   const [openQuestionId, setOpenQuestionId] = useState<string | null>(null);
+  const [edit, setEdit] = useState<PendingEdit | null>(null);
+  const [openEditId, setOpenEditId] = useState<string | null>(null);
+  // An edit is handed over from the desk to be worked on here, so it opens the moment it shows
+  // up — once: closed, it stays behind its button.
+  const seenEditIds = useRef(new Set<string>());
   const preRef = useRef<HTMLPreElement>(null);
   const scrolledToBottom = useRef(false);
 
@@ -64,6 +71,11 @@ export function DesktopScreenView({
       if (res.ok) {
         setContent(data.content ?? '');
         setQuestion(data.question);
+        setEdit(data.edit);
+        if (data.edit && !seenEditIds.current.has(data.edit.id)) {
+          seenEditIds.current.add(data.edit.id);
+          setOpenEditId(data.edit.id);
+        }
         setError(null);
       } else {
         setError(data.error || 'Could not read the session');
@@ -158,6 +170,27 @@ export function DesktopScreenView({
               />
             ))}
             ?
+          </button>
+        )}
+        {edit && (
+          <button
+            onClick={() => setOpenEditId(edit.id)}
+            aria-label="Edit the session's input"
+            className="shrink-0 w-9 h-9 flex items-center justify-center rounded-lg border border-sky-500/50 bg-sky-500/15 text-sky-400 active:opacity-80"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15.232 5.232l3.536 3.536M9 13l6.232-6.232a2.5 2.5 0 113.536 3.536L12.536 16.536 8 18l1-4.464z"
+              />
+            </svg>
           </button>
         )}
         <KebabMenu label="Window actions">
@@ -317,6 +350,19 @@ export function DesktopScreenView({
           onAnswered={() => {
             setOpenQuestionId(null);
             setQuestion(null);
+          }}
+        />
+      )}
+
+      {/* Its window closed, the edit drops out of the next poll and its form goes with it. */}
+      {edit && edit.id === openEditId && (
+        <RemoteEditModal
+          key={edit.id}
+          pending={edit}
+          onClose={() => setOpenEditId(null)}
+          onReplied={() => {
+            setOpenEditId(null);
+            setEdit(null);
           }}
         />
       )}

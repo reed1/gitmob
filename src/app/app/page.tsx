@@ -8,6 +8,7 @@ import { AudioHistoryModal } from './AudioHistoryModal';
 import { PendingHandoffs } from './PendingHandoffs';
 import { PendingCommits } from './PendingCommits';
 import { PendingQuestions } from './PendingQuestions';
+import { PendingEdits } from './PendingEdits';
 import UsagePanel from './UsagePanel';
 import { ClaudeUsage, Project, StaleBuild } from './types';
 import { addToast, apiFetch } from '@/lib/api';
@@ -491,6 +492,8 @@ export default function Home() {
         {/* A search is a look for one project, so parked work steps aside rather than being
             filtered — it stays mounted, and is back the moment the box is cleared. */}
         <PendingQuestions hidden={search !== ''} />
+
+        <PendingEdits hidden={search !== ''} />
 
         <PendingHandoffs
           hidden={search !== ''}
