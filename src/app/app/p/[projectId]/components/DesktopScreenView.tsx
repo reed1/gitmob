@@ -15,6 +15,7 @@ import {
 } from '@/app/app/KebabMenu';
 import type { PendingQuestion } from '@/lib/claude-questions';
 import type { PendingEdit } from '@/lib/remote-edits';
+import type { WindowView } from './ClaudeView';
 
 /** A physical keycap: a raised grey box, its thick bottom border reading as the key's side. */
 const keycapClass =
@@ -33,16 +34,18 @@ export function DesktopScreenView({
   canonicalId,
   windowId,
   title,
+  hasAgenda,
   onBack,
-  onOpenTranscript,
+  onOpenView,
 }: {
   projectId: string;
   canonicalId: string;
   windowId: string;
   title: string;
+  hasAgenda: boolean;
   onBack: () => void;
-  /** Absent for a window recall holds no transcript of. */
-  onOpenTranscript?: () => void;
+  /** Absent for a window without a Claude session, which has neither transcript nor agenda. */
+  onOpenView?: (view: WindowView) => void;
 }) {
   const [content, setContent] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -194,10 +197,16 @@ export function DesktopScreenView({
           </button>
         )}
         <KebabMenu label="Window actions">
-          {onOpenTranscript && (
+          {onOpenView && (
             <>
-              <KebabMenuItem onSelect={onOpenTranscript}>
+              <KebabMenuItem onSelect={() => onOpenView('transcript')}>
                 Transcript
+              </KebabMenuItem>
+              <KebabMenuItem
+                onSelect={() => onOpenView('agenda')}
+                disabled={!hasAgenda}
+              >
+                Agenda
               </KebabMenuItem>
               <KebabMenuSeparator />
             </>

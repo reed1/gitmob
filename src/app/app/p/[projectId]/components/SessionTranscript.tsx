@@ -9,6 +9,7 @@ import {
 } from 'react';
 import type { RecallMessage } from './RecallSearch';
 import { TranscriptMessage } from './TranscriptMessage';
+import type { WindowView } from './ClaudeView';
 import { SendTextModal } from './DesktopSendModals';
 import { projectApiPath } from '@/lib/project-paths';
 
@@ -23,8 +24,9 @@ export function SessionTranscript({
   sessionId,
   lookingUp,
   title,
+  hasAgenda,
   onBack,
-  onOpenTerminal,
+  onOpenView,
 }: {
   projectId: string;
   canonicalId: string;
@@ -33,8 +35,9 @@ export function SessionTranscript({
   /** The window's session is not known yet, so neither is whether it has one. */
   lookingUp: boolean;
   title: string;
+  hasAgenda: boolean;
   onBack: () => void;
-  onOpenTerminal: () => void;
+  onOpenView: (view: WindowView) => void;
 }) {
   const [messages, setMessages] = useState<RecallMessage[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -139,10 +142,17 @@ export function SessionTranscript({
               />
               <div className="absolute right-0 top-full mt-1 z-20 bg-background border border-foreground/20 rounded-lg shadow-lg py-1 min-w-[140px]">
                 <button
-                  onClick={onOpenTerminal}
+                  onClick={() => onOpenView('terminal')}
                   className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 whitespace-nowrap"
                 >
                   Terminal
+                </button>
+                <button
+                  onClick={() => onOpenView('agenda')}
+                  disabled={!hasAgenda}
+                  className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 whitespace-nowrap disabled:opacity-40"
+                >
+                  Agenda
                 </button>
                 <div className="my-1 border-t border-foreground/10" />
                 <button

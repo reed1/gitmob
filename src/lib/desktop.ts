@@ -1,6 +1,6 @@
 import { execFile } from 'child_process';
 import { randomUUID } from 'crypto';
-import { rm, writeFile } from 'fs/promises';
+import { readFile, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import type { CommonCommand, SpecialKey } from './desktop-keys';
@@ -36,6 +36,8 @@ export interface DesktopSession {
   sessionId: string | null;
   cwd: string | null;
   context: SessionContext | null;
+  /** Whether the session has written anything into its agenda. */
+  hasAgenda: boolean;
 }
 
 interface ClaudexSessionContext {
@@ -55,6 +57,7 @@ interface ClaudexSessionRow {
   listen_on: string | null;
   cwd: string | null;
   context: ClaudexSessionContext | null;
+  has_agenda: boolean;
 }
 
 interface ClaudexListResult {
@@ -70,13 +73,13 @@ const CLOSE_TIMEOUT_MS = 60000;
 function run(
   command: string,
   args: string[],
-  timeout = 30000
+  { timeout = 30000, env }: { timeout?: number; env?: NodeJS.ProcessEnv } = {}
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     execFile(
       command,
       args,
-      { timeout, maxBuffer: 4 * 1024 * 1024 },
+      { timeout, env, maxBuffer: 4 * 1024 * 1024 },
       (error, stdout, stderr) => {
         if (error) {
           reject(new Error(stderr.trim() || error.message));
@@ -129,7 +132,9 @@ export interface DesktopLaunch {
 export async function launchDesktopSession(
   launch: DesktopLaunch
 ): Promise<void> {
-  await run('rv', ['open', launch.projectId, '--focus-ide'], OPEN_TIMEOUT_MS);
+  await run('rv', ['open', launch.projectId, '--focus-ide'], {
+    timeout: OPEN_TIMEOUT_MS,
+  });
   const promptFile = launch.prompt
     ? join(tmpdir(), `gitmob-prompt-${randomUUID()}.txt`)
     : null;
@@ -170,7 +175,7 @@ function runKitty(
 }
 
 export async function openProjectOnDesktop(projectId: string): Promise<void> {
-  await run('rv', ['open', projectId], OPEN_TIMEOUT_MS);
+  await run('rv', ['open', projectId], { timeout: OPEN_TIMEOUT_MS });
 }
 
 /**
@@ -178,7 +183,18 @@ export async function openProjectOnDesktop(projectId: string): Promise<void> {
  * its Claude sessions into purgatory — the same one `<leader> q q` runs at the desktop.
  */
 export async function closeProjectOnDesktop(projectId: string): Promise<void> {
-  await run('rv', ['close', projectId], CLOSE_TIMEOUT_MS);
+  await run('rv', ['close', projectId], { timeout: CLOSE_TIMEOUT_MS });
+}
+
+/**
+ * `claudex agenda` says where a session keeps its agenda, creating the file empty when the
+ * session has written none, so an empty string is a session without one.
+ */
+export async function readSessionAgenda(sessionId: string): Promise<string> {
+  const path = await run('claudex', ['agenda', 'path'], {
+    env: { ...process.env, CLAUDE_CODE_SESSION_ID: sessionId },
+  });
+  return readFile(path.trim(), 'utf8');
 }
 
 function toDesktopSession(row: ClaudexSessionRow): DesktopSession {
@@ -196,6 +212,7 @@ function toDesktopSession(row: ClaudexSessionRow): DesktopSession {
       windowSize: row.context.window_size,
       usedPercentage: row.context.used_percentage,
     },
+    hasAgenda: row.has_agenda,
   };
 }
 

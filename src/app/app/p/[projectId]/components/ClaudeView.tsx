@@ -6,6 +6,7 @@ import { DesktopScreenView } from './DesktopScreenView';
 import { DesktopSessions } from './DesktopSessions';
 import { RecallSearch } from './RecallSearch';
 import { RecallTranscript } from './RecallTranscript';
+import { SessionAgenda } from './SessionAgenda';
 import { SessionTranscript } from './SessionTranscript';
 import { usePoll } from '@/lib/use-load';
 import { projectApiPath, projectPagePath } from '@/lib/project-paths';
@@ -28,10 +29,17 @@ export interface DesktopSession {
   sessionId: string | null;
   cwd: string | null;
   context: SessionContext | null;
+  /** Whether the session has written anything into its agenda. */
+  hasAgenda: boolean;
 }
 
-/** recall reads Claude transcripts alone; Codex records its turns its own way. */
-export function transcriptSessionId(session: DesktopSession): string | null {
+export type WindowView = 'terminal' | 'transcript' | 'agenda';
+
+/**
+ * recall reads Claude transcripts alone and agendas are kept by Claude sessions; Codex records
+ * its turns its own way.
+ */
+export function claudeSessionId(session: DesktopSession): string | null {
   return session.provider === 'claude' ? session.sessionId : null;
 }
 
@@ -72,9 +80,9 @@ export function ClaudeView({
 
   const sessionsUrl = `${projectPagePath(projectId)}?tab=claude`;
 
-  const windowUrl = (windowId: string, view: 'terminal' | 'transcript') =>
+  const windowUrl = (windowId: string, view: WindowView) =>
     `${sessionsUrl}&window=${encodeURIComponent(windowId)}` +
-    (view === 'transcript' ? '&view=transcript' : '');
+    (view === 'terminal' ? '' : `&view=${view}`);
 
   if (sessionParam) {
     return (
@@ -109,21 +117,36 @@ export function ClaudeView({
   if (windowParam) {
     const session = sessions?.find((s) => s.windowId === windowParam);
     const title = session?.title || `Window ${windowParam}`;
-    // Switching between the two views of a window replaces rather than pushes, so Back
-    // leaves the window instead of walking every switch.
+    const sessionId = session ? claudeSessionId(session) : null;
+    const hasAgenda = session?.hasAgenda ?? false;
+    // Switching between the views of a window replaces rather than pushes, so Back leaves the
+    // window instead of walking every switch.
+    const openView = (view: WindowView) =>
+      router.replace(windowUrl(windowParam, view));
     if (viewParam === 'transcript') {
       return (
         <SessionTranscript
           projectId={projectId}
           canonicalId={canonicalId}
           windowId={windowParam}
-          sessionId={session ? transcriptSessionId(session) : null}
+          sessionId={sessionId}
+          lookingUp={sessions === null}
+          title={title}
+          hasAgenda={hasAgenda}
+          onBack={() => router.back()}
+          onOpenView={openView}
+        />
+      );
+    }
+    if (viewParam === 'agenda') {
+      return (
+        <SessionAgenda
+          projectId={projectId}
+          sessionId={sessionId}
           lookingUp={sessions === null}
           title={title}
           onBack={() => router.back()}
-          onOpenTerminal={() =>
-            router.replace(windowUrl(windowParam, 'terminal'))
-          }
+          onOpenView={openView}
         />
       );
     }
@@ -134,12 +157,9 @@ export function ClaudeView({
         canonicalId={canonicalId}
         windowId={windowParam}
         title={title}
+        hasAgenda={hasAgenda}
         onBack={() => router.back()}
-        onOpenTranscript={
-          session && transcriptSessionId(session)
-            ? () => router.replace(windowUrl(windowParam, 'transcript'))
-            : undefined
-        }
+        onOpenView={sessionId ? openView : undefined}
       />
     );
   }

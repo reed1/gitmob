@@ -4,7 +4,11 @@ import { useState } from 'react';
 import { addToast, apiFetch } from '@/lib/api';
 import { COMMON_COMMANDS, type CommonCommand } from '@/lib/desktop-keys';
 import { NewSessionModal } from '@/app/app/NewSessionModal';
-import { transcriptSessionId, type DesktopSession } from './ClaudeView';
+import {
+  claudeSessionId,
+  type DesktopSession,
+  type WindowView,
+} from './ClaudeView';
 import { projectApiPath } from '@/lib/project-paths';
 
 function formatTokens(tokens: number): string {
@@ -40,7 +44,7 @@ export function DesktopSessions({
   workspaces: string[];
   error: string | null;
   onRetry: () => void;
-  onOpenWindow: (windowId: string, view: 'terminal' | 'transcript') => void;
+  onOpenWindow: (windowId: string, view: WindowView) => void;
   onOpenSearch: () => void;
 }) {
   const [menuWindowId, setMenuWindowId] = useState<string | null>(null);
@@ -197,16 +201,28 @@ export function DesktopSessions({
                     >
                       Terminal
                     </button>
-                    {transcriptSessionId(session) && (
-                      <button
-                        onClick={() => {
-                          setMenuWindowId(null);
-                          onOpenWindow(session.windowId, 'transcript');
-                        }}
-                        className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
-                      >
-                        Transcript
-                      </button>
+                    {claudeSessionId(session) && (
+                      <>
+                        <button
+                          onClick={() => {
+                            setMenuWindowId(null);
+                            onOpenWindow(session.windowId, 'transcript');
+                          }}
+                          className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
+                        >
+                          Transcript
+                        </button>
+                        <button
+                          onClick={() => {
+                            setMenuWindowId(null);
+                            onOpenWindow(session.windowId, 'agenda');
+                          }}
+                          disabled={!session.hasAgenda}
+                          className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 disabled:opacity-40"
+                        >
+                          Agenda
+                        </button>
+                      </>
                     )}
                     <div className="my-1 border-t border-foreground/10" />
                     {COMMON_COMMANDS.map((command) => (
