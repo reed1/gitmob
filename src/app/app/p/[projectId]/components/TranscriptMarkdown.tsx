@@ -1,6 +1,39 @@
 import Markdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
+type MdNode = {
+  type: string;
+  ordered?: boolean;
+  children?: MdNode[];
+  position?: { start: { offset?: number } };
+  data?: { hProperties?: Record<string, unknown> };
+};
+
+/** Numbers each ordered item as written, where CommonMark would count on from the list's first. */
+function remarkWrittenListNumbers() {
+  return (tree: MdNode, file: { value: unknown }) => {
+    const source = String(file.value);
+    const walk = (node: MdNode) => {
+      if (node.type === 'list' && node.ordered) {
+        for (const item of node.children ?? []) {
+          const marker = /^\s*(\d+)[.)]/.exec(
+            source.slice(item.position!.start.offset)
+          );
+          item.data = {
+            ...item.data,
+            hProperties: {
+              ...item.data?.hProperties,
+              value: Number(marker![1]),
+            },
+          };
+        }
+      }
+      node.children?.forEach(walk);
+    };
+    walk(tree);
+  };
+}
+
 const components: Components = {
   p: ({ children }) => <p className="my-2 leading-relaxed">{children}</p>,
   h1: ({ children }) => (
@@ -27,7 +60,11 @@ const components: Components = {
       {children}
     </ol>
   ),
-  li: ({ children }) => <li className="pl-0.5 leading-relaxed">{children}</li>,
+  li: ({ value, children }) => (
+    <li value={value} className="pl-0.5 leading-relaxed">
+      {children}
+    </li>
+  ),
   strong: ({ children }) => (
     <strong className="font-semibold text-foreground">{children}</strong>
   ),
@@ -81,7 +118,10 @@ const components: Components = {
 export function TranscriptMarkdown({ content }: { content: string }) {
   return (
     <div className="[&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
-      <Markdown remarkPlugins={[remarkGfm]} components={components}>
+      <Markdown
+        remarkPlugins={[remarkGfm, remarkWrittenListNumbers]}
+        components={components}
+      >
         {content}
       </Markdown>
     </div>
