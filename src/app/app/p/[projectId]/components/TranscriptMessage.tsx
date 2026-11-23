@@ -5,7 +5,10 @@ import { relativeTime } from '@/lib/relative-time';
 import type { RecallMessage } from './RecallSearch';
 import { TranscriptMarkdown } from './TranscriptMarkdown';
 
-/** Without `foldAt` the message is shown whole. */
+/**
+ * Without `foldAt` the message is shown whole. On a phone it is a full-width row, the list's
+ * lines between rows standing in for card borders.
+ */
 export function TranscriptMessage({
   message,
   foldAt,
@@ -23,7 +26,7 @@ export function TranscriptMessage({
 
   return (
     <div
-      className={`p-3 border rounded-lg ${
+      className={`p-3 border-b sm:border sm:rounded-lg ${
         fromUser
           ? 'bg-blue-500/10 border-blue-500/20'
           : 'bg-foreground/5 border-foreground/10'

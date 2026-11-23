@@ -133,8 +133,10 @@ export function ClaudeView({
           lookingUp={sessions === null}
           title={title}
           hasAgenda={hasAgenda}
+          context={session?.context ?? null}
           onBack={() => router.back()}
           onOpenView={openView}
+          onRefreshContext={fetchSessions}
         />
       );
     }

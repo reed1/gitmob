@@ -9,7 +9,8 @@ import {
 } from 'react';
 import type { RecallMessage } from './RecallSearch';
 import { TranscriptMessage } from './TranscriptMessage';
-import type { WindowView } from './ClaudeView';
+import type { SessionContext, WindowView } from './ClaudeView';
+import { ContextUsage } from './ContextUsage';
 import { SendTextModal } from './DesktopSendModals';
 import { projectApiPath } from '@/lib/project-paths';
 
@@ -25,8 +26,10 @@ export function SessionTranscript({
   lookingUp,
   title,
   hasAgenda,
+  context,
   onBack,
   onOpenView,
+  onRefreshContext,
 }: {
   projectId: string;
   canonicalId: string;
@@ -36,8 +39,10 @@ export function SessionTranscript({
   lookingUp: boolean;
   title: string;
   hasAgenda: boolean;
+  context: SessionContext | null;
   onBack: () => void;
   onOpenView: (view: WindowView) => void;
+  onRefreshContext: () => void;
 }) {
   const [messages, setMessages] = useState<RecallMessage[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -159,6 +164,7 @@ export function SessionTranscript({
                   onClick={() => {
                     setMenuOpen(false);
                     load();
+                    onRefreshContext();
                   }}
                   disabled={loading || !sessionId}
                   className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 whitespace-nowrap disabled:opacity-40"
@@ -197,26 +203,28 @@ export function SessionTranscript({
       <div
         ref={scrollRef}
         onScroll={trackFollow}
-        className="flex-1 min-h-0 overflow-auto p-3 space-y-2"
+        className="flex-1 min-h-0 overflow-auto sm:p-3 sm:space-y-2"
       >
         {error && (
-          <pre className="p-2 text-xs bg-foreground/5 border border-foreground/10 rounded overflow-x-auto whitespace-pre-wrap text-red-500">
+          <pre className="m-3 sm:m-0 p-2 text-xs bg-foreground/5 border border-foreground/10 rounded overflow-x-auto whitespace-pre-wrap text-red-500">
             {error}
           </pre>
         )}
 
         {!lookingUp && !sessionId && (
-          <div className="text-sm text-foreground/40">
+          <div className="p-3 sm:p-0 text-sm text-foreground/40">
             This window holds no Claude session to read.
           </div>
         )}
 
         {!error && messages === null && (lookingUp || sessionId) && (
-          <div className="text-sm text-foreground/40">Loading...</div>
+          <div className="p-3 sm:p-0 text-sm text-foreground/40">
+            Loading...
+          </div>
         )}
 
         {messages?.length === 0 && (
-          <div className="text-sm text-foreground/40">
+          <div className="p-3 sm:p-0 text-sm text-foreground/40">
             This session has no messages yet.
           </div>
         )}
@@ -224,6 +232,12 @@ export function SessionTranscript({
         {messages?.map((message, index) => (
           <TranscriptMessage key={index} message={message} />
         ))}
+
+        {messages && (
+          <div className="px-3 py-2 sm:p-0 text-xs text-center tabular-nums">
+            <ContextUsage context={context} />
+          </div>
+        )}
       </div>
 
       {textOpen && (

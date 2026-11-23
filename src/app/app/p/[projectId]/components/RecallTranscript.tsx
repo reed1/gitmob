@@ -111,19 +111,21 @@ export function RecallTranscript({
         </button>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-auto p-3 space-y-2">
+      <div className="flex-1 min-h-0 overflow-auto sm:p-3 sm:space-y-2">
         {error && (
-          <pre className="p-2 text-xs bg-foreground/5 border border-foreground/10 rounded overflow-x-auto whitespace-pre-wrap text-red-500">
+          <pre className="m-3 sm:m-0 p-2 text-xs bg-foreground/5 border border-foreground/10 rounded overflow-x-auto whitespace-pre-wrap text-red-500">
             {error}
           </pre>
         )}
 
         {!error && session === null && (
-          <div className="text-sm text-foreground/40">Loading...</div>
+          <div className="p-3 sm:p-0 text-sm text-foreground/40">
+            Loading...
+          </div>
         )}
 
         {session?.messages.length === 0 && (
-          <div className="text-sm text-foreground/40">
+          <div className="p-3 sm:p-0 text-sm text-foreground/40">
             This session has no messages.
           </div>
         )}

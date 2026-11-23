@@ -9,24 +9,8 @@ import {
   type DesktopSession,
   type WindowView,
 } from './ClaudeView';
+import { ContextUsage } from './ContextUsage';
 import { projectApiPath } from '@/lib/project-paths';
-
-function formatTokens(tokens: number): string {
-  if (tokens >= 1000000) {
-    const millions = tokens / 1000000;
-    return `${millions % 1 === 0 ? millions : millions.toFixed(1)}M`;
-  }
-  if (tokens >= 10000) return `${Math.round(tokens / 1000)}k`;
-  if (tokens >= 1000) return `${(tokens / 1000).toFixed(1)}k`;
-  return `${tokens}`;
-}
-
-/** Under 10% a whole number hides most of the movement, and over it a decimal is noise. */
-function formatPercentage(percentage: number): string {
-  return percentage < 10
-    ? `${percentage.toFixed(1)}%`
-    : `${Math.round(percentage)}%`;
-}
 
 export function DesktopSessions({
   projectId,
@@ -123,124 +107,106 @@ export function DesktopSessions({
         />
       )}
 
-      {sessions?.map((session) => {
-        const { context } = session;
-
-        return (
-          <div
-            key={session.windowId}
-            className="flex items-center justify-between gap-2 p-3 bg-foreground/5 border border-foreground/10 rounded-lg"
+      {sessions?.map((session) => (
+        <div
+          key={session.windowId}
+          className="flex items-center justify-between gap-2 p-3 bg-foreground/5 border border-foreground/10 rounded-lg"
+        >
+          <button
+            onClick={() => onOpenWindow(session.windowId, 'terminal')}
+            className="flex items-center gap-3 min-w-0 flex-1 text-left active:opacity-80"
           >
-            <button
-              onClick={() => onOpenWindow(session.windowId, 'terminal')}
-              className="flex items-center gap-3 min-w-0 flex-1 text-left active:opacity-80"
-            >
-              <div
-                className={`w-2.5 h-2.5 shrink-0 rounded-full ${
-                  session.focused ? 'bg-green-500' : 'bg-foreground/30'
-                }`}
-              />
-              <div className="min-w-0">
-                <div className="font-medium truncate">{session.title}</div>
-                <div className="text-xs truncate tabular-nums">
-                  {context ? (
-                    <>
-                      <span className="text-foreground/50">
-                        {formatTokens(context.usedTokens)} /{' '}
-                        {formatTokens(context.windowSize)}
-                      </span>{' '}
-                      <span className="text-blue-500">
-                        {formatPercentage(context.usedPercentage)}
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-foreground/40">
-                      context not reported yet
-                    </span>
-                  )}
-                </div>
+            <div
+              className={`w-2.5 h-2.5 shrink-0 rounded-full ${
+                session.focused ? 'bg-green-500' : 'bg-foreground/30'
+              }`}
+            />
+            <div className="min-w-0">
+              <div className="font-medium truncate">{session.title}</div>
+              <div className="text-xs truncate tabular-nums">
+                <ContextUsage context={session.context} />
               </div>
-            </button>
+            </div>
+          </button>
 
-            <div className="relative shrink-0">
-              <button
-                onClick={() =>
-                  setMenuWindowId(
-                    menuWindowId === session.windowId ? null : session.windowId
-                  )
-                }
-                className="p-2 rounded-lg bg-foreground/10 active:bg-foreground/20 transition-colors"
+          <div className="relative shrink-0">
+            <button
+              onClick={() =>
+                setMenuWindowId(
+                  menuWindowId === session.windowId ? null : session.windowId
+                )
+              }
+              className="p-2 rounded-lg bg-foreground/10 active:bg-foreground/20 transition-colors"
+            >
+              <svg
+                className="w-5 h-5 text-foreground/60"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                <svg
-                  className="w-5 h-5 text-foreground/60"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 5v.01M12 12v.01M12 19v.01"
-                  />
-                </svg>
-              </button>
-              {menuWindowId === session.windowId && (
-                <>
-                  <div
-                    className="fixed inset-0 z-10"
-                    onClick={() => setMenuWindowId(null)}
-                  />
-                  <div className="absolute right-0 top-full mt-1 z-20 bg-background border border-foreground/20 rounded-lg shadow-lg py-1 min-w-[120px]">
-                    <button
-                      onClick={() => {
-                        setMenuWindowId(null);
-                        onOpenWindow(session.windowId, 'terminal');
-                      }}
-                      className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
-                    >
-                      Terminal
-                    </button>
-                    {claudeSessionId(session) && (
-                      <>
-                        <button
-                          onClick={() => {
-                            setMenuWindowId(null);
-                            onOpenWindow(session.windowId, 'transcript');
-                          }}
-                          className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
-                        >
-                          Transcript
-                        </button>
-                        <button
-                          onClick={() => {
-                            setMenuWindowId(null);
-                            onOpenWindow(session.windowId, 'agenda');
-                          }}
-                          disabled={!session.hasAgenda}
-                          className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 disabled:opacity-40"
-                        >
-                          Agenda
-                        </button>
-                      </>
-                    )}
-                    <div className="my-1 border-t border-foreground/10" />
-                    {COMMON_COMMANDS.map((command) => (
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 5v.01M12 12v.01M12 19v.01"
+                />
+              </svg>
+            </button>
+            {menuWindowId === session.windowId && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setMenuWindowId(null)}
+                />
+                <div className="absolute right-0 top-full mt-1 z-20 bg-background border border-foreground/20 rounded-lg shadow-lg py-1 min-w-[120px]">
+                  <button
+                    onClick={() => {
+                      setMenuWindowId(null);
+                      onOpenWindow(session.windowId, 'terminal');
+                    }}
+                    className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
+                  >
+                    Terminal
+                  </button>
+                  {claudeSessionId(session) && (
+                    <>
                       <button
-                        key={command}
-                        onClick={() => sendCommand(session.windowId, command)}
+                        onClick={() => {
+                          setMenuWindowId(null);
+                          onOpenWindow(session.windowId, 'transcript');
+                        }}
                         className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
                       >
-                        {command}
+                        Transcript
                       </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
+                      <button
+                        onClick={() => {
+                          setMenuWindowId(null);
+                          onOpenWindow(session.windowId, 'agenda');
+                        }}
+                        disabled={!session.hasAgenda}
+                        className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10 disabled:opacity-40"
+                      >
+                        Agenda
+                      </button>
+                    </>
+                  )}
+                  <div className="my-1 border-t border-foreground/10" />
+                  {COMMON_COMMANDS.map((command) => (
+                    <button
+                      key={command}
+                      onClick={() => sendCommand(session.windowId, command)}
+                      className="block w-full px-4 py-2 text-sm text-left hover:bg-foreground/10"
+                    >
+                      {command}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
-        );
-      })}
+        </div>
+      ))}
     </div>
   );
 }
