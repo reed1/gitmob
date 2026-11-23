@@ -4,7 +4,7 @@ import { saveTextHistory } from '@/lib/text-history';
 
 import { SessionModelSelect, useSessionModel } from './SessionModelSelect';
 
-import { ReactNode, useCallback, useState } from 'react';
+import { ReactNode, useCallback, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ModalOverlay } from '@/components/ModalOverlay';
 import { addToast, apiFetch } from '@/lib/api';
@@ -13,6 +13,7 @@ import { relativeTime } from '@/lib/relative-time';
 import { useLoad } from '@/lib/use-load';
 import { CollapsedRows } from './CollapsedRows';
 import { KebabMenu, KebabMenuItem, KebabMenuToggle } from './KebabMenu';
+import { SpeakButton } from './SpeakButton';
 import { useModelCatalog } from '@/lib/use-model-catalog';
 import { projectPagePath } from '@/lib/project-paths';
 
@@ -122,6 +123,7 @@ export function PendingHandoffs({
   const [openId, setOpenId] = useState<string | null>(null);
   const [prompt, setPrompt] = useState('');
   const [initialPrompt, setInitialPrompt] = useState('');
+  const promptRef = useRef<HTMLTextAreaElement>(null);
   const { catalog, error: catalogError } = useModelCatalog();
   const [sessionModel, setSessionModel] = useSessionModel(catalog);
   const [browser, setBrowser] = useState(false);
@@ -284,6 +286,7 @@ export function PendingHandoffs({
                 disabled={launching}
               />
               <textarea
+                ref={promptRef}
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 rows={12}
@@ -291,20 +294,27 @@ export function PendingHandoffs({
               />
             </div>
             <div className="px-4 py-3 border-t border-foreground/10 flex items-center justify-between gap-2">
-              <button
-                data-modal-cancel
-                onClick={() => setOpenId(null)}
-                className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={launch}
-                disabled={launching || !sessionModel || !prompt.trim()}
-                className="px-3 py-1.5 text-sm rounded-lg bg-foreground text-background hover:opacity-90 disabled:opacity-40"
-              >
-                {launching ? 'Starting...' : 'Launch'}
-              </button>
+              <SpeakButton
+                projectId={open.projectId}
+                textareaRef={promptRef}
+                onChange={setPrompt}
+              />
+              <div className="flex gap-2">
+                <button
+                  data-modal-cancel
+                  onClick={() => setOpenId(null)}
+                  className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={launch}
+                  disabled={launching || !sessionModel || !prompt.trim()}
+                  className="px-3 py-1.5 text-sm rounded-lg bg-foreground text-background hover:opacity-90 disabled:opacity-40"
+                >
+                  {launching ? 'Starting...' : 'Launch'}
+                </button>
+              </div>
             </div>
           </div>
         </ModalOverlay>
