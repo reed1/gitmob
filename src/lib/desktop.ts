@@ -6,6 +6,7 @@ import { join } from 'path';
 import type { CommonCommand, SpecialKey } from './desktop-keys';
 import type { CustomModel, ModelCatalog } from './desktop-models';
 import type { PendingQuestion, Question, Reply } from './claude-questions';
+import { getProjectsWithWorktrees, projectHolding } from './projects';
 import type { PendingEdit } from './remote-edits';
 
 /** What Claude Code itself reports the session's context window to be holding. */
@@ -262,14 +263,20 @@ interface ClaudexQuestionRow {
   questions: Question[];
 }
 
-function toPendingQuestion(row: ClaudexQuestionRow): PendingQuestion {
-  return {
+/** claudex knows only the session's cwd; the project is looked up here, as edits carry theirs. */
+async function toPendingQuestions(
+  rows: ClaudexQuestionRow[]
+): Promise<PendingQuestion[]> {
+  if (rows.length === 0) return [];
+  const { projects } = await getProjectsWithWorktrees();
+  return rows.map((row) => ({
     id: row.id,
     sessionId: row.session_id,
     cwd: row.cwd,
+    canonicalProjectId: projectHolding(projects, row.cwd)?.canonicalId ?? null,
     createdAt: row.created_at,
     questions: row.questions,
-  };
+  }));
 }
 
 interface ClaudexEditRow {
@@ -310,7 +317,9 @@ export async function getSessionScreen(windowId: string): Promise<{
   } = JSON.parse(await claudexDesktop(['screen', windowId, '--json']));
   return {
     content: result.content,
-    question: result.question && toPendingQuestion(result.question),
+    question: result.question
+      ? (await toPendingQuestions([result.question]))[0]
+      : null,
     edit: result.edit && toPendingEdit(result.edit),
   };
 }
@@ -320,7 +329,7 @@ export async function listPendingQuestions(): Promise<PendingQuestion[]> {
   const rows: ClaudexQuestionRow[] = JSON.parse(
     await claudexDesktop(['questions'])
   );
-  return rows.map(toPendingQuestion);
+  return toPendingQuestions(rows);
 }
 
 /** claudex refuses a question nobody waits on any more, and answers that leave one unanswered. */

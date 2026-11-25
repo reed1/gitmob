@@ -20,6 +20,8 @@ export interface PendingQuestion {
   id: string;
   sessionId: string;
   cwd: string;
+  /** The project whose checkout holds the cwd, if any does. */
+  canonicalProjectId: string | null;
   createdAt: string;
   questions: Question[];
 }

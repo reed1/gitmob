@@ -141,6 +141,20 @@ export function openRepos({ projects, openIds }: ProjectList): Project[] {
   );
 }
 
+/** The innermost project whose checkout holds this path, so a nested checkout wins. */
+export function projectHolding(
+  projects: Project[],
+  path: string
+): Project | undefined {
+  return projects
+    .filter(
+      (project) =>
+        project.path &&
+        (path === project.path || path.startsWith(`${project.path}/`))
+    )
+    .sort((a, b) => b.path.length - a.path.length)[0];
+}
+
 export function expandPath(path: string): string {
   return path.replace(/^~/, homedir());
 }

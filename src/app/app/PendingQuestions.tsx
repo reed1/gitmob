@@ -1,12 +1,19 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type RefObject,
+} from 'react';
 import { ModalOverlay } from '@/components/ModalOverlay';
 import { addToast, apiFetch } from '@/lib/api';
 import { relativeTime } from '@/lib/relative-time';
 import { saveTextHistory } from '@/lib/text-history';
 import { useLoad } from '@/lib/use-load';
 import { CollapsedRows } from './CollapsedRows';
+import { SpeakButton } from './SpeakButton';
 import type { PendingQuestion, Question, Reply } from '@/lib/claude-questions';
 
 interface Choice {
@@ -127,8 +134,10 @@ export function QuestionWizard({
   const [menuOpen, setMenuOpen] = useState(false);
   const [denying, setDenying] = useState(false);
   const [reason, setReason] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const reviewing = step === count;
+  const typing = denying || (!reviewing && choices[step].otherOn);
   const lastStep = count === 1 ? 0 : count;
   const answered = choices.map((choice) => answerOf(choice) !== '');
   const touched =
@@ -141,6 +150,23 @@ export function QuestionWizard({
     setChoices((current) =>
       current.map((existing, i) => (i === index ? choice : existing))
     );
+
+  const dictate = (text: string) => {
+    if (denying) setReason(text);
+    else
+      setChoices((current) =>
+        current.map((existing, i) =>
+          i === step ? { ...existing, other: text } : existing
+        )
+      );
+  };
+
+  // A textarea shown again with text in it keeps its caret at the start, and Speak inserts at
+  // the caret: dictation carries on from the end of what was already there instead.
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    textarea?.setSelectionRange(textarea.value.length, textarea.value.length);
+  }, [denying, step, typing]);
 
   const send = async (reply: Reply, sentMessage: string) => {
     [...choices.map((choice) => choice.other), reason].forEach((text) =>
@@ -259,6 +285,7 @@ export function QuestionWizard({
             <div className="space-y-2">
               <div className="text-sm">Tell Claude why, or leave it empty.</div>
               <textarea
+                ref={textareaRef}
                 autoFocus
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
@@ -291,77 +318,87 @@ export function QuestionWizard({
               question={pending.questions[step]}
               choice={choices[step]}
               onChange={(choice) => setChoice(step, choice)}
+              textareaRef={textareaRef}
             />
           )}
         </div>
 
-        <div className="px-4 py-3 border-t border-foreground/10 flex items-center justify-between gap-2">
-          {denying ? (
-            <button
-              onClick={() => setDenying(false)}
-              className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
-            >
-              Back
-            </button>
-          ) : step === 0 ? (
-            <button
-              data-modal-cancel
-              onClick={onClose}
-              className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
-            >
-              Cancel
-            </button>
-          ) : (
-            <button
-              onClick={() => setStep(step - 1)}
-              className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
-            >
-              Back
-            </button>
+        <div className="px-4 py-3 border-t border-foreground/10 flex items-center gap-2">
+          {typing && (
+            <SpeakButton
+              projectId={pending.canonicalProjectId ?? 'global'}
+              textareaRef={textareaRef}
+              onChange={dictate}
+            />
           )}
-          {denying ? (
-            <button
-              onClick={() =>
-                send(
-                  { kind: 'deny', reason: reason.trim() },
-                  'Questions denied'
-                )
-              }
-              disabled={sending}
-              className="px-3 py-1.5 text-sm rounded-lg bg-red-500 text-white hover:opacity-90 disabled:opacity-40"
-            >
-              {sending ? 'Sending...' : 'Deny'}
-            </button>
-          ) : step === lastStep ? (
-            <button
-              onClick={() =>
-                send(
-                  {
-                    kind: 'answers',
-                    answers: Object.fromEntries(
-                      pending.questions.map((q, i) => [
-                        q.question,
-                        answerOf(choices[i]),
-                      ])
-                    ),
-                  },
-                  'Answer sent'
-                )
-              }
-              disabled={sending || answered.includes(false)}
-              className="px-3 py-1.5 text-sm rounded-lg bg-foreground text-background hover:opacity-90 disabled:opacity-40"
-            >
-              {sending ? 'Sending...' : 'Submit'}
-            </button>
-          ) : (
-            <button
-              onClick={() => setStep(step + 1)}
-              disabled={!answered[step]}
-              className="px-3 py-1.5 text-sm rounded-lg bg-foreground text-background hover:opacity-90 disabled:opacity-40"
-            >
-              Next
-            </button>
-          )}
+          <div className="ml-auto flex gap-2">
+            {denying ? (
+              <button
+                onClick={() => setDenying(false)}
+                className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
+              >
+                Back
+              </button>
+            ) : step === 0 ? (
+              <button
+                data-modal-cancel
+                onClick={onClose}
+                className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
+              >
+                Cancel
+              </button>
+            ) : (
+              <button
+                onClick={() => setStep(step - 1)}
+                className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
+              >
+                Back
+              </button>
+            )}
+            {denying ? (
+              <button
+                onClick={() =>
+                  send(
+                    { kind: 'deny', reason: reason.trim() },
+                    'Questions denied'
+                  )
+                }
+                disabled={sending}
+                className="px-3 py-1.5 text-sm rounded-lg bg-red-500 text-white hover:opacity-90 disabled:opacity-40"
+              >
+                {sending ? 'Sending...' : 'Deny'}
+              </button>
+            ) : step === lastStep ? (
+              <button
+                onClick={() =>
+                  send(
+                    {
+                      kind: 'answers',
+                      answers: Object.fromEntries(
+                        pending.questions.map((q, i) => [
+                          q.question,
+                          answerOf(choices[i]),
+                        ])
+                      ),
+                    },
+                    'Answer sent'
+                  )
+                }
+                disabled={sending || answered.includes(false)}
+                className="px-3 py-1.5 text-sm rounded-lg bg-foreground text-background hover:opacity-90 disabled:opacity-40"
+              >
+                {sending ? 'Sending...' : 'Submit'}
+              </button>
+            ) : (
+              <button
+                onClick={() => setStep(step + 1)}
+                disabled={!answered[step]}
+                className="px-3 py-1.5 text-sm rounded-lg bg-foreground text-background hover:opacity-90 disabled:opacity-40"
+              >
+                Next
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </ModalOverlay>
@@ -372,10 +409,12 @@ function QuestionStep({
   question,
   choice,
   onChange,
+  textareaRef,
 }: {
   question: Question;
   choice: Choice;
   onChange: (choice: Choice) => void;
+  textareaRef: RefObject<HTMLTextAreaElement | null>;
 }) {
   const pick = (label: string) => {
     if (!question.multiSelect) {
@@ -453,6 +492,7 @@ function QuestionStep({
       </button>
       {choice.otherOn && (
         <textarea
+          ref={textareaRef}
           autoFocus
           value={choice.other}
           onChange={(e) => onChange({ ...choice, other: e.target.value })}

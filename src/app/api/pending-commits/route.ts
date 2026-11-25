@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { existsSync } from 'fs';
-import { Project, getProjectsWithWorktrees } from '@/lib/projects';
+import { getProjectsWithWorktrees, projectHolding } from '@/lib/projects';
 import {
   PendingCommit,
   deletePendingCommit,
@@ -17,17 +17,7 @@ interface UnlistedCommit extends PendingCommit {
   staged: StagedSummary | null;
   /** The project this repository sits inside, when it sits inside one. Context, not a claim. */
   insideProject: string | null;
-}
-
-/** The innermost project holding this repository, for a row that would otherwise be a path. */
-function enclosingProject(
-  projects: Project[],
-  repoPath: string
-): string | null {
-  const holders = projects
-    .filter((project) => repoPath.startsWith(`${project.path}/`))
-    .sort((a, b) => b.path.length - a.path.length);
-  return holders[0]?.id ?? null;
+  canonicalProjectId: string | null;
 }
 
 /**
@@ -43,13 +33,17 @@ export async function GET() {
   );
 
   const commits: UnlistedCommit[] = await Promise.all(
-    unlisted.map(async (entry) => ({
-      ...entry,
-      staged: existsSync(entry.repo)
-        ? await getStagedSummary(entry.repo)
-        : null,
-      insideProject: enclosingProject(projects, entry.repo),
-    }))
+    unlisted.map(async (entry) => {
+      const inside = projectHolding(projects, entry.repo);
+      return {
+        ...entry,
+        staged: existsSync(entry.repo)
+          ? await getStagedSummary(entry.repo)
+          : null,
+        insideProject: inside?.id ?? null,
+        canonicalProjectId: inside?.canonicalId ?? null,
+      };
+    })
   );
 
   return NextResponse.json({ commits });

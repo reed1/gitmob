@@ -2,12 +2,13 @@
 
 import { saveTextHistory } from '@/lib/text-history';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ModalOverlay } from '@/components/ModalOverlay';
 import { addToast, apiFetch } from '@/lib/api';
 import { relativeTime } from '@/lib/relative-time';
 import { useLoad } from '@/lib/use-load';
 import { CollapsedRows } from './CollapsedRows';
+import { SpeakButton } from './SpeakButton';
 
 interface StagedFile {
   path: string;
@@ -31,6 +32,7 @@ interface PendingCommit {
   closeSession: boolean;
   staged: StagedSummary | null;
   insideProject: string | null;
+  canonicalProjectId: string | null;
 }
 
 function repoName(repoPath: string): string {
@@ -57,6 +59,7 @@ export function PendingCommits({
   const [commits, setCommits] = useState<PendingCommit[]>([]);
   const [open, setOpen] = useState<PendingCommit | null>(null);
   const [message, setMessage] = useState('');
+  const messageRef = useRef<HTMLTextAreaElement>(null);
   const [committing, setCommitting] = useState(false);
 
   const fetchCommits = useCallback(async () => {
@@ -174,6 +177,7 @@ export function PendingCommits({
 
             <div className="px-4 py-3 overflow-y-auto space-y-3">
               <textarea
+                ref={messageRef}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 rows={10}
@@ -219,31 +223,38 @@ export function PendingCommits({
             </div>
 
             <div className="px-4 py-3 border-t border-foreground/10 flex items-center justify-between gap-2">
-              <button
-                data-modal-cancel
-                onClick={() => setOpen(null)}
-                className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={reject}
-                className="px-3 py-1.5 text-sm rounded-lg text-red-500 hover:bg-red-500/10"
-              >
-                Reject
-              </button>
-              <button
-                onClick={accept}
-                disabled={
-                  committing ||
-                  !message.trim() ||
-                  open.staged === null ||
-                  nothingStaged
-                }
-                className="px-3 py-1.5 text-sm rounded-lg bg-foreground text-background hover:opacity-90 disabled:opacity-40"
-              >
-                {committing ? 'Committing...' : 'Commit'}
-              </button>
+              <SpeakButton
+                projectId={open.canonicalProjectId ?? 'global'}
+                textareaRef={messageRef}
+                onChange={setMessage}
+              />
+              <div className="flex gap-2">
+                <button
+                  data-modal-cancel
+                  onClick={() => setOpen(null)}
+                  className="px-3 py-1.5 text-sm rounded-lg hover:bg-foreground/10"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={reject}
+                  className="px-3 py-1.5 text-sm rounded-lg text-red-500 hover:bg-red-500/10"
+                >
+                  Reject
+                </button>
+                <button
+                  onClick={accept}
+                  disabled={
+                    committing ||
+                    !message.trim() ||
+                    open.staged === null ||
+                    nothingStaged
+                  }
+                  className="px-3 py-1.5 text-sm rounded-lg bg-foreground text-background hover:opacity-90 disabled:opacity-40"
+                >
+                  {committing ? 'Committing...' : 'Commit'}
+                </button>
+              </div>
             </div>
           </div>
         </ModalOverlay>
