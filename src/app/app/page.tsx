@@ -20,6 +20,18 @@ import { useModelCatalog } from '@/lib/use-model-catalog';
 import { useRestart } from '@/lib/use-restart';
 import { RestartingOverlay } from './RestartingOverlay';
 
+/**
+ * A repo's checkouts stay together, placed where the best ranked of them would be: the rest
+ * follow it in their own rank order, so one busy worktree lifts its siblings rather than
+ * scattering them through the list.
+ */
+function groupedByRepo(ranked: Project[]): Project[] {
+  const repoOrder = [...new Set(ranked.map((p) => p.canonicalId))];
+  return repoOrder.flatMap((repo) =>
+    ranked.filter((p) => p.canonicalId === repo)
+  );
+}
+
 export default function Home() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [claudeUsage, setClaudeUsage] = useState<ClaudeUsage | null>(null);
@@ -115,7 +127,7 @@ export default function Home() {
     p.downSites.length > 0 ||
     p.sudoEnabled ||
     p.claudeSessions > 0;
-  const active = filtered.filter(isActive);
+  const active = groupedByRepo(filtered.filter(isActive));
   const pinned = filtered.filter((p) => !isActive(p) && p.pinned);
   const others = filtered.filter((p) => !isActive(p) && !p.pinned);
 
