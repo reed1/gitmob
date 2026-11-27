@@ -102,6 +102,7 @@ export async function GET(request: NextRequest) {
       missing: !existsSync(p.path),
       openOnDesktop: openIds.has(p.id),
       branch: checkout?.branch ?? null,
+      headMovedAt: checkout?.headMovedAt ?? null,
       hold: checkout ? readHold(p.path) : null,
       editing: editing.has(p.id),
       hasPendingMessage: pendingRepos.has(p.path),

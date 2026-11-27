@@ -4,6 +4,8 @@ import { resolve } from 'path';
 export interface Checkout {
   /** `HEAD` when detached. */
   branch: string;
+  /** When HEAD last moved — a commit, pull, reset or checkout — in epoch ms; null without a reflog. */
+  headMovedAt: number | null;
 }
 
 /** A worktree's or submodule's `.git` is a file pointing at its git dir. */
@@ -31,11 +33,22 @@ function readBranch(gitDir: string): string {
 }
 
 /**
- * The branch, read off the git dir rather than asked of git: the project list wants it for
- * every project, and a spawn per project is what makes it slow. Null for a checkout that is not
- * there, or is not a git repository.
+ * Git appends to the reflog every time HEAD moves, so its mtime is the last commit, pull, reset
+ * or checkout. `HEAD` itself is rewritten only on a branch switch, and `index` and `FETCH_HEAD`
+ * change on a status or a fetch that moves nothing.
+ */
+function readHeadMovedAt(gitDir: string): number | null {
+  const reflog = resolve(gitDir, 'logs/HEAD');
+  return existsSync(reflog) ? statSync(reflog).mtimeMs : null;
+}
+
+/**
+ * Read off the git dir rather than asked of git: the project list wants this for every project,
+ * and a spawn per project is what makes it slow. Null for a checkout that is not there, or is
+ * not a git repository.
  */
 export function readCheckout(path: string): Checkout | null {
   if (!existsSync(resolve(path, '.git'))) return null;
-  return { branch: readBranch(resolveGitDir(path)) };
+  const gitDir = resolveGitDir(path);
+  return { branch: readBranch(gitDir), headMovedAt: readHeadMovedAt(gitDir) };
 }

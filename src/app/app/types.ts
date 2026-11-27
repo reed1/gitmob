@@ -30,6 +30,8 @@ export interface Project {
   /** Open on the desktop right now: its IDE and terminals are up. */
   openOnDesktop: boolean;
   branch: string | null;
+  /** When HEAD last moved, in epoch ms; null without a checkout or a reflog. */
+  headMovedAt: number | null;
   /** Rewinds `gg hold` recorded while holding autopush and auto-pull; null when not held. */
   hold: string[] | null;
   editing: boolean;

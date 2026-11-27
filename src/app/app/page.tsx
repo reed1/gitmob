@@ -101,6 +101,9 @@ export default function Home() {
       if (a.editing !== b.editing) {
         return a.editing ? -1 : 1;
       }
+      if (a.headMovedAt !== b.headMovedAt) {
+        return (b.headMovedAt ?? 0) - (a.headMovedAt ?? 0);
+      }
       return a.id.localeCompare(b.id);
     });
 
