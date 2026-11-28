@@ -158,6 +158,7 @@ export function ClaudeView({
         projectId={projectId}
         canonicalId={canonicalId}
         windowId={windowParam}
+        sessionId={sessionId}
         title={title}
         hasAgenda={hasAgenda}
         onBack={() => router.back()}

@@ -16,6 +16,8 @@ and across projects, from the front page:
 - See every project's state at a glance
 - Read and launch handoffs, and accept commits, parked from the desktop
 - Answer the questions Claude asks while I am away from the desktop, or deny them
+- Look at the postcards sessions send (`claudex postcard`): images with a caption, filed by
+  project, worktree and session, new ones flagged on the front page and in the session's header
 - Edit a session's input box handed over from the desk (`claudex edit-remote`), then submit or
   save it back
 - Keep a scratchpad on the device

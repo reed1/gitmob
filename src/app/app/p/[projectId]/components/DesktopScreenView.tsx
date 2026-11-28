@@ -7,6 +7,7 @@ import { COMMON_COMMANDS, type CommonCommand } from '@/lib/desktop-keys';
 import { projectApiPath } from '@/lib/project-paths';
 import { QuestionWizard } from '@/app/app/PendingQuestions';
 import { RemoteEditModal } from '@/app/app/PendingEdits';
+import { PostcardStamp } from '@/app/app/PostcardStamp';
 import {
   KebabMenu,
   KebabMenuItem,
@@ -15,6 +16,7 @@ import {
 } from '@/app/app/KebabMenu';
 import type { PendingQuestion } from '@/lib/claude-questions';
 import type { PendingEdit } from '@/lib/remote-edits';
+import type { SessionPostcards } from '@/lib/postcards';
 import type { WindowView } from './ClaudeView';
 
 /** A physical keycap: a raised grey box, its thick bottom border reading as the key's side. */
@@ -33,6 +35,7 @@ export function DesktopScreenView({
   projectId,
   canonicalId,
   windowId,
+  sessionId,
   title,
   hasAgenda,
   onBack,
@@ -41,6 +44,8 @@ export function DesktopScreenView({
   projectId: string;
   canonicalId: string;
   windowId: string;
+  /** The window's Claude session, which postcards are filed under. */
+  sessionId: string | null;
   title: string;
   hasAgenda: boolean;
   onBack: () => void;
@@ -58,6 +63,7 @@ export function DesktopScreenView({
   const [openQuestionId, setOpenQuestionId] = useState<string | null>(null);
   const [edit, setEdit] = useState<PendingEdit | null>(null);
   const [openEditId, setOpenEditId] = useState<string | null>(null);
+  const [postcards, setPostcards] = useState<SessionPostcards | null>(null);
   // An edit is handed over from the desk to be worked on here, so it opens the moment it shows
   // up — once: closed, it stays behind its button.
   const seenEditIds = useRef(new Set<string>());
@@ -75,6 +81,7 @@ export function DesktopScreenView({
         setContent(data.content ?? '');
         setQuestion(data.question);
         setEdit(data.edit);
+        setPostcards(data.postcards);
         if (data.edit && !seenEditIds.current.has(data.edit.id)) {
           seenEditIds.current.add(data.edit.id);
           setOpenEditId(data.edit.id);
@@ -174,6 +181,9 @@ export function DesktopScreenView({
             ))}
             ?
           </button>
+        )}
+        {sessionId && postcards && postcards.count > 0 && (
+          <PostcardStamp sessionId={sessionId} postcards={postcards} />
         )}
         {edit && (
           <button

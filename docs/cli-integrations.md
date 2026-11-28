@@ -14,6 +14,7 @@ docs; how it is called is in the module. Paths under `rlocal/` are in `~/.dotfil
 | `rv`                              | run commands, opening projects on the desktop | `src/lib/run.ts`, `desktop.ts`                         | `rlocal/app/rofi-vscode/CLAUDE.md`          |
 | `claudex`                         | sessions, handoffs, models, usage             | `src/lib/desktop.ts`, `handoffs.ts`, `claude-usage.ts` | `rlocal/app/claudex/CLAUDE.md`              |
 | `claudex ask`                     | Claude's questions while the user is away     | `src/lib/desktop.ts`                                   | `rlocal/app/claudex/claudex-ask`            |
+| `claudex postcard`                | images a session sends the user               | `src/lib/claudex-postcards.ts`                         | `rlocal/app/claudex/claudex-postcard`       |
 | `claudex edit-remote`             | input boxes handed over from the desk         | `src/lib/desktop.ts`                                   | `rlocal/app/claudex/claudex-edit-remote`    |
 | `claudex agenda`                  | a session's agenda                            | `src/lib/desktop.ts`                                   | `rlocal/app/claudex/claudex-agenda`         |
 | `recall`                          | past sessions                                 | `src/lib/recall.ts`                                    | https://github.com/zippoxer/recall          |

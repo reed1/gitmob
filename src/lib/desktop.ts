@@ -6,6 +6,7 @@ import { join } from 'path';
 import type { CommonCommand, SpecialKey } from './desktop-keys';
 import type { CustomModel, ModelCatalog } from './desktop-models';
 import type { PendingQuestion, Question, Reply } from './claude-questions';
+import type { SessionPostcards } from './postcards';
 import { getProjectsWithWorktrees, projectHolding } from './projects';
 import type { PendingEdit } from './remote-edits';
 
@@ -302,18 +303,20 @@ function toPendingEdit(row: ClaudexEditRow): PendingEdit {
 }
 
 /**
- * The screen, the question its session is blocked on while the user is away, and its input box
- * when `claudex edit-remote` has handed that here.
+ * The screen, the question its session is blocked on while the user is away, its input box
+ * when `claudex edit-remote` has handed that here, and how many postcards its session has sent.
  */
 export async function getSessionScreen(windowId: string): Promise<{
   content: string;
   question: PendingQuestion | null;
   edit: PendingEdit | null;
+  postcards: SessionPostcards;
 }> {
   const result: {
     content: string;
     question: ClaudexQuestionRow | null;
     edit: ClaudexEditRow | null;
+    postcards: SessionPostcards;
   } = JSON.parse(await claudexDesktop(['screen', windowId, '--json']));
   return {
     content: result.content,
@@ -321,6 +324,7 @@ export async function getSessionScreen(windowId: string): Promise<{
       ? (await toPendingQuestions([result.question]))[0]
       : null,
     edit: result.edit && toPendingEdit(result.edit),
+    postcards: result.postcards,
   };
 }
 
